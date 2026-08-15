@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Server rules dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <div class="topbar-right">
+          <div class="user-chip" id="user-chip" hidden>
+            <span id="user-name"></span>
+          </div>
+          <a class="logout-link" id="logout-link" href="/logout" hidden>logout</a>
+          <div class="status-pill">
+            <span id="status-dot" class="dot"></span>
+            <span id="status-text">Connecting…</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Discord rule management</span>
+        </span>
+        <h1 class="hero-title">Server rules,<br />on autopilot.<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="hero-sub">
+          A Discord bot that posts, tracks, and manages your community rules —
+          with a clean dashboard to view and edit them from anywhere.
+        </p>
+        <div class="terminal" aria-hidden="true">
+          <div class="terminal-bar">
+            <i></i><i></i><i></i>
+            <span class="terminal-title">squared-one</span>
+          </div>
+          <div class="terminal-body">
+            <p><span class="t-prompt">$</span> squared-one --help</p>
+            <p class="t-dim">/rules — view server rules</p>
+            <p class="t-dim">/addrule — add a custom rule</p>
+            <p class="t-dim">/removerule — remove a custom rule</p>
+            <p class="t-dim">/postrules — post rules to a channel</p>
+            <p><span class="t-prompt">$</span> <span class="t-cursor">▌</span></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="stat-card">
+          <span class="stat-label">Bot status</span>
+          <span id="stat-status" class="stat-value">--</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Servers</span>
+          <span id="stat-servers" class="stat-value">--</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Members</span>
+          <span id="stat-members" class="stat-value">--</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Rules</span>
+          <span id="stat-rules" class="stat-value">--</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Uptime</span>
+          <span id="stat-uptime" class="stat-value">--</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <span class="corner-br" aria-hidden="true"></span>
+        <span class="corner-bl" aria-hidden="true"></span>
+        <div class="panel-head">
+          <h2><span class="prompt">$</span> rules.list <span class="accent">--all</span></h2>
+          <span id="rules-count" class="count-chip">0 entries</span>
+        </div>
+        <div id="rules-list" class="rules-list"></div>
+      </section>
+
+      <section class="panel">
+        <span class="corner-br" aria-hidden="true"></span>
+        <span class="corner-bl" aria-hidden="true"></span>
+        <div class="panel-head">
+          <h2><span class="prompt">$</span> rules.add <span class="accent">--custom</span></h2>
+        </div>
+        <form id="add-rule-form" class="rule-form" autocomplete="off">
+          <label class="field">
+            <span class="field-label">Title</span>
+            <input id="rule-title" type="text" maxlength="120" placeholder="e.g. No mic spam" required />
+          </label>
+          <label class="field">
+            <span class="field-label">Description</span>
+            <textarea id="rule-desc" rows="3" maxlength="1000" placeholder="Supports **bold**, *italic*, `code`, etc." required></textarea>
+          </label>
+          <button type="submit" class="btn btn-primary">
+            <span class="btn-glyph">+</span> Deploy rule
+          </button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <span class="corner-br" aria-hidden="true"></span>
+        <span class="corner-bl" aria-hidden="true"></span>
+        <div class="panel-head">
+          <h2><span class="prompt">$</span> embed.build <span class="accent">--custom</span></h2>
+          <span id="embed-channel-status" class="count-chip">…</span>
+        </div>
+        <div class="embed-builder">
+          <form id="embed-form" class="rule-form embed-form" autocomplete="off">
+            <div class="embed-grid">
+              <label class="field">
+                <span class="field-label">Title</span>
+                <input id="embed-title" type="text" maxlength="256" placeholder="Optional title" />
+              </label>
+              <label class="field">
+                <span class="field-label">Color</span>
+                <input id="embed-color" type="color" value="#5865f2" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span class="field-label">Description</span>
+              <textarea id="embed-desc" rows="4" maxlength="4096" placeholder="Supports **bold**, *italic*, `code`, links, etc."></textarea>
+            </label>
+
+            <div class="embed-grid">
+              <label class="field">
+                <span class="field-label">Author</span>
+                <input id="embed-author" type="text" maxlength="256" placeholder="Optional" />
+              </label>
+              <label class="field">
+                <span class="field-label">Footer</span>
+                <input id="embed-footer" type="text" maxlength="2048" placeholder="Optional" />
+              </label>
+            </div>
+
+            <div class="embed-grid">
+              <label class="field">
+                <span class="field-label">Thumbnail URL</span>
+                <input id="embed-thumbnail" type="url" placeholder="https://…" />
+              </label>
+              <label class="field">
+                <span class="field-label">Image URL</span>
+                <input id="embed-image" type="url" placeholder="https://…" />
+              </label>
+            </div>
+
+            <label class="checkbox-row">
+              <input id="embed-timestamp" type="checkbox" />
+              <span>Show timestamp</span>
+            </label>
+
+            <div class="field">
+              <span class="field-label">Fields</span>
+              <div id="embed-fields" class="embed-fields"></div>
+              <button type="button" class="btn btn-secondary btn-sm" id="embed-add-field">
+                <span class="btn-glyph">+</span> Add field
+              </button>
+            </div>
+
+            <div class="embed-post-row">
+              <label class="field field-grow">
+                <span class="field-label">Post to channel</span>
+                <select id="embed-channel"></select>
+              </label>
+              <button type="submit" class="btn btn-primary" id="embed-post">
+                Post embed
+              </button>
+            </div>
+          </form>
+
+          <div class="preview-wrap">
+            <span class="field-label">Live preview</span>
+            <div id="embed-preview" class="embed-preview"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <span>health: <a href="/health" target="_blank" rel="noopener">/health</a></span>
+      <span>·</span>
+      <span id="footer-time">--</span>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
