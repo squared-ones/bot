@@ -39,6 +39,7 @@ import {
   purgeMessages,
 } from './moderation.js';
 import { createCaptcha, verifyCaptcha } from './captcha.js';
+import { getClientIp, inspectIp } from './network-detection.js';
 import {
   getVerificationConfig,
   saveVerificationConfig,
@@ -81,6 +82,7 @@ export function startServer(port = 3000) {
       : `http://localhost:${port}/auth/discord/callback`);
 
   const app = express();
+  app.set('trust proxy', process.env.TRUST_PROXY === 'true');
   app.use(express.json());
   app.use(sessionMiddleware(sessionSecret));
 
@@ -590,6 +592,17 @@ export function startServer(port = 3000) {
     return guild;
   }
 
+  async function rejectBlockedNetwork(req, res, config) {
+    if (!config.blockVpn) return false;
+    const result = await inspectIp(getClientIp(req));
+    if (!result.blocked) return false;
+    res.status(403).json({
+      error: 'verification is blocked from VPN, proxy, Tor, or known datacenter networks',
+      networkReason: result.reason,
+    });
+    return true;
+  }
+
   // Servers where the signed-in user can configure verification, including
   // the roles/channels available to that server's configuration.
   app.get('/api/verification/guilds', guard, async (req, res) => {
@@ -692,6 +705,9 @@ export function startServer(port = 3000) {
     if (inGuild && config.roleId) {
       verified = await isMemberVerified(guildId, req.user.id, config.roleId);
     }
+    const network = inGuild && config.blockVpn && verified !== true
+      ? await inspectIp(getClientIp(req))
+      : null;
 
     res.json({
       signedIn: true,
@@ -699,6 +715,8 @@ export function startServer(port = 3000) {
       verified,
       roleRequired: Boolean(config.roleId),
       configured: isVerificationConfigured(config),
+      networkBlocked: Boolean(network?.blocked),
+      networkReason: network?.reason || null,
       guildName: guild?.name || null,
       botConnected: Boolean(client?.isReady()),
     });
@@ -710,9 +728,11 @@ export function startServer(port = 3000) {
     if (!(req.user.guildIds || []).includes(guildId)) {
       return res.status(403).json({ error: 'you are not a member of this server' });
     }
-    if (!isVerificationConfigured(getVerificationConfig(guildId))) {
+    const config = getVerificationConfig(guildId);
+    if (!isVerificationConfigured(config)) {
       return res.status(503).json({ error: 'verification is not configured for this server' });
     }
+    if (await rejectBlockedNetwork(req, res, config)) return;
     const captcha = createCaptcha();
     res.json({ id: captcha.id, svg: captcha.svg });
   });
@@ -726,6 +746,7 @@ export function startServer(port = 3000) {
     if (!isVerificationConfigured(config)) {
       return res.status(500).json({ error: 'verification is not configured for this server' });
     }
+    if (await rejectBlockedNetwork(req, res, config)) return;
     if (!(req.user.guildIds || []).includes(guildId)) {
       return res.status(403).json({ error: 'you are not a member of this server' });
     }

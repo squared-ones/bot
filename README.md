@@ -97,6 +97,7 @@ Squared One can gate a "Verified" role behind a self-hosted CAPTCHA. Open the
 **Verification** section of the dashboard to configure each server separately:
 
 - Choose the role granted after a successful CAPTCHA.
+- Enable self-hosted VPN, proxy, Tor, and known datacenter blocking.
 - Configure account-age and default-avatar detection.
 - Configure join-burst detection, the action for flagged joins (`none`, `kick`, or `ban`), and an optional log channel.
 
@@ -106,6 +107,14 @@ restarting the bot. Users run `/verify`, sign in with Discord, and solve the
 CAPTCHA; on success the configured role is added. Verification links use the
 application's global `PUBLIC_URL` (or localhost when it is unset), not a
 per-server URL setting.
+
+VPN blocking is self-hosted: the server evaluates the verifier's IP against
+Tor exit-node and VPN/datacenter CIDR lists refreshed in memory every hour.
+It does not require a paid IP-detection API. Detection only applies to the web
+verification flow because Discord does not provide member IP addresses. If the
+lists cannot be refreshed, verification fails open and the event is logged.
+When running behind a trusted reverse proxy, set `TRUST_PROXY=true` so Express
+can obtain the original client IP.
 
 ### GitHub data storage
 
@@ -221,6 +230,7 @@ src/
   moderation.js # shared moderation helpers (permissions, ban/kick/timeout/purge)
   auth.js     # Discord OAuth + signed session cookie
   captcha.js  # self-hosted SVG captcha
+  network-detection.js # self-hosted VPN/proxy/Tor CIDR detection
   verification.js # per-server config store + anti-alt / anti-raid detection
   server.js   # Express server, /health, rules + embed + moderation + verification API
 scripts/

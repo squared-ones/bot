@@ -7,6 +7,7 @@ const CONFIG_FILE = path.join(DATA_DIR, 'verification.json');
 const ACTIONS = ['none', 'kick', 'ban'];
 const DEFAULT_CONFIG = {
   roleId: null,
+  blockVpn: false,
   minAccountAgeDays: 0,
   requireAvatar: false,
   joinBurst: 0,
@@ -51,6 +52,7 @@ export function normalizeVerificationConfig(input = {}) {
     roleId: typeof input.roleId === 'string' && input.roleId.trim()
       ? input.roleId.trim()
       : null,
+    blockVpn: input.blockVpn === true,
     minAccountAgeDays: Math.min(
       3650,
       toNonNegativeInt(input.minAccountAgeDays, DEFAULT_CONFIG.minAccountAgeDays)

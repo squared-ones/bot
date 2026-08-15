@@ -315,6 +315,12 @@
                 'You are not a member of ' + (data.guildName || 'this server') + '.'
               );
             }
+            if (data.networkBlocked) {
+              return message(
+                'verify-err',
+                'VPN, proxy, Tor, or a known datacenter network was detected. Disable it and try again.'
+              );
+            }
             if (data.verified === true) {
               return set(`<p class="verify-ok">✅ You're already verified!</p>`);
             }
