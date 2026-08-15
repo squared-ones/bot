@@ -1,32 +1,37 @@
 # Squared One
 
-A Discord bot that manages your server's rules for you, plus a neon web
-dashboard to view and edit them. Ships with a sensible set of default rules
-that you can extend with your own.
+A multitool Discord bot — moderation, rules, announcements, verification,
+voting, tickets, appeals, leveling, and more — plus a red/black neon web
+dashboard to manage it all.
 
 ## Features
 
-- **Default rules out of the box** — respect, no spam, no NSFW, no ads, ToS,
-  listen to mods. Default rules can't be removed.
-- **Custom rules** — add and remove your own via slash commands or the web
-  dashboard. Persisted to `data/rules.json`.
-- **Posts rules for you** — DM new members the rules on join, or post them to
-  any channel with `/postrules`.
-- **Markdown formatting** — rule titles/descriptions and announcements support
-  Discord markdown (**bold**, *italic*, `code`, links, blockquotes, etc.).
-- **Rule embeds** — `/rules` and `/postrules` present the server rules in
-  consistent Discord embeds.
-- **Web dashboard** — red/black neon UI with live bot stats, rules, moderation,
-  verification, voting, and server management.
-- **Discord OAuth login** — sign in with Discord; channel listing is scoped
-  to servers you actually belong to.
-- **Dashboard moderation** — ban, kick, timeout, and purge members from the
-  dashboard, scoped to servers where you hold the matching permission.
+- **Moderation** — ban, kick, timeout, and purge members via slash commands or
+  the dashboard, permission-checked and scoped to servers you manage.
+- **Rules** — sensible defaults out of the box plus your own custom rules,
+  persisted to `data/rules.json`, DMed to new members or posted with
+  `/postrules`, with Discord markdown formatting and consistent embeds.
+- **Announcements** — `/announce` posts markdown-formatted messages to any
+  channel.
 - **Verification** — a self-hosted CAPTCHA gate that grants a "Verified" role
   after passing, plus anti-alt/anti-raid detections (account age, default
   avatar, and join bursts).
 - **Voting system** — clickable `/vote` buttons for Top.gg and Discord Bot List,
   signed webhook tracking, vote statistics, and private-DM cooldown reminders.
+- **Tickets** — a staff support system (`/ticket`, `/ticketsetup`, and
+  `/ticketpanel`) with a configurable category and staff role.
+- **Appeals** — users can submit ban appeals (`/appeal`) and moderators can
+  review them (`/appeals`).
+- **Leveling** — text and voice XP, level-up announcements, `/rank`, and a
+  `/leaderboard`.
+- **Automation** — `/autorole` roles for new members and `/restoreroles` for
+  rejoin role restore.
+- **VPN blocklist** — self-hosted blocking of VPN, proxy, Tor, and datacenter
+  IPs.
+- **Web dashboard** — red/black neon UI with live bot stats and per-server
+  configuration for every feature.
+- **Discord OAuth login** — sign in with Discord; access is scoped to servers
+  you actually belong to.
 - **Private GitHub data storage** — runtime files in `data/` are loaded from and
   committed to the private `squared-ones/data` repository.
 - **`/health` endpoint** — JSON health/status check.

@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Squared One — Discord rules bot</title>
+    <title>Squared One — Multitool Discord bot</title>
     <meta
       name="description"
-      content="Squared One is a Discord bot that manages your server rules — post them to any channel and format them with markdown from one red-hot dashboard."
+      content="Squared One is the multitool Discord bot — moderation, rules, verification, voting, tickets, and leveling, all managed from one red-hot dashboard."
     />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -268,10 +268,10 @@
           <span class="eyebrow-label">//</span>
           <span>Discord bot</span>
         </span>
-        <h1 class="hero-title">Your server rules,<br />on autopilot.<span class="cursor" aria-hidden="true"></span></h1>
+        <h1 class="hero-title">Your server,<br />on autopilot.<span class="cursor" aria-hidden="true"></span></h1>
         <p class="hero-sub">
-          Squared One manages your Discord server's rules — post them to any
-          channel and format them with markdown from one
+          Squared One is the multitool Discord bot — moderation, rules,
+          verification, tickets, leveling, and more, all managed from one
           red-hot dashboard.
         </p>
         <div class="home-cta">
@@ -286,9 +286,10 @@
           </div>
           <div class="terminal-body">
             <p><span class="t-prompt">$</span> squared-one --help</p>
-            <p class="t-dim">/rules — view server rules</p>
-            <p class="t-dim">/addrule — add a custom rule</p>
-            <p class="t-dim">/postrules — post rules to a channel</p>
+            <p class="t-dim">moderation — /ban · /kick · /timeout · /purge</p>
+            <p class="t-dim">rules — /rules · /addrule · /postrules</p>
+            <p class="t-dim">verification — /verify · /verification-panel</p>
+            <p class="t-dim">community — /vote · /ticket · /leveling · /appeal</p>
             <p><span class="t-prompt">$</span> <span class="t-cursor">▌</span></p>
           </div>
         </div>
@@ -306,44 +307,45 @@
 
       <section class="features" id="features">
         <div class="feature-card">
-          <h3>Default rules</h3>
+          <h3>Moderation</h3>
           <p>
-            Six sensible rules ship out of the box — respect, no spam, no NSFW,
-            no ads, follow ToS, listen to mods. They can't be removed.
+            Ban, kick, timeout, and purge with slash commands or straight from
+            the dashboard — permission-checked and role-hierarchy safe.
           </p>
         </div>
         <div class="feature-card">
-          <h3>Custom rules</h3>
+          <h3>Rules</h3>
           <p>
-            Add and remove your own rules via slash commands or the dashboard.
-            Persisted to disk, so nothing gets lost.
+            Sensible defaults out of the box plus your own custom rules,
+            auto-posted to a channel or DMed to new members on join.
           </p>
         </div>
         <div class="feature-card">
-          <h3>Auto-posting</h3>
+          <h3>Verification</h3>
           <p>
-            DM new members the rules the moment they join, or drop the full
-            rules embed into any channel with /postrules.
+            Gate a "Verified" role behind a CAPTCHA and catch raids with
+            account-age, default-avatar, and join-burst detection.
           </p>
         </div>
         <div class="feature-card">
-          <h3>Markdown formatting</h3>
+          <h3>Tickets</h3>
           <p>
-            Bold, italics, code, links, and blockquotes in rules and
-            announcements.
+            Run a staff support desk with /ticket and a button panel, scoped to
+            the category and staff role you choose.
           </p>
         </div>
         <div class="feature-card">
-          <h3>Rule embeds</h3>
+          <h3>Leveling</h3>
           <p>
-            Publish consistent, readable rule embeds with /rules and /postrules.
+            Reward activity with text and voice XP, level-up announcements, and
+            a server leaderboard.
           </p>
         </div>
         <div class="feature-card">
           <h3>Discord OAuth</h3>
           <p>
-            Sign in with Discord. Channel access is scoped to servers you
-            actually belong to, so nothing leaks across servers.
+            Sign in with Discord. Access is scoped to servers you actually
+            belong to, so nothing leaks across servers.
           </p>
         </div>
       </section>

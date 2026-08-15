@@ -1,7 +1,7 @@
 {
   "name": "squared-one",
   "version": "1.0.0",
-  "description": "Squared One — Discord bot that manages and posts server rules, with an OAuth-protected web dashboard and /health endpoint.",
+  "description": "Squared One — multitool Discord bot (moderation, rules, verification, voting, tickets, leveling, and more) with an OAuth-protected web dashboard.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

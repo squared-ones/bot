@@ -25,7 +25,6 @@ const el = {
   serverModalClose: $('#server-modal-close'),
   serverPickerList: $('#server-picker-list'),
   serversList: $('#servers-list'),
-  modGuild: $('#mod-guild'),
   modBody: $('#mod-body'),
   modStatus: $('#mod-status'),
   modUserSearch: $('#mod-user-search'),
@@ -40,7 +39,6 @@ const el = {
   modKick: $('#mod-kick'),
   modTimeout: $('#mod-timeout'),
   modPurge: $('#mod-purge'),
-  verificationGuild: $('#verification-guild'),
   verificationForm: $('#verification-form'),
   verificationStatus: $('#verification-status'),
   verificationRole: $('#verification-role'),
@@ -460,7 +458,7 @@ let verificationGuilds = [];
 let verificationGuildsLoaded = false;
 
 function verificationGuildInfo() {
-  return verificationGuilds.find((g) => g.id === el.verificationGuild.value);
+  return verificationGuilds.find((g) => g.id === selectedGuildId);
 }
 
 function setSelectOptions(select, options, emptyLabel, getLabel) {
@@ -518,19 +516,11 @@ async function loadVerificationGuilds() {
       : manageableGuilds;
     verificationGuildsLoaded = data.connected;
 
-    setSelectOptions(
-      el.verificationGuild,
-      verificationGuilds,
-      verificationGuilds.length ? 'Current server' : 'Selected server is not manageable',
-      (guild) => guild.name
-    );
-    el.verificationGuild.disabled = true;
     el.verificationStatus.textContent = data.connected
       ? `${verificationGuilds.length} server${verificationGuilds.length === 1 ? '' : 's'}`
       : 'bot offline';
     el.verificationForm.hidden = true;
     if (verificationGuilds.length) {
-      el.verificationGuild.value = verificationGuilds[0].id;
       renderVerificationConfig();
     }
   } catch {
@@ -538,8 +528,6 @@ async function loadVerificationGuilds() {
     el.verificationForm.hidden = true;
   }
 }
-
-el.verificationGuild.addEventListener('change', renderVerificationConfig);
 
 let vpnBlocklistLoaded = false;
 
@@ -625,7 +613,7 @@ el.vpnBlocklist.addEventListener('click', async (event) => {
 
 el.verificationForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const guildId = el.verificationGuild.value;
+  const guildId = selectedGuildId;
   if (!guildId) return;
 
   el.verificationSave.disabled = true;
@@ -717,6 +705,7 @@ async function loadChannels() {
     const data = await res.json();
     channelsData = data;
     channelsLoaded = Boolean(data.connected);
+    populateModChannels(selectedGuildId);
   } catch {
     channelsLoaded = false;
   }
@@ -737,7 +726,7 @@ function updateModSelected() {
 }
 
 function modGuildInfo() {
-  return modGuilds.find((g) => g.id === el.modGuild.value);
+  return modGuilds.find((g) => g.id === selectedGuildId);
 }
 
 function updateModActions() {
@@ -777,21 +766,6 @@ async function loadModerationGuilds() {
       : manageableGuilds;
     modGuildsLoaded = data.connected;
 
-    el.modGuild.innerHTML = '';
-    el.modGuild.disabled = true;
-    const def = document.createElement('option');
-    def.value = '';
-    def.textContent = modGuilds.length
-      ? 'Current server'
-      : 'Selected server cannot be moderated';
-    el.modGuild.appendChild(def);
-    for (const g of modGuilds) {
-      const opt = document.createElement('option');
-      opt.value = g.id;
-      opt.textContent = g.name;
-      el.modGuild.appendChild(opt);
-    }
-
     el.modStatus.textContent = data.connected
       ? `${modGuilds.length} server${modGuilds.length === 1 ? '' : 's'}`
       : 'bot offline';
@@ -803,7 +777,7 @@ async function loadModerationGuilds() {
 }
 
 async function searchModMembers(query) {
-  const guildId = el.modGuild.value;
+  const guildId = selectedGuildId;
   if (!guildId) return;
   try {
     const res = await apiFetch(
@@ -894,15 +868,6 @@ async function runModAction(action, body) {
   }
 }
 
-el.modGuild.addEventListener('change', () => {
-  modSelectedUser = null;
-  updateModSelected();
-  el.modUserList.innerHTML = '';
-  el.modUserSearch.value = '';
-  populateModChannels(el.modGuild.value);
-  updateModActions();
-});
-
 el.modUserSearch.addEventListener('input', () => {
   clearTimeout(modSearchTimer);
   modSearchTimer = setTimeout(
@@ -923,7 +888,7 @@ el.modBan.addEventListener('click', () => {
   if (!modSelectedUser) return;
   if (!confirm(`Ban ${modSelectedUser.name}?`)) return;
   runModAction('ban', {
-    guildId: el.modGuild.value,
+    guildId: selectedGuildId,
     action: 'ban',
     userId: modSelectedUser.id,
     reason: el.modReason.value,
@@ -934,7 +899,7 @@ el.modKick.addEventListener('click', () => {
   if (!modSelectedUser) return;
   if (!confirm(`Kick ${modSelectedUser.name}?`)) return;
   runModAction('kick', {
-    guildId: el.modGuild.value,
+    guildId: selectedGuildId,
     action: 'kick',
     userId: modSelectedUser.id,
     reason: el.modReason.value,
@@ -950,7 +915,7 @@ el.modTimeout.addEventListener('click', () => {
   }
   if (!confirm(`Timeout ${modSelectedUser.name} for ${duration}?`)) return;
   runModAction('timeout', {
-    guildId: el.modGuild.value,
+    guildId: selectedGuildId,
     action: 'timeout',
     userId: modSelectedUser.id,
     duration,
@@ -981,7 +946,7 @@ el.modPurge.addEventListener('click', () => {
     return;
   }
   runModAction('purge', {
-    guildId: el.modGuild.value,
+    guildId: selectedGuildId,
     action: 'purge',
     channelId,
     amount,
