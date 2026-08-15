@@ -35,6 +35,33 @@ const el = {
   embedPost: $('#embed-post'),
   embedPreview: $('#embed-preview'),
   serversList: $('#servers-list'),
+  modGuild: $('#mod-guild'),
+  modBody: $('#mod-body'),
+  modStatus: $('#mod-status'),
+  modUserSearch: $('#mod-user-search'),
+  modUserList: $('#mod-user-list'),
+  modSelected: $('#mod-selected'),
+  modSelectedName: $('#mod-selected-name'),
+  modReason: $('#mod-reason'),
+  modDuration: $('#mod-duration'),
+  modChannel: $('#mod-channel'),
+  modAmount: $('#mod-amount'),
+  modBan: $('#mod-ban'),
+  modKick: $('#mod-kick'),
+  modTimeout: $('#mod-timeout'),
+  modPurge: $('#mod-purge'),
+  verificationGuild: $('#verification-guild'),
+  verificationForm: $('#verification-form'),
+  verificationStatus: $('#verification-status'),
+  verificationRole: $('#verification-role'),
+  verificationPublicUrl: $('#verification-public-url'),
+  verificationMinAge: $('#verification-min-age'),
+  verificationAction: $('#verification-action'),
+  verificationRequireAvatar: $('#verification-require-avatar'),
+  verificationJoinBurst: $('#verification-join-burst'),
+  verificationJoinWindow: $('#verification-join-window'),
+  verificationLogChannel: $('#verification-log-channel'),
+  verificationSave: $('#verification-save'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -197,6 +224,8 @@ async function loadHealth() {
     if (data.bot?.connected) {
       if (!channelsLoaded) loadChannels();
       if (!serversLoaded) loadServers();
+      if (!modGuildsLoaded) loadModerationGuilds();
+      if (!verificationGuildsLoaded) loadVerificationGuilds();
     }
   } catch (err) {
     setBotStatus(false);
@@ -262,6 +291,125 @@ async function loadServers() {
   }
 }
 
+/* ---------- Verification configuration ---------- */
+let verificationGuilds = [];
+let verificationGuildsLoaded = false;
+
+function verificationGuildInfo() {
+  return verificationGuilds.find((g) => g.id === el.verificationGuild.value);
+}
+
+function setSelectOptions(select, options, emptyLabel, getLabel) {
+  select.innerHTML = '';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = emptyLabel;
+  select.appendChild(empty);
+  for (const option of options) {
+    const item = document.createElement('option');
+    item.value = option.id;
+    item.textContent = getLabel(option);
+    select.appendChild(item);
+  }
+}
+
+function renderVerificationConfig() {
+  const guild = verificationGuildInfo();
+  const config = guild?.config || {};
+  el.verificationForm.hidden = !guild;
+  if (!guild) return;
+
+  setSelectOptions(
+    el.verificationRole,
+    guild.roles || [],
+    'No role (disabled)',
+    (role) => `${role.name} (${role.id})`
+  );
+  setSelectOptions(
+    el.verificationLogChannel,
+    guild.channels || [],
+    'No logging channel',
+    (channel) => `#${channel.name}`
+  );
+  el.verificationRole.value = config.roleId || '';
+  el.verificationPublicUrl.value = config.publicUrl || '';
+  el.verificationMinAge.value = String(config.minAccountAgeDays ?? 0);
+  el.verificationAction.value = config.action || 'none';
+  el.verificationRequireAvatar.checked = config.requireAvatar === true;
+  el.verificationJoinBurst.value = String(config.joinBurst ?? 0);
+  el.verificationJoinWindow.value = String(config.joinBurstWindow ?? 10);
+  el.verificationLogChannel.value = config.logChannelId || '';
+  el.verificationStatus.textContent = guild.configured ? 'enabled' : 'disabled';
+  el.verificationStatus.className = `count-chip ${guild.configured ? 'config-enabled' : ''}`;
+}
+
+async function loadVerificationGuilds() {
+  try {
+    const res = await apiFetch('/api/verification/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    verificationGuilds = data.guilds || [];
+    verificationGuildsLoaded = data.connected;
+
+    setSelectOptions(
+      el.verificationGuild,
+      verificationGuilds,
+      verificationGuilds.length ? 'Select a server…' : 'No servers you can manage',
+      (guild) => guild.name
+    );
+    el.verificationStatus.textContent = data.connected
+      ? `${verificationGuilds.length} server${verificationGuilds.length === 1 ? '' : 's'}`
+      : 'bot offline';
+    el.verificationForm.hidden = true;
+    if (verificationGuilds.length) {
+      el.verificationGuild.value = verificationGuilds[0].id;
+      renderVerificationConfig();
+    }
+  } catch {
+    el.verificationStatus.textContent = 'unavailable';
+    el.verificationForm.hidden = true;
+  }
+}
+
+el.verificationGuild.addEventListener('change', renderVerificationConfig);
+
+el.verificationForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const guildId = el.verificationGuild.value;
+  if (!guildId) return;
+
+  el.verificationSave.disabled = true;
+  try {
+    const res = await apiFetch(`/api/verification/config/${encodeURIComponent(guildId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roleId: el.verificationRole.value || null,
+        publicUrl: el.verificationPublicUrl.value.trim() || null,
+        minAccountAgeDays: parseInt(el.verificationMinAge.value, 10),
+        requireAvatar: el.verificationRequireAvatar.checked,
+        joinBurst: parseInt(el.verificationJoinBurst.value, 10),
+        joinBurstWindow: parseInt(el.verificationJoinWindow.value, 10),
+        action: el.verificationAction.value,
+        logChannelId: el.verificationLogChannel.value || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to save configuration');
+    const guild = verificationGuildInfo();
+    if (guild) {
+      guild.config = data.config;
+      guild.configured = data.configured;
+    }
+    renderVerificationConfig();
+    showToast(data.configured ? 'Verification configuration saved.' : 'Verification disabled.');
+  } catch (error) {
+    showToast(error.message || 'Failed to save configuration.', 'err');
+  } finally {
+    el.verificationSave.disabled = false;
+  }
+});
+
 el.rulesList.addEventListener('click', async (e) => {
   const btn = e.target.closest('.btn-icon');
   if (!btn) return;
@@ -308,12 +456,15 @@ el.form.addEventListener('submit', async (e) => {
 
 let channelsLoaded = false;
 let serversLoaded = false;
+let channelsData = null;
+let modGuildsLoaded = false;
 
 async function loadChannels() {
   try {
     const res = await apiFetch('/api/channels');
     if (!res.ok) throw new Error('failed to load channels');
     const data = await res.json();
+    channelsData = data;
     const connected = Boolean(data.connected);
     el.embedChannel.innerHTML = '';
 
@@ -484,6 +635,268 @@ el.embedForm.addEventListener('submit', async (e) => {
   }
 });
 
+/* ---------- Moderation ---------- */
+let modGuilds = [];
+let modSelectedUser = null;
+let modSearchTimer = null;
+
+function updateModSelected() {
+  if (modSelectedUser) {
+    el.modSelected.hidden = false;
+    el.modSelectedName.textContent = modSelectedUser.name;
+  } else {
+    el.modSelected.hidden = true;
+  }
+}
+
+function modGuildInfo() {
+  return modGuilds.find((g) => g.id === el.modGuild.value);
+}
+
+function updateModActions() {
+  const g = modGuildInfo();
+  const p = g?.permissions || {};
+  el.modBan.disabled = !p.ban || !modSelectedUser;
+  el.modKick.disabled = !p.kick || !modSelectedUser;
+  el.modTimeout.disabled = !p.timeout || !modSelectedUser;
+  el.modPurge.disabled = !p.purge || !el.modChannel.value;
+}
+
+function populateModChannels(guildId) {
+  el.modChannel.innerHTML = '';
+  const g = channelsData?.guilds?.find((x) => x.id === guildId);
+  const channels = g?.channels || [];
+  const def = document.createElement('option');
+  def.value = '';
+  def.textContent = channels.length ? 'Select a channel…' : 'No channels';
+  el.modChannel.appendChild(def);
+  for (const c of channels) {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = '#' + c.name;
+    el.modChannel.appendChild(opt);
+  }
+  updateModActions();
+}
+
+async function loadModerationGuilds() {
+  try {
+    const res = await apiFetch('/api/moderation/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    modGuilds = data.guilds || [];
+    modGuildsLoaded = data.connected;
+
+    el.modGuild.innerHTML = '';
+    const def = document.createElement('option');
+    def.value = '';
+    def.textContent = modGuilds.length
+      ? 'Select a server…'
+      : 'No servers you can moderate';
+    el.modGuild.appendChild(def);
+    for (const g of modGuilds) {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      el.modGuild.appendChild(opt);
+    }
+
+    el.modStatus.textContent = data.connected
+      ? `${modGuilds.length} server${modGuilds.length === 1 ? '' : 's'}`
+      : 'bot offline';
+    el.modBody.hidden = modGuilds.length === 0;
+    updateModActions();
+  } catch {
+    el.modStatus.textContent = 'unavailable';
+  }
+}
+
+async function searchModMembers(query) {
+  const guildId = el.modGuild.value;
+  if (!guildId) return;
+  try {
+    const res = await apiFetch(
+      `/api/moderation/members?guildId=${encodeURIComponent(
+        guildId
+      )}&query=${encodeURIComponent(query)}`
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      el.modUserList.innerHTML = `<div class="empty">${escapeHtml(
+        data.error || 'Failed to load members.'
+      )}</div>`;
+      return;
+    }
+    const members = data.members || [];
+    if (!members.length) {
+      el.modUserList.innerHTML = '<div class="empty">No members found.</div>';
+      return;
+    }
+    el.modUserList.innerHTML = members
+      .map((m) => {
+        const name = m.displayName || m.username;
+        const meta = `${m.bot ? 'BOT' : ''}${
+          m.username !== name ? ' @' + m.username : ''
+        }`.trim();
+        return `
+          <button type="button" class="mod-user-item" data-id="${escapeHtml(
+            m.id
+          )}" data-name="${escapeHtml(name)}">
+            <span class="mod-user-avatar-wrap">
+              <span class="mod-user-fallback">${escapeHtml(
+                (name || '?').charAt(0).toUpperCase()
+              )}</span>
+              ${
+                m.avatar
+                  ? `<img class="mod-user-avatar" src="${escapeHtml(
+                      m.avatar
+                    )}" alt="" loading="lazy" onerror="this.remove()" />`
+                  : ''
+              }
+            </span>
+            <span class="mod-user-name">${escapeHtml(name)}</span>
+            <span class="mod-user-meta">${escapeHtml(meta)}</span>
+          </button>`;
+      })
+      .join('');
+  } catch {
+    el.modUserList.innerHTML =
+      '<div class="empty">Failed to load members.</div>';
+  }
+}
+
+async function runModAction(action, body) {
+  const btn = {
+    ban: el.modBan,
+    kick: el.modKick,
+    timeout: el.modTimeout,
+    purge: el.modPurge,
+  }[action];
+  if (btn) btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/moderation/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Action failed.');
+
+    if (action === 'purge') {
+      showToast(
+        `Purged ${data.deleted} message${data.deleted === 1 ? '' : 's'}.`
+      );
+    } else {
+      showToast(
+        `${action[0].toUpperCase() + action.slice(1)} succeeded${
+          data.duration ? ' (' + data.duration + ')' : ''
+        }.`
+      );
+      modSelectedUser = null;
+      updateModSelected();
+      searchModMembers(el.modUserSearch.value.trim());
+    }
+  } catch (err) {
+    showToast(err.message || 'Action failed.', 'err');
+  } finally {
+    updateModActions();
+  }
+}
+
+el.modGuild.addEventListener('change', () => {
+  modSelectedUser = null;
+  updateModSelected();
+  el.modUserList.innerHTML = '';
+  el.modUserSearch.value = '';
+  populateModChannels(el.modGuild.value);
+  updateModActions();
+});
+
+el.modUserSearch.addEventListener('input', () => {
+  clearTimeout(modSearchTimer);
+  modSearchTimer = setTimeout(
+    () => searchModMembers(el.modUserSearch.value.trim()),
+    250
+  );
+});
+
+el.modUserList.addEventListener('click', (e) => {
+  const item = e.target.closest('.mod-user-item');
+  if (!item) return;
+  modSelectedUser = { id: item.dataset.id, name: item.dataset.name };
+  updateModSelected();
+  updateModActions();
+});
+
+el.modBan.addEventListener('click', () => {
+  if (!modSelectedUser) return;
+  if (!confirm(`Ban ${modSelectedUser.name}?`)) return;
+  runModAction('ban', {
+    guildId: el.modGuild.value,
+    action: 'ban',
+    userId: modSelectedUser.id,
+    reason: el.modReason.value,
+  });
+});
+
+el.modKick.addEventListener('click', () => {
+  if (!modSelectedUser) return;
+  if (!confirm(`Kick ${modSelectedUser.name}?`)) return;
+  runModAction('kick', {
+    guildId: el.modGuild.value,
+    action: 'kick',
+    userId: modSelectedUser.id,
+    reason: el.modReason.value,
+  });
+});
+
+el.modTimeout.addEventListener('click', () => {
+  if (!modSelectedUser) return;
+  const duration = el.modDuration.value.trim();
+  if (!duration) {
+    showToast('Enter a duration, e.g. 10m.', 'err');
+    return;
+  }
+  if (!confirm(`Timeout ${modSelectedUser.name} for ${duration}?`)) return;
+  runModAction('timeout', {
+    guildId: el.modGuild.value,
+    action: 'timeout',
+    userId: modSelectedUser.id,
+    duration,
+    reason: el.modReason.value,
+  });
+});
+
+el.modChannel.addEventListener('change', updateModActions);
+
+el.modPurge.addEventListener('click', () => {
+  const channelId = el.modChannel.value;
+  const amount = parseInt(el.modAmount.value, 10);
+  const channelName =
+    el.modChannel.selectedOptions[0]?.textContent?.replace(/^#/, '') || '';
+  if (!channelId) {
+    showToast('Select a channel first.', 'err');
+    return;
+  }
+  if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+    showToast('Amount must be 1–100.', 'err');
+    return;
+  }
+  if (
+    !confirm(
+      `Delete ${amount} message${amount === 1 ? '' : 's'} from #${channelName}?`
+    )
+  ) {
+    return;
+  }
+  runModAction('purge', {
+    guildId: el.modGuild.value,
+    action: 'purge',
+    channelId,
+    amount,
+  });
+});
+
 /* ---------- Particle background ---------- */
 function initBackground() {
   const canvas = document.getElementById('bgCanvas');
@@ -559,4 +972,6 @@ updateEmbedPreview();
 loadRules();
 loadHealth();
 loadServers();
+loadModerationGuilds();
+loadVerificationGuilds();
 setInterval(loadHealth, 5000);

@@ -2,21 +2,31 @@ import 'dotenv/config';
 import { loadRules } from './rules.js';
 import { startBot } from './bot.js';
 import { startServer } from './server.js';
+import { loadDataFromGitHub } from './github-data.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
-const ruleCount = loadRules().length;
-console.log(`[rules] loaded ${ruleCount} rules.`);
+async function main() {
+  await loadDataFromGitHub();
 
-startServer(PORT);
+  const ruleCount = loadRules().length;
+  console.log(`[rules] loaded ${ruleCount} rules.`);
 
-const token = process.env.DISCORD_TOKEN;
-if (token) {
-  startBot(token).catch((err) => {
-    console.error('[bot] failed to start:', err.message);
-  });
-} else {
-  console.warn(
-    '[bot] DISCORD_TOKEN not set — bot disabled, running web dashboard only.'
-  );
+  startServer(PORT);
+
+  const token = process.env.DISCORD_TOKEN;
+  if (token) {
+    startBot(token).catch((err) => {
+      console.error('[bot] failed to start:', err.message);
+    });
+  } else {
+    console.warn(
+      '[bot] DISCORD_TOKEN not set — bot disabled, running web dashboard only.'
+    );
+  }
 }
+
+main().catch((err) => {
+  console.error('[app] failed to start:', err.message);
+  process.exitCode = 1;
+});

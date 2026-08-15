@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Verify</title>
+    <meta name="description" content="Complete verification for Squared One." />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .verify-main {
+        position: relative;
+        z-index: 2;
+        max-width: 460px;
+        margin: 0 auto;
+        padding: 64px 24px 96px;
+      }
+
+      .verify-card {
+        position: relative;
+        padding: 40px 32px 36px;
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        text-align: center;
+      }
+
+      .verify-card::before,
+      .verify-card::after,
+      .verify-card .corner-br,
+      .verify-card .corner-bl {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-color: var(--red);
+        border-style: solid;
+      }
+
+      .verify-card::before {
+        top: -1px;
+        left: -1px;
+        border-width: 2px 0 0 2px;
+      }
+
+      .verify-card::after {
+        top: -1px;
+        right: -1px;
+        border-width: 2px 2px 0 0;
+      }
+
+      .verify-card .corner-br {
+        bottom: -1px;
+        right: -1px;
+        border-width: 0 2px 2px 0;
+      }
+
+      .verify-card .corner-bl {
+        bottom: -1px;
+        left: -1px;
+        border-width: 0 0 2px 2px;
+      }
+
+      .verify-title {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 1.5rem;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 10px var(--red-glow);
+      }
+
+      .verify-sub {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 10px 0 28px;
+      }
+
+      .verify-status p {
+        font-family: var(--sans);
+        font-weight: 300;
+        color: var(--text-dim);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 16px;
+      }
+
+      .verify-ok {
+        color: var(--green) !important;
+        text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+      }
+
+      .verify-err {
+        color: #ff5555 !important;
+      }
+
+      .verify-btn {
+        margin-top: 8px;
+        width: 100%;
+      }
+
+      .captcha-box {
+        margin: 0 auto 16px;
+        border: 1px solid var(--red-dim);
+        line-height: 0;
+        overflow: hidden;
+      }
+
+      .captcha-box svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .captcha-input {
+        width: 100%;
+        font-family: var(--mono);
+        font-size: 1.1rem;
+        letter-spacing: 6px;
+        text-align: center;
+        text-transform: uppercase;
+        color: #fff;
+        background: transparent;
+        border: 1px solid var(--red-dim);
+        padding: 12px;
+        margin-bottom: 14px;
+        outline: none;
+        caret-color: var(--red);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .captcha-input:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+      }
+
+      .verify-hint {
+        font-family: var(--mono) !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 1px;
+        margin-top: 14px !important;
+      }
+
+      .verify-hint a {
+        color: #ff5555;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/">Home</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="verify-main">
+      <div class="verify-card">
+        <span class="corner-br" aria-hidden="true"></span>
+        <span class="corner-bl" aria-hidden="true"></span>
+        <h1 class="verify-title">Verify<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="verify-sub">SECURE ACCESS</p>
+        <div class="verify-status" id="verify-status">
+          <p>Loading…</p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <a href="/privacy">privacy</a>
+      <span>·</span>
+      <a href="/terms">terms</a>
+      <span>·</span>
+      <a href="/">home</a>
+    </footer>
+
+    <script src="/particles.js"></script>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const guild = (params.get('guild') || '').trim();
+        const statusEl = document.getElementById('verify-status');
+        let captchaId = null;
+
+        const esc = (s) =>
+          String(s).replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[c]);
+
+        function set(html) {
+          statusEl.innerHTML = html;
+        }
+
+        function signIn() {
+          const next = '/verify?guild=' + encodeURIComponent(guild);
+          set(
+            `<p>Sign in with Discord to continue.</p>` +
+              `<a class="btn btn-primary verify-btn" href="/auth/discord/login?next=${encodeURIComponent(
+                next
+              )}">Sign in with Discord</a>`
+          );
+        }
+
+        function message(cls, text) {
+          set(`<p class="${cls}">${esc(text)}</p>`);
+        }
+
+        async function submit() {
+          const input = document.getElementById('captcha-answer');
+          const answer = input.value.trim();
+          if (!answer) return;
+          const btn = document.getElementById('verify-submit');
+          btn.disabled = true;
+          btn.textContent = 'Verifying…';
+          try {
+            const res = await fetch('/api/verify/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ guild, captchaId, answer }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 401) return signIn();
+            if (!res.ok) {
+              message('verify-err', data.error || 'Verification failed.');
+              showCaptcha();
+              return;
+            }
+            set(`<p class="verify-ok">✅ You're verified! You can close this tab.</p>`);
+          } catch {
+            message('verify-err', 'Connection error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Verify';
+          }
+        }
+
+        async function showCaptcha() {
+          try {
+            const res = await fetch(
+              '/api/verify/captcha?guild=' + encodeURIComponent(guild)
+            );
+            if (res.status === 401) return signIn();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              message('verify-err', data.error || 'Could not load captcha.');
+              return;
+            }
+            captchaId = data.id;
+            set(
+              `<p>Enter the code below to verify.</p>` +
+                `<div class="captcha-box">${data.svg}</div>` +
+                `<input class="captcha-input" id="captcha-answer" type="text" maxlength="8" placeholder="CODE" autocomplete="off" />` +
+                `<button class="btn btn-primary verify-btn" id="verify-submit" type="button">Verify</button>` +
+                `<p class="verify-hint">Not clear? <a href="#" id="captcha-refresh">Refresh</a></p>`
+            );
+            const input = document.getElementById('captcha-answer');
+            input.focus();
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') submit();
+            });
+            document.getElementById('captcha-refresh').addEventListener('click', (e) => {
+              e.preventDefault();
+              showCaptcha();
+            });
+            document.getElementById('verify-submit').addEventListener('click', submit);
+          } catch {
+            message('verify-err', 'Failed to load captcha. Please try again.');
+          }
+        }
+
+        async function init() {
+          if (!guild) {
+            message('verify-err', 'Missing server ID — use the link from the /verify command.');
+            return;
+          }
+          try {
+            const res = await fetch(
+              '/api/verify/status?guild=' + encodeURIComponent(guild)
+            );
+            if (res.status === 401) return signIn();
+            const data = await res.json();
+            if (!data.signedIn) return signIn();
+            if (!data.configured || !data.roleRequired) {
+              return message('verify-err', 'Verification is not configured for this server.');
+            }
+            if (!data.member) {
+              return message(
+                'verify-err',
+                'You are not a member of ' + (data.guildName || 'this server') + '.'
+              );
+            }
+            if (data.verified === true) {
+              return set(`<p class="verify-ok">✅ You're already verified!</p>`);
+            }
+            if (data.verified === null) {
+              return message(
+                'verify-err',
+                'The bot is offline. Please try again shortly.'
+              );
+            }
+            showCaptcha();
+          } catch {
+            message('verify-err', 'Failed to check your status. Please try again.');
+          }
+        }
+
+        init();
+      })();
+    </script>
+  </body>
+</html>

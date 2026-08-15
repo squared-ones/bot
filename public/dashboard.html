@@ -40,6 +40,12 @@
           <button class="nav-item" data-view="servers" type="button">
             <span class="nav-glyph">▣</span> Servers
           </button>
+          <button class="nav-item" data-view="moderation" type="button">
+            <span class="nav-glyph">▩</span> Moderation
+          </button>
+          <button class="nav-item" data-view="verification" type="button">
+            <span class="nav-glyph">✓</span> Verification
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -222,6 +228,144 @@
           <section class="view" id="view-servers">
             <h2 class="view-title">Servers</h2>
             <div id="servers-list" class="servers-grid"></div>
+          </section>
+
+          <!-- Verification -->
+          <section class="view" id="view-verification">
+            <h2 class="view-title">Verification</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> verification <span class="accent">--config</span></h2>
+                <span id="verification-status" class="count-chip">…</span>
+              </div>
+
+              <p class="verification-help">
+                Configure verification independently for every server. Saving without a role or public URL disables verification for that server.
+              </p>
+              <label class="field">
+                <span class="field-label">Server</span>
+                <select id="verification-guild"></select>
+              </label>
+
+              <form id="verification-form" class="rule-form" autocomplete="off" hidden>
+                <div class="config-grid">
+                  <label class="field">
+                    <span class="field-label">Verified role</span>
+                    <select id="verification-role"></select>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Verification page URL</span>
+                    <input id="verification-public-url" type="url" maxlength="512" placeholder="https://example.com" />
+                  </label>
+                </div>
+
+                <div class="config-grid">
+                  <label class="field">
+                    <span class="field-label">Minimum account age (days)</span>
+                    <input id="verification-min-age" type="number" min="0" max="3650" value="0" />
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Flagged member action</span>
+                    <select id="verification-action">
+                      <option value="none">No action</option>
+                      <option value="kick">Kick</option>
+                      <option value="ban">Ban</option>
+                    </select>
+                  </label>
+                </div>
+
+                <label class="checkbox-row">
+                  <input id="verification-require-avatar" type="checkbox" />
+                  <span>Flag members using Discord's default avatar</span>
+                </label>
+
+                <div class="config-grid">
+                  <label class="field">
+                    <span class="field-label">Join burst threshold (0 = off)</span>
+                    <input id="verification-join-burst" type="number" min="0" max="10000" value="0" />
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Join burst window (seconds)</span>
+                    <input id="verification-join-window" type="number" min="1" max="86400" value="10" />
+                  </label>
+                </div>
+
+                <label class="field">
+                  <span class="field-label">Detection log channel</span>
+                  <select id="verification-log-channel"></select>
+                </label>
+
+                <button type="submit" class="btn btn-primary" id="verification-save">Save configuration</button>
+              </form>
+            </section>
+          </section>
+
+          <!-- Moderation -->
+          <section class="view" id="view-moderation">
+            <h2 class="view-title">Moderation</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> mod <span class="accent">--panel</span></h2>
+                <span id="mod-status" class="count-chip">…</span>
+              </div>
+
+              <label class="field">
+                <span class="field-label">Server</span>
+                <select id="mod-guild"></select>
+              </label>
+
+              <div id="mod-body" hidden>
+                <div class="mod-grid">
+                  <div class="mod-col">
+                    <label class="field">
+                      <span class="field-label">Member</span>
+                      <input id="mod-user-search" type="text" placeholder="Search members…" autocomplete="off" />
+                    </label>
+                    <div id="mod-user-list" class="mod-user-list"></div>
+                  </div>
+
+                  <div class="mod-col">
+                    <div class="mod-selected" id="mod-selected" hidden>
+                      <span class="mod-selected-label">Selected</span>
+                      <span id="mod-selected-name" class="mod-selected-name"></span>
+                    </div>
+
+                    <label class="field">
+                      <span class="field-label">Reason</span>
+                      <input id="mod-reason" type="text" maxlength="512" placeholder="Optional reason" />
+                    </label>
+
+                    <div class="mod-actions">
+                      <button class="btn btn-secondary" id="mod-ban" type="button" disabled>Ban</button>
+                      <button class="btn btn-secondary" id="mod-kick" type="button" disabled>Kick</button>
+                      <label class="field field-grow mod-duration-field">
+                        <span class="field-label">Timeout duration</span>
+                        <input id="mod-duration" type="text" placeholder="30s / 10m / 1h / 2d" />
+                      </label>
+                      <button class="btn btn-secondary" id="mod-timeout" type="button" disabled>Timeout</button>
+                    </div>
+
+                    <div class="mod-purge-row">
+                      <label class="field field-grow">
+                        <span class="field-label">Channel (purge)</span>
+                        <select id="mod-channel"></select>
+                      </label>
+                      <label class="field mod-amount-field">
+                        <span class="field-label">Amount</span>
+                        <input id="mod-amount" type="number" min="1" max="100" value="25" />
+                      </label>
+                      <button class="btn btn-secondary" id="mod-purge" type="button" disabled>Purge</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </section>
         </main>
 

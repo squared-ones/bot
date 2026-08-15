@@ -1,10 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { queueDataSync, resolveDataDir } from './github-data.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = resolveDataDir();
 const RULES_FILE = path.join(DATA_DIR, 'rules.json');
 
 // Default rules ship with the bot and can never be removed.
@@ -57,6 +56,7 @@ function ensureDataDir() {
 function saveRules() {
   ensureDataDir();
   fs.writeFileSync(RULES_FILE, JSON.stringify({ customRules }, null, 2));
+  queueDataSync('Update rules');
 }
 
 export function loadRules() {

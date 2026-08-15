@@ -12,6 +12,12 @@ import {
   removeCustomRule,
 } from './rules.js';
 import { buildEmbedFromSpec, validateEmbedSpec } from './embed.js';
+import { parseDuration, formatDuration, purgeMessages } from './moderation.js';
+import {
+  getVerificationConfig,
+  detectFlags,
+  isJoinBurst,
+} from './verification.js';
 
 export const botState = {
   client: null,
@@ -230,6 +236,12 @@ const commands = [
   new SlashCommandBuilder()
     .setName('ping')
     .setDescription('Check bot latency'),
+  new SlashCommandBuilder()
+    .setName('vote')
+    .setDescription('Vote for Squared One on bot lists'),
+  new SlashCommandBuilder()
+    .setName('verify')
+    .setDescription('Verify yourself to get the verified role'),
 ];
 
 function isModerator(interaction) {
@@ -238,31 +250,6 @@ function isModerator(interaction) {
   );
 }
 
-// Parses a duration like "30s", "10m", "1h", "2d" (bare numbers = minutes).
-function parseDuration(input) {
-  if (input == null) return null;
-  const m = String(input).trim().toLowerCase().match(/^(\d+)\s*(s|m|h|d)?$/);
-  if (!m) return null;
-  let ms = parseInt(m[1], 10);
-  const unit = m[2] || 'm';
-  if (unit === 's') ms *= 1000;
-  else if (unit === 'm') ms *= 60 * 1000;
-  else if (unit === 'h') ms *= 60 * 60 * 1000;
-  else if (unit === 'd') ms *= 24 * 60 * 60 * 1000;
-  return ms;
-}
-
-function formatDuration(ms) {
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
 
 // Returns an error string when the invoker or bot lacks a permission.
 function checkPermission(interaction, permission, label) {
@@ -298,20 +285,6 @@ function canModerate(interaction, member) {
   return null;
 }
 
-async function purgeMessages(channel, amount, user) {
-  if (!channel?.isTextBased()) return 0;
-  const fetched = await channel.messages.fetch({ limit: amount });
-  const targets = user
-    ? fetched.filter((m) => m.author.id === user.id)
-    : fetched;
-  if (targets.size === 0) return 0;
-  if (targets.size === 1) {
-    await targets.first().delete();
-    return 1;
-  }
-  const deleted = await channel.bulkDelete(targets, true);
-  return deleted.size;
-}
 
 async function handleInteraction(interaction) {
   if (interaction.isAutocomplete()) {
@@ -726,6 +699,67 @@ async function handleInteraction(interaction) {
         content: `🏓 Pong! WebSocket: **${interaction.client.ws.ping}ms** · Round-trip: **${roundtrip}ms**`,
       });
     }
+
+    if (commandName === 'vote') {
+      const botId = interaction.client.user.id;
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle('🗳️ Vote for Squared One')
+        .setDescription(
+          'Voting helps Squared One grow and reach more servers. It only takes a second — thank you for your support!'
+        )
+        .addFields(
+          {
+            name: 'top.gg',
+            value: `[Vote on top.gg](https://top.gg/bot/${botId}/vote)`,
+            inline: true,
+          },
+          {
+            name: 'Discord Bot List',
+            value: `[Vote on discordbotlist.com](https://discordbotlist.com/bots/${botId}/upvote)`,
+            inline: true,
+          }
+        );
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'verify') {
+      const config = getVerificationConfig(interaction.guild?.id);
+      if (!config.roleId || !config.publicUrl) {
+        await interaction.reply({
+          content:
+            '❌ Verification is not configured for this server. Ask a server manager to configure it in the dashboard.',
+          ephemeral: true,
+        });
+        return;
+      }
+      if (interaction.member.roles.cache.has(config.roleId)) {
+        await interaction.reply({
+          content: '✅ You are already verified.',
+          ephemeral: true,
+        });
+        return;
+      }
+      const url = `${config.publicUrl.replace(/\/$/, '')}/verify?guild=${
+        interaction.guild.id
+      }`;
+      try {
+        await interaction.user.send(
+          `🔒 **Verify for ${interaction.guild.name}**\nOpen this link to complete verification:\n${url}`
+        );
+        await interaction.reply({
+          content: '📬 Check your DMs — I sent you a verification link.',
+          ephemeral: true,
+        });
+      } catch {
+        await interaction.reply({
+          content: `🔒 Open this link to verify:\n${url}`,
+          ephemeral: true,
+        });
+      }
+      return;
+    }
   } catch (err) {
     console.error('[bot] interaction error:', err);
     const payload = { content: '❌ Something went wrong.', ephemeral: true };
@@ -765,6 +799,71 @@ export function getGuildChannels() {
   });
 }
 
+// Assigns a role to a member (used by the web verification flow).
+export async function assignRole(guildId, userId, roleId) {
+  const client = botState.client;
+  if (!client || !client.isReady()) throw new Error('bot is not connected');
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) throw new Error('guild not found');
+  const member = await guild.members.fetch(userId);
+  await member.roles.add(roleId);
+}
+
+// Returns true/false whether the member has the role, or null when unknown
+// (bot offline or the user is not in the guild).
+export async function isMemberVerified(guildId, userId, roleId) {
+  const client = botState.client;
+  if (!client || !client.isReady()) return null;
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) return false;
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return false;
+  return member.roles.cache.has(roleId);
+}
+
+async function handleFlaggedMember(member, flags, config) {
+  const tag = member.user.tag;
+  const guildName = member.guild.name;
+  const reason = flags.join('; ');
+  console.log(`[verify] flag ${tag} in ${guildName}: ${reason}`);
+
+  if (config.action === 'kick') {
+    try {
+      await member.kick(`Verification flag — ${reason}`);
+      console.log(`[verify] kicked ${tag} from ${guildName}`);
+    } catch (e) {
+      console.error(`[verify] failed to kick ${tag}:`, e.message);
+    }
+  } else if (config.action === 'ban') {
+    try {
+      await member.ban({ reason: `Verification flag — ${reason}` });
+      console.log(`[verify] banned ${tag} from ${guildName}`);
+    } catch (e) {
+      console.error(`[verify] failed to ban ${tag}:`, e.message);
+    }
+  }
+
+  if (config.logChannelId) {
+    try {
+      const ch = await member.guild.channels.fetch(config.logChannelId);
+      if (ch?.isTextBased()) {
+        const embed = new EmbedBuilder()
+          .setColor(COLOR)
+          .setTitle('🚨 Verification flag')
+          .setDescription(
+            `**${tag}** (\`${member.user.id}\`)\n${flags
+              .map((f) => `• ${f}`)
+              .join('\n')}`
+          )
+          .setTimestamp();
+        await ch.send({ embeds: [embed] });
+      }
+    } catch {
+      // Ignore log failures.
+    }
+  }
+}
+
 export async function startBot(token) {
   const client = new Client({
     intents: [
@@ -797,6 +896,17 @@ export async function startBot(token) {
   });
 
   client.on('guildMemberAdd', async (member) => {
+    const config = getVerificationConfig(member.guild.id);
+    const flags = detectFlags(member, config);
+    if (isJoinBurst(member.guild.id, config)) {
+      flags.push(
+        `join burst (${config.joinBurst}+ joins in ${config.joinBurstWindow}s)`
+      );
+    }
+    if (flags.length) {
+      await handleFlaggedMember(member, flags, config);
+    }
+
     try {
       await member.send({
         embeds: [

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Support</title>
+    <meta
+      name="description"
+      content="Help center for Squared One: setup guides, commands, FAQ, and troubleshooting."
+    />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .support-main {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 56px 24px 96px;
+      }
+
+      .support-hero {
+        text-align: center;
+        margin-bottom: 36px;
+      }
+
+      .support-cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 26px;
+      }
+
+      .support-h2 {
+        font-family: var(--mono);
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 10px var(--red-glow);
+        margin: 48px 0 20px;
+        text-align: center;
+      }
+
+      /* Live status widget */
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+      }
+
+      .status-item {
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 16px 18px;
+        text-align: center;
+      }
+
+      .status-label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .status-value {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--red);
+        text-shadow: 0 0 10px var(--red-glow);
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        text-transform: uppercase;
+      }
+
+      /* Quick-link cards */
+      .support-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 14px;
+        margin-top: 8px;
+      }
+
+      .support-card {
+        position: relative;
+        display: block;
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 20px;
+        text-decoration: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .support-card:hover {
+        border-color: var(--red);
+        box-shadow: 0 0 18px rgba(255, 0, 0, 0.2);
+      }
+
+      .support-card h3 {
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+        margin-bottom: 8px;
+      }
+
+      .support-card p {
+        font-family: var(--sans);
+        font-weight: 300;
+        color: var(--text-dim);
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      /* FAQ */
+      .faq details {
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        margin-bottom: 10px;
+      }
+
+      .faq summary {
+        cursor: pointer;
+        padding: 15px 18px;
+        font-family: var(--sans);
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.95rem;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .faq summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .faq summary::after {
+        content: "+";
+        font-family: var(--mono);
+        color: var(--red);
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .faq details[open] summary::after {
+        content: "–";
+      }
+
+      .faq-body {
+        padding: 0 18px 16px;
+        color: var(--text-dim);
+        font-size: 0.92rem;
+        line-height: 1.7;
+        font-weight: 300;
+      }
+
+      /* Command reference */
+      .cmd-group {
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 18px;
+        margin-bottom: 12px;
+      }
+
+      .cmd-group h3 {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+        margin-bottom: 10px;
+      }
+
+      .cmd-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(255, 0, 0, 0.12);
+      }
+
+      .cmd-row:last-child {
+        border-bottom: none;
+      }
+
+      .cmd-name {
+        font-family: var(--mono);
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .cmd-desc {
+        color: var(--text-dim);
+        font-size: 0.9rem;
+        font-weight: 300;
+        text-align: right;
+      }
+
+      code,
+      .faq-body code {
+        font-family: var(--mono);
+        font-size: 0.85em;
+        background: var(--red-faint);
+        border: 1px solid var(--red-dim);
+        padding: 1px 5px;
+        color: var(--text);
+      }
+
+      .contact-links {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 560px) {
+        .cmd-row {
+          flex-direction: column;
+          gap: 2px;
+        }
+        .cmd-desc {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/">Home</a>
+          <a class="btn btn-secondary btn-sm" href="/dashboard">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="support-main">
+      <section class="support-hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Help center</span>
+        </span>
+        <h1 class="hero-title">Need a hand?<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="hero-sub">
+          Everything you need to set up, use, and troubleshoot Squared One.
+        </p>
+        <div class="support-cta">
+          <a class="btn btn-primary" id="support-invite" href="#" target="_blank" rel="noopener">Add to Discord</a>
+          <a class="btn btn-secondary" id="support-server-btn" href="#" target="_blank" rel="noopener" hidden>Join support server</a>
+        </div>
+      </section>
+
+      <section aria-label="Bot status">
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">Bot status</span>
+            <span class="status-value" id="sw-status"><span class="dot offline"></span> --</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Servers</span>
+            <span class="status-value" id="sw-servers">--</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Members</span>
+            <span class="status-value" id="sw-members">--</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Uptime</span>
+            <span class="status-value" id="sw-uptime">--</span>
+          </div>
+        </div>
+      </section>
+
+      <h2 class="support-h2">Quick links</h2>
+      <section class="support-cards">
+        <a class="support-card" id="support-bug" href="#" target="_blank" rel="noopener">
+          <h3>Report a bug</h3>
+          <p>Found something broken? Open an issue and we'll take a look.</p>
+        </a>
+        <a class="support-card" href="/dashboard">
+          <h3>Open dashboard</h3>
+          <p>Manage rules, build embeds, and moderate from the web dashboard.</p>
+        </a>
+        <a class="support-card" href="#commands">
+          <h3>Commands</h3>
+          <p>The full list of slash commands, grouped by category.</p>
+        </a>
+        <a class="support-card" href="#faq">
+          <h3>FAQ</h3>
+          <p>Answers to the most common questions.</p>
+        </a>
+      </section>
+
+      <h2 class="support-h2" id="faq">Frequently asked questions</h2>
+      <section class="faq">
+        <details>
+          <summary>How do I add the bot to my server?</summary>
+          <div class="faq-body">
+            Click <strong>Add to Discord</strong> above, pick your server, and
+            authorize it. The bot registers all slash commands automatically —
+            they may take up to an hour to appear, so restart Discord if you
+            don't see them right away.
+          </div>
+        </details>
+        <details>
+          <summary>How do I set up the server rules?</summary>
+          <div class="faq-body">
+            Squared One ships with six default rules. Run <code>/rules</code> to
+            view them, <code>/addrule</code> to add your own, and
+            <code>/postrules</code> to post the full list into any channel. New
+            members are automatically DMed the rules when they join.
+          </div>
+        </details>
+        <details>
+          <summary>How do I post announcements or embeds?</summary>
+          <div class="faq-body">
+            Use <code>/announce</code> for formatted messages (supports
+            **bold**, *italic*, `code`, links, and blockquotes) or
+            <code>/embed</code> to build a rich embed with a title, description,
+            color, fields, author, footer, and media. You can also build embeds
+            visually in the dashboard.
+          </div>
+        </details>
+        <details>
+          <summary>What moderation commands are available?</summary>
+          <div class="faq-body">
+            <code>/ban</code>, <code>/kick</code>, <code>/timeout</code> (30s to
+            28 days), and <code>/purge</code> (1–100 messages). Every action
+            checks permissions and role hierarchy, and you can run all of them
+            from the dashboard's Moderation panel too.
+          </div>
+        </details>
+        <details>
+          <summary>How does the dashboard work?</summary>
+          <div class="faq-body">
+            Sign in with Discord at <a href="/dashboard">/dashboard</a>. Your
+            access is scoped to the servers you actually belong to, so you can
+            only manage and post to your own communities.
+          </div>
+        </details>
+        <details>
+          <summary>How do I verify members?</summary>
+          <div class="faq-body">
+            If verification is enabled, users run <code>/verify</code> and
+            complete a CAPTCHA to receive the "Verified" role. The bot also
+            flags suspicious joins (brand-new accounts, default avatars, join
+            bursts) and can kick or ban them automatically.
+          </div>
+        </details>
+        <details>
+          <summary>The bot isn't responding — what now?</summary>
+          <div class="faq-body">
+            First check the status widget above. Then make sure the bot has the
+            permissions it needs (Kick/Ban/Moderate/Manage Messages for
+            moderation) and that it can read the channel. Re-inviting with the
+            default permission set usually fixes most issues.
+          </div>
+        </details>
+      </section>
+
+      <h2 class="support-h2" id="commands">Commands</h2>
+      <section class="cmd-group">
+        <h3>Rules</h3>
+        <div class="cmd-row"><span class="cmd-name">/rules</span><span class="cmd-desc">View all server rules</span></div>
+        <div class="cmd-row"><span class="cmd-name">/addrule</span><span class="cmd-desc">Add a custom rule</span></div>
+        <div class="cmd-row"><span class="cmd-name">/removerule</span><span class="cmd-desc">Remove a custom rule</span></div>
+        <div class="cmd-row"><span class="cmd-name">/postrules</span><span class="cmd-desc">Post the rules to a channel</span></div>
+      </section>
+      <section class="cmd-group">
+        <h3>Messaging &amp; embeds</h3>
+        <div class="cmd-row"><span class="cmd-name">/announce</span><span class="cmd-desc">Post a markdown announcement</span></div>
+        <div class="cmd-row"><span class="cmd-name">/embed</span><span class="cmd-desc">Build and post a rich embed</span></div>
+      </section>
+      <section class="cmd-group">
+        <h3>Moderation</h3>
+        <div class="cmd-row"><span class="cmd-name">/ban</span><span class="cmd-desc">Ban a member</span></div>
+        <div class="cmd-row"><span class="cmd-name">/kick</span><span class="cmd-desc">Kick a member</span></div>
+        <div class="cmd-row"><span class="cmd-name">/timeout</span><span class="cmd-desc">Timeout a member</span></div>
+        <div class="cmd-row"><span class="cmd-name">/purge</span><span class="cmd-desc">Delete recent messages</span></div>
+      </section>
+      <section class="cmd-group">
+        <h3>Utility</h3>
+        <div class="cmd-row"><span class="cmd-name">/userinfo</span><span class="cmd-desc">Info about a user</span></div>
+        <div class="cmd-row"><span class="cmd-name">/serverinfo</span><span class="cmd-desc">Info about the server</span></div>
+        <div class="cmd-row"><span class="cmd-name">/avatar</span><span class="cmd-desc">Show a user's avatar</span></div>
+        <div class="cmd-row"><span class="cmd-name">/ping</span><span class="cmd-desc">Check bot latency</span></div>
+      </section>
+      <section class="cmd-group">
+        <h3>Other</h3>
+        <div class="cmd-row"><span class="cmd-name">/verify</span><span class="cmd-desc">Complete verification</span></div>
+        <div class="cmd-row"><span class="cmd-name">/vote</span><span class="cmd-desc">Vote for Squared One</span></div>
+      </section>
+
+      <h2 class="support-h2" id="troubleshooting">Troubleshooting</h2>
+      <section class="faq">
+        <details>
+          <summary>Slash commands aren't showing up</summary>
+          <div class="faq-body">
+            Commands are registered globally on boot and can take up to an hour
+            to propagate. Restart Discord to force a refresh, and make sure the
+            bot is online. If it still doesn't work, check the server's
+            <em>Integrations</em> settings to confirm Squared One is present.
+          </div>
+        </details>
+        <details>
+          <summary>The bot can't DM new members</summary>
+          <div class="faq-body">
+            The bot needs the <strong>Server Members</strong> privileged intent
+            (enabled under Bot → Privileged Gateway Intents in the developer
+            portal). If the member has DMs disabled, the bot skips them silently.
+          </div>
+        </details>
+        <details>
+          <summary>Moderation commands return a permission error</summary>
+          <div class="faq-body">
+            You need the matching permission (Ban/Kick/Moderate/Manage
+            Messages), and the bot does too. Give the bot those permissions in
+            the role hierarchy — its role must be above the members it manages.
+          </div>
+        </details>
+        <details>
+          <summary>The dashboard redirects me to a login page</summary>
+          <div class="faq-body">
+            That's expected when OAuth login is enabled — sign in with Discord
+            to continue. If you don't want login, the operator can disable it by
+            removing <code>CLIENT_SECRET</code> from the environment.
+          </div>
+        </details>
+      </section>
+
+      <h2 class="support-h2" id="contact">Still stuck?</h2>
+      <section class="contact-links">
+        <a class="btn btn-primary" id="contact-server" href="#" target="_blank" rel="noopener" hidden>Join the support server</a>
+        <a class="btn btn-secondary" href="/dashboard">Open dashboard</a>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <a href="/dashboard">dashboard</a>
+      <span>·</span>
+      <a href="/support">support</a>
+      <span>·</span>
+      <a href="/privacy">privacy</a>
+      <span>·</span>
+      <a href="/terms">terms</a>
+      <span>·</span>
+      <a href="/">home</a>
+    </footer>
+
+    <script src="/particles.js"></script>
+    <script>
+      (function () {
+        function fmtUptime(s) {
+          const sec = Math.max(0, Math.floor(s));
+          const d = Math.floor(sec / 86400);
+          const h = Math.floor((sec % 86400) / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          if (d > 0) return d + "d " + h + "h";
+          if (h > 0) return h + "h " + m + "m";
+          if (m > 0) return m + "m";
+          return sec + "s";
+        }
+
+        async function loadStatus() {
+          try {
+            const r = await fetch('/health');
+            const d = await r.json();
+            const connected = Boolean(d.bot && d.bot.connected);
+            document.getElementById('sw-status').innerHTML =
+              '<span class="dot ' + (connected ? 'online' : 'offline') + '"></span> ' +
+              (connected ? 'ONLINE' : 'OFFLINE');
+            document.getElementById('sw-servers').textContent =
+              d.bot ? d.bot.guildCount : 0;
+            document.getElementById('sw-members').textContent =
+              d.bot ? d.bot.memberCount : 0;
+            document.getElementById('sw-uptime').textContent = fmtUptime(d.uptime || 0);
+          } catch (e) {
+            document.getElementById('sw-status').innerHTML =
+              '<span class="dot offline"></span> OFFLINE';
+          }
+        }
+
+        function applyMeta(d) {
+          const invite = document.getElementById('support-invite');
+          if (d && d.invite) invite.href = d.invite;
+          else invite.remove();
+
+          const setSupport = (el) => {
+            if (d && d.support) {
+              el.href = d.support;
+              el.hidden = false;
+            }
+          };
+          setSupport(document.getElementById('support-server-btn'));
+          setSupport(document.getElementById('contact-server'));
+
+          const bug = document.getElementById('support-bug');
+          if (d && d.github) bug.href = d.github;
+          else if (d && d.support) bug.href = d.support;
+          else bug.remove();
+        }
+
+        fetch('/api/meta')
+          .then((r) => r.json())
+          .then(applyMeta)
+          .catch(() => {});
+
+        loadStatus();
+        setInterval(loadStatus, 15000);
+      })();
+    </script>
+  </body>
+</html>
