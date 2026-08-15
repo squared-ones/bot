@@ -126,21 +126,25 @@ export function startServer(port = 3000) {
     });
   });
 
-  // Servers the bot is in (name + icon), for the homepage marquee.
+  // Servers the bot is in (name + icon). Scoped to the logged-in user's
+  // guilds when a session is present; public (all bot guilds) for the homepage.
   app.get('/api/servers', (req, res) => {
     const client = botState.client;
     const connected = Boolean(client?.isReady());
+    const allowed = req.user ? new Set(req.user.guildIds || []) : null;
     const servers = connected
-      ? client.guilds.cache.map((g) => {
-          const ext = g.icon?.startsWith('a_') ? 'gif' : 'png';
-          return {
-            id: g.id,
-            name: g.name,
-            icon: g.icon
-              ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`
-              : null,
-          };
-        })
+      ? client.guilds.cache
+          .filter((g) => !allowed || allowed.has(g.id))
+          .map((g) => {
+            const ext = g.icon?.startsWith('a_') ? 'gif' : 'png';
+            return {
+              id: g.id,
+              name: g.name,
+              icon: g.icon
+                ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`
+                : null,
+            };
+          })
       : [];
     res.json({ connected, servers });
   });
@@ -163,6 +167,14 @@ export function startServer(port = 3000) {
   // ---------- Homepage (public) ----------
   app.get('/', (req, res) => res.sendFile(HOME_FILE));
   app.get('/index.html', (req, res) => res.redirect('/dashboard'));
+
+  // ---------- Legal pages (public) ----------
+  app.get('/privacy', (req, res) =>
+    res.sendFile(path.join(PUBLIC_DIR, 'privacy.html'))
+  );
+  app.get('/terms', (req, res) =>
+    res.sendFile(path.join(PUBLIC_DIR, 'terms.html'))
+  );
 
   // ---------- Dashboard (protected) ----------
   app.get('/dashboard', guard, (req, res) => res.sendFile(DASHBOARD_FILE));

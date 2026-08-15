@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Privacy Policy</title>
+    <meta
+      name="description"
+      content="Privacy policy for Squared One, a Discord bot and web dashboard."
+    />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/">Home</a>
+          <a class="btn btn-secondary btn-sm" href="/dashboard">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="legal-main">
+      <section class="legal-hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Legal</span>
+        </span>
+        <h1 class="hero-title">Privacy Policy<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="legal-updated">Last updated: August 15, 2026</p>
+      </section>
+
+      <section class="legal">
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--overview</span></h2>
+          </div>
+          <p>
+            Squared One ("the Service") is a Discord bot and optional web
+            dashboard. This policy explains what information the Service
+            collects, how it is used, and the choices available to you. By using
+            the Service, you agree to the practices described here.
+          </p>
+          <p>
+            Squared One is designed to be self-hosted: the person or team
+            running an instance ("the Operator") controls where it runs and the
+            data it holds. This policy describes the default behavior of the
+            software as distributed.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--collect</span></h2>
+          </div>
+          <h3>Discord account information</h3>
+          <p>
+            When you sign in to the dashboard with Discord OAuth, the Service
+            receives your Discord user ID, username, avatar, and the list of
+            servers you belong to (the <code>identify</code> and
+            <code>guilds</code> scopes). This is used only to authenticate you
+            and to scope dashboard access to servers you belong to.
+          </p>
+          <h3>Server information</h3>
+          <p>
+            The bot caches basic server metadata from Discord — server names,
+            icons, channel names, and member counts — to power the dashboard and
+            its commands. This is standard Discord API data and is not used for
+            any other purpose.
+          </p>
+          <h3>Rules you configure</h3>
+          <p>
+            Custom rules you add via slash commands or the dashboard are stored
+            locally on the Operator's server in a <code>rules.json</code> file.
+          </p>
+          <h3>Messages</h3>
+          <p>
+            The bot reads recent messages only when a moderator runs
+            <code>/purge</code> to delete them. Messages are not stored, logged,
+            or transmitted anywhere by the Service.
+          </p>
+          <h3>Logs</h3>
+          <p>
+            The Service writes operational logs to the Operator's console
+            (startup, connection, and error messages). Logs may contain Discord
+            usernames or channel names referenced in errors, but are not shared
+            with third parties.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--use</span></h2>
+          </div>
+          <p>Information is used to:</p>
+          <ul>
+            <li>Authenticate dashboard users and scope access to their servers;</li>
+            <li>Provide the bot's features (rules, embeds, moderation, utility);</li>
+            <li>Operate and troubleshoot the Service.</li>
+          </ul>
+          <p>
+            The Service does <strong>not</strong> sell, rent, or share your
+            personal information with advertisers or data brokers. It does not
+            use your data for targeted advertising or profiling.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--storage</span></h2>
+          </div>
+          <p>
+            Session cookies are HMAC-signed and <code>httpOnly</code>; they store
+            only your Discord user ID, username, avatar, and the server IDs you
+            belong to, and expire after 7 days. Discord OAuth access tokens are
+            used transiently to fetch your profile and are not stored.
+          </p>
+          <p>
+            Custom rules persist in a local file until the Operator deletes
+            them. Removing the bot from a server, or the Operator deleting its
+            data directory, removes that data.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--third-parties</span></h2>
+          </div>
+          <p>The Service interacts with these third parties:</p>
+          <ul>
+            <li>
+              <strong>Discord</strong> — the Discord API and OAuth are used to
+              operate the bot and dashboard. Discord's own Privacy Policy applies
+              to your Discord account.
+            </li>
+            <li>
+              <strong>Google Fonts</strong> — the dashboard loads the
+              <em>JetBrains Mono</em> and <em>Outfit</em> fonts from Google Fonts.
+            </li>
+            <li>
+              <strong>Discord CDN</strong> — server and user avatars are loaded
+              directly from Discord's content delivery network.
+            </li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--rights</span></h2>
+          </div>
+          <p>You can:</p>
+          <ul>
+            <li>Revoke the Service's access to your Discord account at any time via Discord's Authorized Apps settings;</li>
+            <li>Remove the bot from a server to stop it from reading that server's data;</li>
+            <li>Contact the Operator to request access to or deletion of data associated with you.</li>
+          </ul>
+          <h3>Children</h3>
+          <p>
+            The Service is not directed at children under 13 (or the minimum age
+            in your jurisdiction). Discord's own Terms of Service require users
+            to meet Discord's minimum age.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--changes</span></h2>
+          </div>
+          <p>
+            This policy may be updated from time to time. Changes take effect
+            when posted on this page, and the "Last updated" date above will be
+            revised. Continued use of the Service after a change constitutes
+            acceptance of the revised policy.
+          </p>
+        </div>
+
+        <div class="panel">
+          <span class="corner-br" aria-hidden="true"></span>
+          <span class="corner-bl" aria-hidden="true"></span>
+          <div class="panel-head">
+            <h2><span class="prompt">$</span> privacy <span class="accent">--contact</span></h2>
+          </div>
+          <p>
+            For privacy questions or data requests, contact the Operator of your
+            instance. For the reference deployment, open an issue in the
+            <a href="https://github.com/" target="_blank" rel="noopener">project repository</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <a href="/privacy">privacy</a>
+      <span>·</span>
+      <a href="/terms">terms</a>
+      <span>·</span>
+      <a href="/">home</a>
+    </footer>
+
+    <script src="/particles.js"></script>
+  </body>
+</html>

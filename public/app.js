@@ -34,6 +34,7 @@ const el = {
   embedChannelStatus: $('#embed-channel-status'),
   embedPost: $('#embed-post'),
   embedPreview: $('#embed-preview'),
+  serversList: $('#servers-list'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -193,10 +194,71 @@ async function loadHealth() {
     el.statMembers.textContent = String(data.bot?.memberCount ?? 0);
     el.statUptime.textContent = formatUptime(data.uptime ?? 0);
     el.footerTime.textContent = new Date(data.timestamp).toLocaleTimeString();
-    if (data.bot?.connected && !channelsLoaded) loadChannels();
+    if (data.bot?.connected) {
+      if (!channelsLoaded) loadChannels();
+      if (!serversLoaded) loadServers();
+    }
   } catch (err) {
     setBotStatus(false);
     el.statUptime.textContent = '--';
+  }
+}
+
+/* ---------- Sidebar navigation ---------- */
+const navItems = [...document.querySelectorAll('.nav-item')];
+const views = [...document.querySelectorAll('.view')];
+
+navItems.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const view = btn.dataset.view;
+    navItems.forEach((n) => n.classList.toggle('active', n === btn));
+    views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
+  });
+});
+
+/* ---------- Servers view ---------- */
+async function loadServers() {
+  try {
+    const res = await fetch('/api/servers');
+    if (!res.ok) throw new Error('failed to load servers');
+    const data = await res.json();
+    serversLoaded = data.connected;
+
+    if (!data.connected) {
+      el.serversList.innerHTML =
+        '<div class="empty">Bot offline — your servers will appear here once it connects.</div>';
+      return;
+    }
+    if (!data.servers || data.servers.length === 0) {
+      el.serversList.innerHTML =
+        '<div class="empty">The bot is not in any servers you belong to.</div>';
+      return;
+    }
+
+    el.serversList.innerHTML = data.servers
+      .map((s) => {
+        const letter = escapeHtml((s.name || '?').charAt(0).toUpperCase());
+        const avatar = s.icon
+          ? `<img class="server-avatar" src="${escapeHtml(
+              s.icon
+            )}" alt="" loading="lazy" onerror="this.remove()" />`
+          : '';
+        return `
+          <div class="server-card">
+            <span class="server-avatar-wrap">
+              <span class="server-avatar-fallback">${letter}</span>
+              ${avatar}
+            </span>
+            <div class="server-info">
+              <div class="server-name">${escapeHtml(s.name)}</div>
+              <div class="server-id">${escapeHtml(s.id)}</div>
+            </div>
+          </div>`;
+      })
+      .join('');
+  } catch {
+    el.serversList.innerHTML =
+      '<div class="empty">Failed to load servers.</div>';
   }
 }
 
@@ -245,6 +307,7 @@ el.form.addEventListener('submit', async (e) => {
 /* ---------- Channels + embed builder ---------- */
 
 let channelsLoaded = false;
+let serversLoaded = false;
 
 async function loadChannels() {
   try {
@@ -495,4 +558,5 @@ updateEmbedPreview();
 
 loadRules();
 loadHealth();
+loadServers();
 setInterval(loadHealth, 5000);

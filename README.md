@@ -85,6 +85,14 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 | `/postrules`   | moderators  | Posts the rules embed to a channel             |
 | `/announce`    | moderators  | Posts a markdown announcement (optionally as an embed) |
 | `/embed`       | moderators  | Builds and posts a rich embed                  |
+| `/ban`         | moderators  | Bans a member (Ban Members permission)         |
+| `/kick`        | moderators  | Kicks a member (Kick Members permission)       |
+| `/timeout`     | moderators  | Times out a member, e.g. `10m` (Moderate Members) |
+| `/purge`       | moderators  | Deletes recent messages, optionally from one user (Manage Messages) |
+| `/userinfo`    | everyone    | Shows info about a user                       |
+| `/serverinfo`  | everyone    | Shows info about the server                   |
+| `/avatar`      | everyone    | Shows a user's avatar                        |
+| `/ping`        | everyone    | Checks bot latency                           |
 
 > "Moderators" means anyone with the **Manage Server** permission.
 > Slash commands are registered globally on boot (may take up to an hour to
@@ -99,6 +107,8 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 | Method | Path                    | Description                                        |
 | ------ | ----------------------- | -------------------------------------------------- |
 | GET    | `/`                     | Public homepage                                    |
+| GET    | `/privacy`              | Privacy policy (public)                            |
+| GET    | `/terms`                | Terms of service (public)                          |
 | GET    | `/dashboard`            | Dashboard (requires login when OAuth is enabled)   |
 | GET    | `/health`               | JSON health + bot status (public)                  |
 | GET    | `/api/invite`           | Bot invite URL (public)                            |
@@ -115,8 +125,8 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 | POST   | `/api/embed`            | Post an embed `{ channelId, embed }` (scoped to you) |
 
 > All `/api/*` routes and `/dashboard` require a valid session when
-> `CLIENT_SECRET` is set. The homepage, `/health`, `/api/invite`, `/login`,
-> and the OAuth routes are public.
+> `CLIENT_SECRET` is set. The homepage, `/privacy`, `/terms`, `/health`,
+> `/api/invite`, `/login`, and the OAuth routes are public.
 
 ## Project structure
 
@@ -132,8 +142,11 @@ public/
   home.html      # public homepage
   dashboard.html # dashboard markup
   login.html     # Discord OAuth login page
+  privacy.html   # privacy policy
+  terms.html     # terms of service
   style.css      # red/black neon theme
   app.js         # dashboard logic, markdown preview, embed builder
+  particles.js   # shared particle-canvas background
 data/
   rules.json  # custom rules (created at runtime)
 ```

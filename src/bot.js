@@ -21,7 +21,7 @@ export const botState = {
   memberCount: 0,
 };
 
-const COLOR = 0x00ffcc;
+const COLOR = 0xff0000;
 
 function buildRulesEmbed(title, footer) {
   const all = getAllRules();
@@ -153,12 +153,164 @@ const commands = [
         .setDescription('Channel to post in (defaults to the current channel)')
         .setRequired(false)
     ),
+  new SlashCommandBuilder()
+    .setName('ban')
+    .setDescription('Ban a member (Ban Members permission)')
+    .addUserOption((o) =>
+      o.setName('user').setDescription('Member to ban').setRequired(true)
+    )
+    .addStringOption((o) =>
+      o.setName('reason').setDescription('Reason for the ban').setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('kick')
+    .setDescription('Kick a member (Kick Members permission)')
+    .addUserOption((o) =>
+      o.setName('user').setDescription('Member to kick').setRequired(true)
+    )
+    .addStringOption((o) =>
+      o.setName('reason').setDescription('Reason for the kick').setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('timeout')
+    .setDescription('Timeout a member (Moderate Members permission)')
+    .addUserOption((o) =>
+      o.setName('user').setDescription('Member to timeout').setRequired(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('duration')
+        .setDescription('Duration, e.g. 30s, 10m, 1h, 2d')
+        .setRequired(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('reason')
+        .setDescription('Reason for the timeout')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('purge')
+    .setDescription('Delete recent messages (Manage Messages permission)')
+    .addIntegerOption((o) =>
+      o
+        .setName('amount')
+        .setDescription('Number of messages to delete (1-100)')
+        .setRequired(true)
+        .setMinValue(1)
+        .setMaxValue(100)
+    )
+    .addUserOption((o) =>
+      o
+        .setName('user')
+        .setDescription('Only delete messages from this user')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('userinfo')
+    .setDescription('Show info about a user')
+    .addUserOption((o) =>
+      o
+        .setName('user')
+        .setDescription('User to look up (defaults to you)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('serverinfo')
+    .setDescription('Show info about this server'),
+  new SlashCommandBuilder()
+    .setName('avatar')
+    .setDescription("Show a user's avatar")
+    .addUserOption((o) =>
+      o
+        .setName('user')
+        .setDescription('User (defaults to you)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Check bot latency'),
 ];
 
 function isModerator(interaction) {
   return (
     interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) === true
   );
+}
+
+// Parses a duration like "30s", "10m", "1h", "2d" (bare numbers = minutes).
+function parseDuration(input) {
+  if (input == null) return null;
+  const m = String(input).trim().toLowerCase().match(/^(\d+)\s*(s|m|h|d)?$/);
+  if (!m) return null;
+  let ms = parseInt(m[1], 10);
+  const unit = m[2] || 'm';
+  if (unit === 's') ms *= 1000;
+  else if (unit === 'm') ms *= 60 * 1000;
+  else if (unit === 'h') ms *= 60 * 60 * 1000;
+  else if (unit === 'd') ms *= 24 * 60 * 60 * 1000;
+  return ms;
+}
+
+function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+// Returns an error string when the invoker or bot lacks a permission.
+function checkPermission(interaction, permission, label) {
+  if (!interaction.memberPermissions?.has(permission)) {
+    return `⛔ You need the **${label}** permission to do that.`;
+  }
+  const me = interaction.guild?.members?.me;
+  if (me && !me.permissions.has(permission)) {
+    return `❌ I don't have the **${label}** permission in this server.`;
+  }
+  return null;
+}
+
+// Returns an error string when a moderation action would violate role hierarchy.
+function canModerate(interaction, member) {
+  if (!member) return '❌ That member is not in this server.';
+  if (member.id === interaction.user.id) {
+    return "❌ You can't do that to yourself.";
+  }
+  if (member.id === interaction.guild.ownerId) {
+    return "❌ You can't do that to the server owner.";
+  }
+  const invoker = interaction.member;
+  if (invoker && invoker.id !== interaction.guild.ownerId) {
+    if (member.roles.highest.position >= invoker.roles.highest.position) {
+      return "❌ You can't do that to someone with an equal or higher role.";
+    }
+  }
+  const me = interaction.guild?.members?.me;
+  if (me && member.roles.highest.position >= me.roles.highest.position) {
+    return "❌ I can't do that to someone with a higher role than mine.";
+  }
+  return null;
+}
+
+async function purgeMessages(channel, amount, user) {
+  if (!channel?.isTextBased()) return 0;
+  const fetched = await channel.messages.fetch({ limit: amount });
+  const targets = user
+    ? fetched.filter((m) => m.author.id === user.id)
+    : fetched;
+  if (targets.size === 0) return 0;
+  if (targets.size === 1) {
+    await targets.first().delete();
+    return 1;
+  }
+  const deleted = await channel.bulkDelete(targets, true);
+  return deleted.size;
 }
 
 async function handleInteraction(interaction) {
@@ -350,6 +502,228 @@ async function handleInteraction(interaction) {
       await interaction.reply({
         content: `📢 Embed posted in ${channel}.`,
         ephemeral: true,
+      });
+      return;
+    }
+
+    // ---------- Moderation ----------
+    if (commandName === 'ban') {
+      const permErr = checkPermission(
+        interaction,
+        PermissionFlagsBits.BanMembers,
+        'Ban Members'
+      );
+      if (permErr) {
+        await interaction.reply({ content: permErr, ephemeral: true });
+        return;
+      }
+      const user = interaction.options.getUser('user');
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
+      const member = await interaction.guild.members
+        .fetch(user.id)
+        .catch(() => null);
+      if (member) {
+        const modErr = canModerate(interaction, member);
+        if (modErr) {
+          await interaction.reply({ content: modErr, ephemeral: true });
+          return;
+        }
+      }
+      await interaction.guild.bans.create(user.id, {
+        reason: `Banned by ${interaction.user.tag} — ${reason}`,
+      });
+      await interaction.reply({
+        content: `✅ Banned **${user.tag}** (${reason}).`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (commandName === 'kick') {
+      const permErr = checkPermission(
+        interaction,
+        PermissionFlagsBits.KickMembers,
+        'Kick Members'
+      );
+      if (permErr) {
+        await interaction.reply({ content: permErr, ephemeral: true });
+        return;
+      }
+      const member = interaction.options.getMember('user');
+      const modErr = canModerate(interaction, member);
+      if (modErr) {
+        await interaction.reply({ content: modErr, ephemeral: true });
+        return;
+      }
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
+      await member.kick(`Kicked by ${interaction.user.tag} — ${reason}`);
+      await interaction.reply({
+        content: `✅ Kicked **${member.user.tag}** (${reason}).`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (commandName === 'timeout') {
+      const permErr = checkPermission(
+        interaction,
+        PermissionFlagsBits.ModerateMembers,
+        'Moderate Members'
+      );
+      if (permErr) {
+        await interaction.reply({ content: permErr, ephemeral: true });
+        return;
+      }
+      const member = interaction.options.getMember('user');
+      const modErr = canModerate(interaction, member);
+      if (modErr) {
+        await interaction.reply({ content: modErr, ephemeral: true });
+        return;
+      }
+      const ms = parseDuration(interaction.options.getString('duration'));
+      if (ms == null || ms <= 0) {
+        await interaction.reply({
+          content:
+            '❌ Invalid duration — use e.g. `30s`, `10m`, `1h`, or `2d`.',
+          ephemeral: true,
+        });
+        return;
+      }
+      if (ms > 28 * 24 * 60 * 60 * 1000) {
+        await interaction.reply({
+          content: '❌ Timeouts can be at most 28 days.',
+          ephemeral: true,
+        });
+        return;
+      }
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
+      await member.timeout(
+        ms,
+        `Timed out by ${interaction.user.tag} — ${reason}`
+      );
+      await interaction.reply({
+        content: `✅ Timed out **${member.user.tag}** for ${formatDuration(
+          ms
+        )} (${reason}).`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (commandName === 'purge') {
+      const permErr = checkPermission(
+        interaction,
+        PermissionFlagsBits.ManageMessages,
+        'Manage Messages'
+      );
+      if (permErr) {
+        await interaction.reply({ content: permErr, ephemeral: true });
+        return;
+      }
+      const amount = interaction.options.getInteger('amount');
+      const user = interaction.options.getUser('user') ?? null;
+      await interaction.deferReply({ ephemeral: true });
+      const deleted = await purgeMessages(interaction.channel, amount, user);
+      await interaction.editReply({
+        content: `🧹 Deleted ${deleted} message${deleted === 1 ? '' : 's'}.`,
+      });
+      return;
+    }
+
+    // ---------- Utility ----------
+    if (commandName === 'userinfo') {
+      const user = interaction.options.getUser('user') ?? interaction.user;
+      const member = await interaction.guild.members
+        .fetch(user.id)
+        .catch(() => null);
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+        .setThumbnail(user.displayAvatarURL({ size: 256 }))
+        .addFields(
+          { name: 'ID', value: user.id, inline: true },
+          { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true },
+          {
+            name: 'Account created',
+            value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+            inline: true,
+          }
+        );
+      if (member) {
+        embed.addFields(
+          {
+            name: 'Joined',
+            value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`,
+            inline: true,
+          },
+          {
+            name: 'Roles',
+            value: String(
+              member.roles.cache.filter((r) => r.id !== interaction.guild.id)
+                .size
+            ),
+            inline: true,
+          },
+          {
+            name: 'Nickname',
+            value: member.nickname ?? 'None',
+            inline: true,
+          }
+        );
+      }
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'serverinfo') {
+      const g = interaction.guild;
+      const owner = await g.fetchOwner().catch(() => null);
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setAuthor({ name: g.name, iconURL: g.iconURL() })
+        .setThumbnail(g.iconURL({ size: 256 }))
+        .addFields(
+          { name: 'ID', value: g.id, inline: true },
+          {
+            name: 'Owner',
+            value: owner ? owner.user.tag : 'Unknown',
+            inline: true,
+          },
+          { name: 'Members', value: String(g.memberCount), inline: true },
+          { name: 'Channels', value: String(g.channels.cache.size), inline: true },
+          { name: 'Roles', value: String(g.roles.cache.size), inline: true },
+          { name: 'Boost level', value: String(g.premiumTier), inline: true },
+          {
+            name: 'Created',
+            value: `<t:${Math.floor(g.createdTimestamp / 1000)}:R>`,
+            inline: true,
+          }
+        );
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'avatar') {
+      const user = interaction.options.getUser('user') ?? interaction.user;
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle(`${user.username}'s avatar`)
+        .setImage(user.displayAvatarURL({ size: 1024 }));
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'ping') {
+      const sent = await interaction.reply({
+        content: '🏓 Pinging…',
+        fetchReply: true,
+      });
+      const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
+      await interaction.editReply({
+        content: `🏓 Pong! WebSocket: **${interaction.client.ws.ping}ms** · Round-trip: **${roundtrip}ms**`,
       });
     }
   } catch (err) {

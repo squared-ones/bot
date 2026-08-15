@@ -15,5 +15,17 @@
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "express": "^4.21.2"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/squared-ones/bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/squared-ones/bot/issues"
+  },
+  "homepage": "https://github.com/squared-ones/bot#readme"
 }
