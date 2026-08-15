@@ -62,6 +62,11 @@ const el = {
   verificationJoinWindow: $('#verification-join-window'),
   verificationLogChannel: $('#verification-log-channel'),
   verificationSave: $('#verification-save'),
+  vpnBlocklistForm: $('#vpn-blocklist-form'),
+  vpnIp: $('#vpn-ip'),
+  vpnFlag: $('#vpn-flag'),
+  vpnBlocklist: $('#vpn-blocklist'),
+  vpnBlocklistStatus: $('#vpn-blocklist-status'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -226,6 +231,7 @@ async function loadHealth() {
       if (!serversLoaded) loadServers();
       if (!modGuildsLoaded) loadModerationGuilds();
       if (!verificationGuildsLoaded) loadVerificationGuilds();
+      if (!vpnBlocklistLoaded) loadVpnBlocklist();
     }
   } catch (err) {
     setBotStatus(false);
@@ -372,6 +378,88 @@ async function loadVerificationGuilds() {
 }
 
 el.verificationGuild.addEventListener('change', renderVerificationConfig);
+
+let vpnBlocklistLoaded = false;
+
+function renderVpnBlocklist(entries) {
+  el.vpnBlocklistStatus.textContent = `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}`;
+  if (!entries.length) {
+    el.vpnBlocklist.innerHTML = '<div class="empty">No manually flagged IP addresses.</div>';
+    return;
+  }
+  el.vpnBlocklist.innerHTML = entries
+    .map(
+      (entry) => `
+        <div class="vpn-blocklist-entry">
+          <code>${escapeHtml(entry.ip)}</code>
+          <span class="vpn-blocklist-meta">${escapeHtml(entry.addedBy || 'dashboard')}</span>
+          <button type="button" class="btn-icon vpn-remove" data-ip="${escapeHtml(entry.ip)}">✕ REMOVE</button>
+        </div>`
+    )
+    .join('');
+}
+
+async function loadVpnBlocklist() {
+  try {
+    const res = await apiFetch('/api/vpn-blocklist');
+    const data = await res.json().catch(() => ({}));
+    vpnBlocklistLoaded = res.status !== 503;
+    if (!res.ok) {
+      el.vpnBlocklistStatus.textContent = res.status === 403 ? 'owner only' : 'unavailable';
+      el.vpnBlocklist.innerHTML = `<div class="empty">${escapeHtml(data.error || 'Unable to load the VPN blocklist.')}</div>`;
+      return;
+    }
+    renderVpnBlocklist(data.entries || []);
+  } catch {
+    el.vpnBlocklistStatus.textContent = 'unavailable';
+    el.vpnBlocklist.innerHTML = '<div class="empty">Unable to load the VPN blocklist.</div>';
+  }
+}
+
+el.vpnBlocklistForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const ip = el.vpnIp.value.trim();
+  if (!ip) return;
+  el.vpnFlag.disabled = true;
+  try {
+    const res = await apiFetch('/api/vpn-blocklist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to flag IP.');
+    el.vpnIp.value = '';
+    showToast('IP flagged as VPN.');
+    await loadVpnBlocklist();
+  } catch (error) {
+    showToast(error.message || 'Failed to flag IP.', 'err');
+  } finally {
+    el.vpnFlag.disabled = false;
+  }
+});
+
+el.vpnBlocklist.addEventListener('click', async (event) => {
+  const button = event.target.closest('.vpn-remove');
+  if (!button) return;
+  const ip = button.dataset.ip;
+  if (!confirm(`Remove ${ip} from the VPN blocklist?`)) return;
+  button.disabled = true;
+  try {
+    const res = await apiFetch('/api/vpn-blocklist', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to remove IP.');
+    showToast('IP removed from the VPN blocklist.');
+    await loadVpnBlocklist();
+  } catch (error) {
+    showToast(error.message || 'Failed to remove IP.', 'err');
+    button.disabled = false;
+  }
+});
 
 el.verificationForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -974,4 +1062,5 @@ loadHealth();
 loadServers();
 loadModerationGuilds();
 loadVerificationGuilds();
+loadVpnBlocklist();
 setInterval(loadHealth, 5000);

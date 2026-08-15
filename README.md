@@ -109,12 +109,15 @@ application's global `PUBLIC_URL` (or localhost when it is unset), not a
 per-server URL setting.
 
 VPN blocking is self-hosted: the server evaluates the verifier's IP against
-Tor exit-node and VPN/datacenter CIDR lists refreshed in memory every hour.
-It does not require a paid IP-detection API. Detection only applies to the web
-verification flow because Discord does not provide member IP addresses. If the
-lists cannot be refreshed, verification fails open and the event is logged.
-When running behind a trusted reverse proxy, set `TRUST_PROXY=true` so Express
-can obtain the original client IP.
+Tor exit-node and VPN/datacenter CIDR lists refreshed in memory every hour. The
+Discord application owner can also use the dashboard's **VPN Blocklist** page
+to flag exact IPv4/IPv6 addresses manually; those entries are saved in
+`data/vpn-blocklist.json` and synced to the private data repository. It does not
+require a paid IP-detection API. Detection only applies to the web verification
+flow because Discord does not provide member IP addresses. If the public lists
+cannot be refreshed, manually flagged addresses still work and automatic list
+detection fails open. When running behind a trusted reverse proxy, set
+`TRUST_PROXY=true` so Express can obtain the original client IP.
 
 ### GitHub data storage
 
@@ -122,7 +125,7 @@ Set `GITHUB_TOKEN` to a fine-grained GitHub token with **Contents: read and writ
 access to the private `squared-ones/data` repository. On startup, the repository
 root is loaded into the local `data/` directory. Every change to a data file is
 then committed back to that repository. This includes `rules.json`,
-`verification.json`, and future files added under `data/`.
+`verification.json`, `vpn-blocklist.json`, and future files added under `data/`.
 
 The token must stay in `.env` or the hosting provider's secret store; never commit
 it to this repository. If GitHub is unavailable at startup, the app logs the
@@ -184,6 +187,9 @@ failure and falls back to the local data directory.
 | GET    | `/api/moderation/members`| Search members (`?guildId=&query=`)                 || POST   | `/api/moderation/action` | Ban / kick / timeout / purge (scoped + permission-checked) |
 | GET    | `/api/verification/guilds` | Servers manageable for verification + saved configs |
 | PUT    | `/api/verification/config/:guildId` | Save one server's verification config |
+| GET    | `/api/vpn-blocklist`     | List manually flagged IPs (application owner)      |
+| POST   | `/api/vpn-blocklist`     | Flag an exact IP as VPN (application owner)        |
+| DELETE | `/api/vpn-blocklist`     | Remove an exact flagged IP (application owner)     |
 | GET    | `/verify`                | Verification page (public)                         |
 
 | GET    | `/api/verify/status`    | Verification status for the signed-in user         |
@@ -254,4 +260,5 @@ dist/
 data/
   rules.json        # custom rules (created at runtime)
   verification.json # per-server verification settings (synced to GitHub)
+  vpn-blocklist.json # manually flagged exact IPs (synced to GitHub)
 ```

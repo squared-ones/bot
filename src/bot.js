@@ -27,6 +27,20 @@ export const botState = {
   memberCount: 0,
 };
 
+// Checks whether a dashboard user owns the Discord application. This is used
+// for global controls that should not be delegated to individual servers.
+export async function isApplicationOwner(userId) {
+  const application = botState.client?.application;
+  if (!application || !userId) return false;
+  try {
+    const owner = application.owner || (await application.fetch()).owner;
+    if (owner?.ownerId) return owner.ownerId === userId;
+    return owner?.id === userId;
+  } catch {
+    return false;
+  }
+}
+
 const COLOR = 0xff0000;
 
 function buildRulesEmbed(title, footer) {

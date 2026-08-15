@@ -2,6 +2,7 @@ node_modules/
 .env
 data/rules.json
 data/verification.json
+data/vpn-blocklist.json
 dist/
 npm-debug.log*
 .DS_Store

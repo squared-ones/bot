@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import net from 'node:net';
+import { queueDataSync, resolveDataDir } from './github-data.js';
 
 const LIST_SOURCES = [
   {
@@ -15,19 +18,71 @@ const LIST_SOURCES = [
   },
 ];
 const LIST_TTL = 60 * 60 * 1000;
+const MANUAL_BLOCKLIST_FILE = path.join(resolveDataDir(), 'vpn-blocklist.json');
 
+let manualBlocklist = null;
 let exactIps = new Map();
 let cidrs = [];
 let loadedAt = 0;
 let refreshPromise = null;
 
-function normalizeIp(value) {
+export function normalizeIp(value) {
   let ip = String(value || '').trim().toLowerCase();
   if (ip.startsWith('[') && ip.endsWith(']')) ip = ip.slice(1, -1);
   const zone = ip.indexOf('%');
   if (zone !== -1) ip = ip.slice(0, zone);
   const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   return mapped ? mapped[1] : ip;
+}
+
+function readManualBlocklist() {
+  if (manualBlocklist) return manualBlocklist;
+  try {
+    const raw = JSON.parse(fs.readFileSync(MANUAL_BLOCKLIST_FILE, 'utf8'));
+    manualBlocklist = Array.isArray(raw)
+      ? raw.filter((entry) => entry && typeof entry.ip === 'string' && net.isIP(entry.ip))
+      : [];
+  } catch {
+    manualBlocklist = [];
+  }
+  return manualBlocklist;
+}
+
+function saveManualBlocklist() {
+  fs.mkdirSync(path.dirname(MANUAL_BLOCKLIST_FILE), { recursive: true });
+  const temporary = `${MANUAL_BLOCKLIST_FILE}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(readManualBlocklist(), null, 2)}\n`);
+  fs.renameSync(temporary, MANUAL_BLOCKLIST_FILE);
+  queueDataSync('Update VPN blocklist');
+}
+
+export function getManualBlocklist() {
+  return readManualBlocklist().map((entry) => ({ ...entry }));
+}
+
+export function addManualBlockedIp(ip, addedBy = 'dashboard') {
+  const normalized = normalizeIp(ip);
+  if (!net.isIP(normalized)) throw new Error('enter a valid IPv4 or IPv6 address');
+  const list = readManualBlocklist();
+  if (list.some((entry) => entry.ip === normalized)) return list.find((entry) => entry.ip === normalized);
+  const entry = { ip: normalized, addedAt: new Date().toISOString(), addedBy: String(addedBy) };
+  list.push(entry);
+  saveManualBlocklist();
+  return entry;
+}
+
+export function removeManualBlockedIp(ip) {
+  const normalized = normalizeIp(ip);
+  const list = readManualBlocklist();
+  const index = list.findIndex((entry) => entry.ip === normalized);
+  if (index === -1) return false;
+  list.splice(index, 1);
+  saveManualBlocklist();
+  return true;
+}
+
+function isManualBlocked(ip) {
+  return readManualBlocklist().some((entry) => entry.ip === ip);
 }
 
 function parseIpv4(ip) {
@@ -157,9 +212,13 @@ export function getClientIp(req) {
   return normalizeIp(req.ip || req.socket?.remoteAddress || '');
 }
 
-export async function inspectIp(ip) {
+export async function inspectIp(ip, useNetworkLists = true) {
   const normalized = normalizeIp(ip);
   if (!net.isIP(normalized)) return { blocked: false, reason: null };
+  if (isManualBlocked(normalized)) {
+    return { blocked: true, reason: 'manually flagged VPN IP' };
+  }
+  if (!useNetworkLists) return { blocked: false, reason: null };
   await refreshNetworkLists();
 
   const exactReason = exactIps.get(normalized);

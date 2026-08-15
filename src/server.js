@@ -13,6 +13,7 @@ import {
   getGuildChannels,
   assignRole,
   isMemberVerified,
+  isApplicationOwner,
 } from './bot.js';
 import { buildEmbedFromSpec, validateEmbedSpec } from './embed.js';
 import {
@@ -39,7 +40,13 @@ import {
   purgeMessages,
 } from './moderation.js';
 import { createCaptcha, verifyCaptcha } from './captcha.js';
-import { getClientIp, inspectIp } from './network-detection.js';
+import {
+  addManualBlockedIp,
+  getClientIp,
+  getManualBlocklist,
+  inspectIp,
+  removeManualBlockedIp,
+} from './network-detection.js';
 import {
   getVerificationConfig,
   saveVerificationConfig,
@@ -561,6 +568,51 @@ export function startServer(port = 3000) {
     }
   });
 
+  // ---------- Global VPN blocklist ----------
+  async function requireApplicationOwner(req, res) {
+    if (!req.user) {
+      res.status(403).json({ error: 'dashboard owner access is required' });
+      return false;
+    }
+    if (!botState.client?.isReady()) {
+      res.status(503).json({ error: 'bot is not connected' });
+      return false;
+    }
+    if (!(await isApplicationOwner(req.user.id))) {
+      res.status(403).json({ error: 'only the Discord application owner can manage the VPN blocklist' });
+      return false;
+    }
+    return true;
+  }
+
+  app.get('/api/vpn-blocklist', guard, async (req, res) => {
+    if (!(await requireApplicationOwner(req, res))) return;
+    res.json({ entries: getManualBlocklist() });
+  });
+
+  app.post('/api/vpn-blocklist', guard, async (req, res) => {
+    if (!(await requireApplicationOwner(req, res))) return;
+    const { ip } = req.body ?? {};
+    if (typeof ip !== 'string' || !ip.trim()) {
+      return res.status(400).json({ error: 'ip is required' });
+    }
+    try {
+      const entry = addManualBlockedIp(ip, req.user.username || req.user.id);
+      res.status(201).json({ entry });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/vpn-blocklist', guard, async (req, res) => {
+    if (!(await requireApplicationOwner(req, res))) return;
+    const { ip } = req.body ?? {};
+    if (typeof ip !== 'string' || !ip.trim()) {
+      return res.status(400).json({ error: 'ip is required' });
+    }
+    res.json({ ok: removeManualBlockedIp(ip) });
+  });
+
   // ---------- Verification (captcha + verified role) ----------
   async function getVerificationGuild(req, res, guildId, requireManager = false) {
     const client = botState.client;
@@ -593,8 +645,7 @@ export function startServer(port = 3000) {
   }
 
   async function rejectBlockedNetwork(req, res, config) {
-    if (!config.blockVpn) return false;
-    const result = await inspectIp(getClientIp(req));
+    const result = await inspectIp(getClientIp(req), config.blockVpn);
     if (!result.blocked) return false;
     res.status(403).json({
       error: 'verification is blocked from VPN, proxy, Tor, or known datacenter networks',
@@ -705,8 +756,8 @@ export function startServer(port = 3000) {
     if (inGuild && config.roleId) {
       verified = await isMemberVerified(guildId, req.user.id, config.roleId);
     }
-    const network = inGuild && config.blockVpn && verified !== true
-      ? await inspectIp(getClientIp(req))
+    const network = inGuild && verified !== true
+      ? await inspectIp(getClientIp(req), config.blockVpn)
       : null;
 
     res.json({

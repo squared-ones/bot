@@ -324,6 +324,35 @@ main {
   border-color: var(--green);
 }
 
+.vpn-blocklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.vpn-blocklist-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--red-dim);
+  background: rgba(20, 0, 0, 0.5);
+}
+
+.vpn-blocklist-entry code {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.vpn-blocklist-meta {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
 /* ---------- Servers grid ---------- */
 .servers-grid {
   display: grid;

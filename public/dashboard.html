@@ -46,6 +46,9 @@
           <button class="nav-item" data-view="verification" type="button">
             <span class="nav-glyph">✓</span> Verification
           </button>
+          <button class="nav-item" data-view="vpn-blocklist" type="button">
+            <span class="nav-glyph">⊘</span> VPN Blocklist
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -299,6 +302,32 @@
 
                 <button type="submit" class="btn btn-primary" id="verification-save">Save configuration</button>
               </form>
+            </section>
+          </section>
+
+          <!-- VPN blocklist -->
+          <section class="view" id="view-vpn-blocklist">
+            <h2 class="view-title">VPN Blocklist</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> vpn.blocklist <span class="accent">--exact-ip</span></h2>
+                <span id="vpn-blocklist-status" class="count-chip">…</span>
+              </div>
+
+              <p class="verification-help">
+                Flag an exact IPv4 or IPv6 address. Manually flagged addresses are blocked for every server during web verification and synced to the private data repository.
+              </p>
+              <form id="vpn-blocklist-form" class="rule-form" autocomplete="off">
+                <label class="field field-grow">
+                  <span class="field-label">IP address</span>
+                  <input id="vpn-ip" type="text" maxlength="45" placeholder="203.0.113.25 or 2001:db8::25" required />
+                </label>
+                <button type="submit" class="btn btn-primary" id="vpn-flag">Flag as VPN</button>
+              </form>
+              <div id="vpn-blocklist" class="vpn-blocklist"></div>
             </section>
           </section>
 
