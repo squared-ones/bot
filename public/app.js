@@ -19,6 +19,11 @@ const el = {
   userChip: $('#user-chip'),
   userName: $('#user-name'),
   logoutLink: $('#logout-link'),
+  serverSwitcher: $('#server-switcher'),
+  serverSwitcherName: $('#server-switcher-name'),
+  serverModal: $('#server-modal'),
+  serverModalClose: $('#server-modal-close'),
+  serverPickerList: $('#server-picker-list'),
   embedForm: $('#embed-form'),
   embedTitle: $('#embed-title'),
   embedColor: $('#embed-color'),
@@ -173,6 +178,95 @@ function setBotStatus(connected) {
   el.statStatus.style.color = connected ? 'var(--green)' : 'var(--red)';
 }
 
+let availableServers = [];
+let selectedGuildId = localStorage.getItem('squared-one-selected-guild') || '';
+
+function selectedServer() {
+  return availableServers.find((server) => server.id === selectedGuildId) || null;
+}
+
+function updateServerSwitcher() {
+  const server = selectedServer();
+  el.serverSwitcherName.textContent = server?.name || 'Choose a server…';
+  el.serverSwitcher.classList.toggle('has-selection', Boolean(server));
+}
+
+function renderServerPicker() {
+  if (!availableServers.length) {
+    el.serverPickerList.innerHTML =
+      '<div class="empty">No servers are available. Make sure the bot is connected and you share a server with it.</div>';
+    return;
+  }
+  el.serverPickerList.innerHTML = availableServers
+    .map((server) => {
+      const selected = server.id === selectedGuildId ? ' selected' : '';
+      const letter = escapeHtml((server.name || '?').charAt(0).toUpperCase());
+      return `
+        <button type="button" class="server-picker-option${selected}" data-server-id="${escapeHtml(server.id)}">
+          <span class="server-picker-letter">${letter}</span>
+          <span class="server-picker-copy">
+            <strong>${escapeHtml(server.name)}</strong>
+            <small>${escapeHtml(server.id)}</small>
+          </span>
+          <span class="server-picker-check">${selected ? '✓' : '→'}</span>
+        </button>`;
+    })
+    .join('');
+}
+
+function openServerPicker() {
+  renderServerPicker();
+  el.serverModal.hidden = false;
+}
+
+function closeServerPicker() {
+  if (selectedServer()) el.serverModal.hidden = true;
+}
+
+function loadSelectedServerData() {
+  if (!selectedGuildId) return;
+  channelsLoaded = false;
+  channelsData = null;
+  modGuildsLoaded = false;
+  verificationGuildsLoaded = false;
+  loadChannels();
+  loadModerationGuilds();
+  loadVerificationGuilds();
+}
+
+function selectServer(guildId) {
+  if (!availableServers.some((server) => server.id === guildId)) return;
+  selectedGuildId = guildId;
+  localStorage.setItem('squared-one-selected-guild', guildId);
+  updateServerSwitcher();
+  closeServerPicker();
+  loadSelectedServerData();
+}
+
+function initializeServerContext(servers) {
+  availableServers = servers || [];
+  if (!availableServers.some((server) => server.id === selectedGuildId)) {
+    selectedGuildId = '';
+    localStorage.removeItem('squared-one-selected-guild');
+  }
+  updateServerSwitcher();
+  if (selectedGuildId) {
+    closeServerPicker();
+    loadSelectedServerData();
+  } else {
+    openServerPicker();
+  }
+}
+
+el.serverSwitcher.addEventListener('click', openServerPicker);
+el.serverPickerList.addEventListener('click', (event) => {
+  const option = event.target.closest('.server-picker-option');
+  if (option) selectServer(option.dataset.serverId);
+});
+document.querySelectorAll('[data-close-server-modal]').forEach((element) => {
+  element.addEventListener('click', closeServerPicker);
+});
+
 let rules = [];
 
 function renderRules() {
@@ -233,10 +327,12 @@ async function loadHealth() {
     el.statUptime.textContent = formatUptime(data.uptime ?? 0);
     el.footerTime.textContent = new Date(data.timestamp).toLocaleTimeString();
     if (data.bot?.connected) {
-      if (!channelsLoaded) loadChannels();
       if (!serversLoaded) loadServers();
-      if (!modGuildsLoaded) loadModerationGuilds();
-      if (!verificationGuildsLoaded) loadVerificationGuilds();
+      if (selectedGuildId) {
+        if (!channelsLoaded) loadChannels();
+        if (!modGuildsLoaded) loadModerationGuilds();
+        if (!verificationGuildsLoaded) loadVerificationGuilds();
+      }
       if (!vpnBlocklistLoaded) loadVpnBlocklist();
       if (!votesLoaded) loadVotes();
     }
@@ -265,6 +361,7 @@ async function loadServers() {
     if (!res.ok) throw new Error('failed to load servers');
     const data = await res.json();
     serversLoaded = data.connected;
+    initializeServerContext(data.servers || []);
 
     if (!data.connected) {
       el.serversList.innerHTML =
@@ -394,15 +491,19 @@ async function loadVerificationGuilds() {
     const res = await apiFetch('/api/verification/guilds');
     if (!res.ok) throw new Error('failed');
     const data = await res.json();
-    verificationGuilds = data.guilds || [];
+    const manageableGuilds = data.guilds || [];
+    verificationGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
     verificationGuildsLoaded = data.connected;
 
     setSelectOptions(
       el.verificationGuild,
       verificationGuilds,
-      verificationGuilds.length ? 'Select a server…' : 'No servers you can manage',
+      verificationGuilds.length ? 'Current server' : 'Selected server is not manageable',
       (guild) => guild.name
     );
+    el.verificationGuild.disabled = true;
     el.verificationStatus.textContent = data.connected
       ? `${verificationGuilds.length} server${verificationGuilds.length === 1 ? '' : 's'}`
       : 'bot offline';
@@ -588,8 +689,9 @@ let channelsData = null;
 let modGuildsLoaded = false;
 
 async function loadChannels() {
+  if (!selectedGuildId) return;
   try {
-    const res = await apiFetch('/api/channels');
+    const res = await apiFetch(`/api/channels?guildId=${encodeURIComponent(selectedGuildId)}`);
     if (!res.ok) throw new Error('failed to load channels');
     const data = await res.json();
     channelsData = data;
@@ -812,15 +914,19 @@ async function loadModerationGuilds() {
     const res = await apiFetch('/api/moderation/guilds');
     if (!res.ok) throw new Error('failed');
     const data = await res.json();
-    modGuilds = data.guilds || [];
+    const manageableGuilds = data.guilds || [];
+    modGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
     modGuildsLoaded = data.connected;
 
     el.modGuild.innerHTML = '';
+    el.modGuild.disabled = true;
     const def = document.createElement('option');
     def.value = '';
     def.textContent = modGuilds.length
-      ? 'Select a server…'
-      : 'No servers you can moderate';
+      ? 'Current server'
+      : 'Selected server cannot be moderated';
     el.modGuild.appendChild(def);
     for (const g of modGuilds) {
       const opt = document.createElement('option');
@@ -1094,14 +1200,11 @@ function initBackground() {
 initBackground();
 
 loadSession();
-loadChannels();
 updateEmbedPreview();
 
 loadRules();
 loadHealth();
 loadServers();
-loadModerationGuilds();
-loadVerificationGuilds();
 loadVpnBlocklist();
 loadVotes();
 setInterval(loadHealth, 5000);

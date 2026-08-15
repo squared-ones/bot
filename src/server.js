@@ -42,6 +42,7 @@ import {
 } from './moderation.js';
 import { createCaptcha, verifyCaptcha } from './captcha.js';
 import { getVoteStats, recordVote } from './voting.js';
+import { flushDataSync } from './github-data.js';
 import {
   addManualBlockedIp,
   getClientIp,
@@ -228,7 +229,7 @@ export function startServer(port = 3000) {
     };
   }
 
-  app.post('/webhooks/topgg', (req, res) => {
+  app.post('/webhooks/topgg', async (req, res) => {
     if (!process.env.TOPGG_WEBHOOK_SECRET) {
       return res.status(503).json({ error: 'Top.gg webhook secret is not configured' });
     }
@@ -237,6 +238,7 @@ export function startServer(port = 3000) {
     if (!vote) return res.json({ ok: true, test: true });
     try {
       const result = recordVote(vote);
+      await flushDataSync();
       console.log(`[vote] Top.gg vote recorded for ${vote.userId}${result.duplicate ? ' (duplicate)' : ''}.`);
       res.json({ ok: true, duplicate: result.duplicate });
     } catch (error) {
@@ -244,7 +246,7 @@ export function startServer(port = 3000) {
     }
   });
 
-  app.post('/webhooks/discordbotlist', (req, res) => {
+  app.post('/webhooks/discordbotlist', async (req, res) => {
     const secret = process.env.DBL_WEBHOOK_TOKEN;
     if (!secret) return res.status(503).json({ error: 'Discord Bot List webhook token is not configured' });
     const authorization = req.headers.authorization || req.headers['x-webhook-token'];
@@ -259,6 +261,7 @@ export function startServer(port = 3000) {
         eventId: body.voteId || null,
         weight: 1,
       });
+      await flushDataSync();
       console.log(`[vote] Discord Bot List vote recorded for ${body.id}${result.duplicate ? ' (duplicate)' : ''}.`);
       res.json({ ok: true, duplicate: result.duplicate });
     } catch (error) {
@@ -367,7 +370,7 @@ export function startServer(port = 3000) {
     res.json(getAllRules());
   });
 
-  app.post('/api/rules', guard, (req, res) => {
+  app.post('/api/rules', guard, async (req, res) => {
     const { title, description } = req.body ?? {};
     if (
       typeof title !== 'string' ||
@@ -380,26 +383,30 @@ export function startServer(port = 3000) {
         .json({ error: 'title and description are required' });
     }
     const rule = addCustomRule(title, description);
+    await flushDataSync();
     res.status(201).json(rule);
   });
 
-  app.delete('/api/rules/:id', guard, (req, res) => {
+  app.delete('/api/rules/:id', guard, async (req, res) => {
     const ok = removeCustomRule(req.params.id);
     if (!ok) {
       return res
         .status(404)
         .json({ error: 'rule not found or is a default rule' });
     }
+    await flushDataSync();
     res.json({ ok: true });
   });
 
   // ---------- Channels (scoped to the logged-in user's guilds) ----------
   app.get('/api/channels', guard, (req, res) => {
     const all = getGuildChannels();
+    const selectedGuildId = String(req.query.guildId || '');
     // When OAuth is active, scope to the guilds the user belongs to.
-    const guilds = req.user
+    let guilds = req.user
       ? all.filter((g) => (req.user.guildIds || []).includes(g.id))
       : all;
+    if (selectedGuildId) guilds = guilds.filter((g) => g.id === selectedGuildId);
     res.json({
       connected: Boolean(botState.client?.isReady()),
       guilds,
@@ -695,6 +702,7 @@ export function startServer(port = 3000) {
     }
     try {
       const entry = addManualBlockedIp(ip, req.user.username || req.user.id);
+      await flushDataSync();
       res.status(201).json({ entry });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -707,7 +715,9 @@ export function startServer(port = 3000) {
     if (typeof ip !== 'string' || !ip.trim()) {
       return res.status(400).json({ error: 'ip is required' });
     }
-    res.json({ ok: removeManualBlockedIp(ip) });
+    const removed = removeManualBlockedIp(ip);
+    await flushDataSync();
+    res.json({ ok: removed });
   });
 
   // ---------- Verification (captcha + verified role) ----------
@@ -830,6 +840,7 @@ export function startServer(port = 3000) {
 
     try {
       const saved = saveVerificationConfig(guild.id, config);
+      await flushDataSync();
       res.json({ config: saved, configured: isVerificationConfigured(saved) });
     } catch (e) {
       res.status(500).json({ error: e.message });

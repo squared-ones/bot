@@ -166,10 +166,19 @@ export async function loadDataFromGitHub() {
     for (const remote of remoteFiles) {
       const relativePath = safeRemotePath(remote.path);
       if (!relativePath) continue;
-      if (typeof remote.content !== 'string') continue;
-      const target = path.join(DATA_DIR, ...relativePath.split('/'));
+      // Directory listings return file metadata without file contents. Fetch
+      // each file explicitly before replacing the local runtime data.
+      const file = await getRemoteContent(relativePath);
+      if (typeof file?.content !== 'string') continue;
+      // Accept both the documented repository-root layout and an older
+      // data/ subfolder layout so existing private repositories migrate cleanly.
+      const localPath = relativePath.startsWith('data/')
+        ? relativePath.slice('data/'.length)
+        : relativePath;
+      if (!localPath) continue;
+      const target = path.join(DATA_DIR, ...localPath.split('/'));
       await fsp.mkdir(path.dirname(target), { recursive: true });
-      await fsp.writeFile(target, Buffer.from(remote.content.replace(/\s/g, ''), 'base64'));
+      await fsp.writeFile(target, Buffer.from(file.content.replace(/\s/g, ''), 'base64'));
     }
     console.log(`[data] loaded ${remoteFiles.length} file${remoteFiles.length === 1 ? '' : 's'} from GitHub.`);
     return true;
@@ -197,6 +206,10 @@ export async function syncDataFolder(message = 'Sync data') {
 }
 
 let syncQueue = Promise.resolve();
+
+export function flushDataSync() {
+  return syncQueue;
+}
 
 export function queueDataSync(message) {
   if (!isConfigured()) return syncQueue;
