@@ -1111,27 +1111,6 @@ main {
   font-weight: 600;
 }
 
-/* ---------- Embed builder ---------- */
-.embed-builder {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 28px;
-  align-items: start;
-}
-
-.embed-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.embed-post-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
 .field-grow {
   flex: 1;
   min-width: 200px;
@@ -1152,181 +1131,6 @@ main {
   width: 16px;
   height: 16px;
   accent-color: var(--red);
-}
-
-.embed-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.embed-field-row {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  border: 1px solid var(--red-dim);
-  padding: 10px;
-  background: var(--red-faint);
-}
-
-.ef-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.ef-inputs input,
-.ef-inputs textarea {
-  font-family: var(--sans);
-  font-size: 0.9rem;
-  font-weight: 300;
-  color: #fff;
-  background: transparent;
-  caret-color: var(--red);
-  padding: 8px 10px;
-  border: 1px solid var(--red-dim);
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.ef-inputs input::placeholder,
-.ef-inputs textarea::placeholder {
-  color: var(--muted);
-}
-
-.ef-inputs input:focus,
-.ef-inputs textarea:focus {
-  border-color: var(--red);
-  box-shadow: 0 0 8px rgba(255, 0, 0, 0.25);
-}
-
-.ef-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-end;
-}
-
-.ef-inline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.ef-inline input {
-  accent-color: var(--red);
-}
-
-/* ---------- Embed preview (Discord dark embed) ---------- */
-.preview-wrap {
-  position: sticky;
-  top: 88px;
-}
-
-.embed-preview {
-  max-width: 440px;
-}
-
-.embed-preview-inner {
-  position: relative;
-  background: #2b2d31;
-  border-left: 4px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 10px 14px 12px;
-  box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
-}
-
-.ep-author {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 4px;
-}
-
-.ep-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #00a8fc;
-  margin-bottom: 4px;
-}
-
-.ep-desc {
-  font-size: 0.9rem;
-  color: #dbdee1;
-  line-height: 1.5;
-}
-
-.ep-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin-top: 10px;
-}
-
-.ep-field {
-  min-width: 0;
-}
-
-.ep-field-inline {
-  flex: 1 1 40%;
-}
-
-.ep-field-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #fff;
-}
-
-.ep-field-value {
-  font-size: 0.86rem;
-  color: #dbdee1;
-}
-
-.ep-image {
-  display: block;
-  max-width: 100%;
-  border-radius: 4px;
-  margin-top: 10px;
-}
-
-.ep-footer {
-  margin-top: 10px;
-  font-size: 0.75rem;
-  color: #949ba4;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-}
-
-.ep-thumb {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.ep-empty {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-  color: var(--muted);
-  padding: 18px;
-  border: 1px dashed var(--red-dim);
-  text-align: center;
 }
 
 /* ---------- Markdown (rules list) ---------- */
@@ -1377,64 +1181,6 @@ main {
 
 .rule-desc a {
   color: #ff5555;
-  text-decoration: underline;
-}
-
-/* ---------- Markdown (embed preview, Discord dark) ---------- */
-.ep-desc strong,
-.ep-title strong,
-.ep-field-value strong {
-  font-weight: 700;
-  color: #fff;
-}
-
-.ep-desc em,
-.ep-field-value em {
-  font-style: italic;
-}
-
-.ep-desc u,
-.ep-field-value u {
-  text-decoration: underline;
-}
-
-.ep-desc s,
-.ep-field-value s {
-  text-decoration: line-through;
-}
-
-.ep-desc code,
-.ep-field-value code,
-.ep-title code {
-  font-family: var(--mono);
-  font-size: 0.85em;
-  background: #1e1f22;
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: #dbdee1;
-}
-
-.ep-desc pre {
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  background: #1e1f22;
-  color: #dbdee1;
-  border-radius: 8px;
-  padding: 10px 12px;
-  overflow-x: auto;
-  margin: 8px 0;
-}
-
-.ep-desc blockquote {
-  border-left: 3px solid #404249;
-  padding-left: 10px;
-  color: #b5bac1;
-  margin: 6px 0;
-}
-
-.ep-desc a,
-.ep-field-value a {
-  color: #00a8fc;
   text-decoration: underline;
 }
 
@@ -1865,14 +1611,8 @@ main {
 
 /* ---------- Responsive ---------- */
 @media (max-width: 820px) {
-  .embed-builder {
-    grid-template-columns: 1fr;
-  }
   .config-grid {
     grid-template-columns: 1fr;
-  }
-  .preview-wrap {
-    position: static;
   }
 }
 
@@ -1929,12 +1669,6 @@ main {
 
   main {
     padding: 32px 16px 64px;
-  }
-}
-
-@media (max-width: 560px) {
-  .embed-grid {
-    grid-template-columns: 1fr;
   }
 }
 

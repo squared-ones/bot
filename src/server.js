@@ -16,7 +16,6 @@ import {
   isMemberVerified,
   isApplicationOwner,
 } from './bot.js';
-import { buildEmbedFromSpec, validateEmbedSpec } from './embed.js';
 import {
   SESSION_TTL,
   sessionMiddleware,
@@ -411,44 +410,6 @@ export function startServer(port = 3000) {
       connected: Boolean(botState.client?.isReady()),
       guilds,
     });
-  });
-
-  // ---------- Embed posting (scoped to the logged-in user's guilds) ----------
-  app.post('/api/embed', guard, async (req, res) => {
-    const { channelId, embed } = req.body ?? {};
-    const client = botState.client;
-
-    if (!client || !client.isReady()) {
-      return res.status(503).json({ error: 'bot is not connected' });
-    }
-    if (typeof channelId !== 'string' || !channelId) {
-      return res.status(400).json({ error: 'channelId is required' });
-    }
-
-    const spec = embed && typeof embed === 'object' ? embed : {};
-    const err = validateEmbedSpec(spec);
-    if (err) return res.status(400).json({ error: err });
-
-    try {
-      const channel = await client.channels.fetch(channelId);
-      if (!channel?.isTextBased()) {
-        return res
-          .status(400)
-          .json({ error: 'channel not found or is not text-based' });
-      }
-
-      // Only allow posting to channels in guilds the user belongs to.
-      if (req.user && !(req.user.guildIds || []).includes(channel.guildId)) {
-        return res
-          .status(403)
-          .json({ error: 'you do not have access to that channel' });
-      }
-
-      await channel.send({ embeds: [buildEmbedFromSpec(spec)] });
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
   });
 
   // ---------- Moderation (scoped to the logged-in user's guilds) ----------

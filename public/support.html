@@ -310,7 +310,7 @@
         </a>
         <a class="support-card" href="/dashboard">
           <h3>Open dashboard</h3>
-          <p>Manage rules, build embeds, and moderate from the web dashboard.</p>
+          <p>Manage rules and moderate from the web dashboard.</p>
         </a>
         <a class="support-card" href="#commands">
           <h3>Commands</h3>
@@ -343,13 +343,10 @@
           </div>
         </details>
         <details>
-          <summary>How do I post announcements or embeds?</summary>
+          <summary>How do I post announcements?</summary>
           <div class="faq-body">
             Use <code>/announce</code> for formatted messages (supports
-            **bold**, *italic*, `code`, links, and blockquotes) or
-            <code>/embed</code> to build a rich embed with a title, description,
-            color, fields, author, footer, and media. You can also build embeds
-            visually in the dashboard.
+            **bold**, *italic*, `code`, links, and blockquotes).
           </div>
         </details>
         <details>
@@ -372,7 +369,8 @@
         <details>
           <summary>How do I verify members?</summary>
           <div class="faq-body">
-            If verification is enabled, users run <code>/verify</code> and
+            If verification is enabled, users can run <code>/verify</code> or
+            click a panel posted with <code>/verification-panel</code>, then
             complete a CAPTCHA to receive the "Verified" role. The bot also
             flags suspicious joins (brand-new accounts, default avatars, join
             bursts) and can kick or ban them automatically.
@@ -398,9 +396,8 @@
         <div class="cmd-row"><span class="cmd-name">/postrules</span><span class="cmd-desc">Post the rules to a channel</span></div>
       </section>
       <section class="cmd-group">
-        <h3>Messaging &amp; embeds</h3>
+        <h3>Messaging</h3>
         <div class="cmd-row"><span class="cmd-name">/announce</span><span class="cmd-desc">Post a markdown announcement</span></div>
-        <div class="cmd-row"><span class="cmd-name">/embed</span><span class="cmd-desc">Build and post a rich embed</span></div>
       </section>
       <section class="cmd-group">
         <h3>Moderation</h3>
@@ -419,6 +416,7 @@
       <section class="cmd-group">
         <h3>Other</h3>
         <div class="cmd-row"><span class="cmd-name">/verify</span><span class="cmd-desc">Complete verification</span></div>
+        <div class="cmd-row"><span class="cmd-name">/verification-panel</span><span class="cmd-desc">Post a verification panel</span></div>
         <div class="cmd-row"><span class="cmd-name">/vote</span><span class="cmd-desc">Vote for Squared One</span></div>
       </section>
 

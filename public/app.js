@@ -24,21 +24,6 @@ const el = {
   serverModal: $('#server-modal'),
   serverModalClose: $('#server-modal-close'),
   serverPickerList: $('#server-picker-list'),
-  embedForm: $('#embed-form'),
-  embedTitle: $('#embed-title'),
-  embedColor: $('#embed-color'),
-  embedDesc: $('#embed-desc'),
-  embedAuthor: $('#embed-author'),
-  embedFooter: $('#embed-footer'),
-  embedThumbnail: $('#embed-thumbnail'),
-  embedImage: $('#embed-image'),
-  embedTimestamp: $('#embed-timestamp'),
-  embedFields: $('#embed-fields'),
-  embedAddField: $('#embed-add-field'),
-  embedChannel: $('#embed-channel'),
-  embedChannelStatus: $('#embed-channel-status'),
-  embedPost: $('#embed-post'),
-  embedPreview: $('#embed-preview'),
   serversList: $('#servers-list'),
   modGuild: $('#mod-guild'),
   modBody: $('#mod-body'),
@@ -681,7 +666,7 @@ el.form.addEventListener('submit', async (e) => {
   }
 });
 
-/* ---------- Channels + embed builder ---------- */
+/* ---------- Channels ---------- */
 
 let channelsLoaded = false;
 let serversLoaded = false;
@@ -695,175 +680,11 @@ async function loadChannels() {
     if (!res.ok) throw new Error('failed to load channels');
     const data = await res.json();
     channelsData = data;
-    const connected = Boolean(data.connected);
-    el.embedChannel.innerHTML = '';
-
-    let total = 0;
-    for (const g of data.guilds) {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = g.name;
-      for (const c of g.channels) {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = '#' + c.name;
-        optgroup.appendChild(opt);
-        total++;
-      }
-      el.embedChannel.appendChild(optgroup);
-    }
-
-    el.embedChannelStatus.textContent = connected
-      ? total
-        ? `${total} channels`
-        : 'no channels'
-      : 'bot offline';
-    el.embedPost.disabled = !connected || total === 0;
-    channelsLoaded = connected;
+    channelsLoaded = Boolean(data.connected);
   } catch {
-    el.embedChannelStatus.textContent = 'unavailable';
+    channelsLoaded = false;
   }
 }
-
-function collectEmbedSpec() {
-  const fields = [...el.embedFields.querySelectorAll('.embed-field-row')]
-    .map((row) => ({
-      name: row.querySelector('.f-name').value.trim(),
-      value: row.querySelector('.f-value').value.trim(),
-      inline: row.querySelector('.f-inline').checked,
-    }))
-    .filter((f) => f.name || f.value);
-
-  return {
-    title: el.embedTitle.value.trim(),
-    description: el.embedDesc.value.trim(),
-    color: el.embedColor.value,
-    author: el.embedAuthor.value.trim(),
-    footer: el.embedFooter.value.trim(),
-    thumbnail: el.embedThumbnail.value.trim(),
-    image: el.embedImage.value.trim(),
-    timestamp: el.embedTimestamp.checked,
-    fields,
-  };
-}
-
-function renderEmbedPreview(spec) {
-  const color = spec.color || '#e2e8f0';
-  const parts = [];
-
-  if (spec.author) {
-    parts.push(`<div class="ep-author">${escapeHtml(spec.author)}</div>`);
-  }
-  if (spec.title) {
-    parts.push(`<div class="ep-title">${renderMarkdown(spec.title)}</div>`);
-  }
-  if (spec.description) {
-    parts.push(`<div class="ep-desc">${renderMarkdown(spec.description)}</div>`);
-  }
-  if (spec.fields && spec.fields.length) {
-    const rows = spec.fields
-      .map((f) => {
-        const inline = f.inline ? ' ep-field-inline' : '';
-        return `<div class="ep-field${inline}"><div class="ep-field-name">${renderMarkdown(
-          f.name || ''
-        )}</div><div class="ep-field-value">${renderMarkdown(
-          f.value || ''
-        )}</div></div>`;
-      })
-      .join('');
-    parts.push(`<div class="ep-fields">${rows}</div>`);
-  }
-  if (spec.image) {
-    parts.push(
-      `<img class="ep-image" src="${escapeHtml(spec.image)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
-    );
-  }
-
-  const foot = [];
-  if (spec.footer) foot.push(`<span>${escapeHtml(spec.footer)}</span>`);
-  if (spec.timestamp) {
-    foot.push(`<span class="ep-time">Today at ${new Date().toLocaleTimeString()}</span>`);
-  }
-  if (foot.length) parts.push(`<div class="ep-footer">${foot.join(' · ')}</div>`);
-
-  if (spec.thumbnail) {
-    parts.push(
-      `<img class="ep-thumb" src="${escapeHtml(spec.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'" />`
-    );
-  }
-
-  if (!parts.length) {
-    return '<div class="ep-empty">Your embed preview will appear here…</div>';
-  }
-  return `<div class="embed-preview-inner" style="border-left-color:${color}">${parts.join('')}</div>`;
-}
-
-function updateEmbedPreview() {
-  el.embedPreview.innerHTML = renderEmbedPreview(collectEmbedSpec());
-}
-
-function addFieldRow(name = '', value = '', inline = false) {
-  const row = document.createElement('div');
-  row.className = 'embed-field-row';
-  row.innerHTML = `
-    <div class="ef-inputs">
-      <input class="f-name" type="text" maxlength="256" placeholder="Field name" value="${escapeHtml(name)}" />
-      <textarea class="f-value" rows="2" maxlength="1024" placeholder="Value (supports markdown)">${escapeHtml(value)}</textarea>
-    </div>
-    <div class="ef-controls">
-      <label class="ef-inline"><input class="f-inline" type="checkbox" ${inline ? 'checked' : ''} /> inline</label>
-      <button type="button" class="btn-icon f-remove" title="Remove field">✕</button>
-    </div>`;
-
-  row.querySelector('.f-remove').addEventListener('click', () => {
-    row.remove();
-    updateEmbedPreview();
-  });
-  row.querySelectorAll('input, textarea').forEach((inp) =>
-    inp.addEventListener('input', updateEmbedPreview)
-  );
-  el.embedFields.appendChild(row);
-}
-
-el.embedAddField.addEventListener('click', () => {
-  addFieldRow();
-  updateEmbedPreview();
-});
-
-[
-  el.embedTitle,
-  el.embedColor,
-  el.embedDesc,
-  el.embedAuthor,
-  el.embedFooter,
-  el.embedThumbnail,
-  el.embedImage,
-].forEach((inp) => inp.addEventListener('input', updateEmbedPreview));
-el.embedTimestamp.addEventListener('change', updateEmbedPreview);
-
-el.embedForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const spec = collectEmbedSpec();
-  const channelId = el.embedChannel.value;
-  if (!channelId) {
-    showToast('Select a channel first.', 'err');
-    return;
-  }
-  el.embedPost.disabled = true;
-  try {
-    const res = await apiFetch('/api/embed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channelId, embed: spec }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'failed to post embed');
-    showToast('Embed posted.');
-  } catch (err) {
-    showToast(err.message || 'Failed to post embed.', 'err');
-  } finally {
-    el.embedPost.disabled = false;
-  }
-});
 
 /* ---------- Moderation ---------- */
 let modGuilds = [];
@@ -1200,8 +1021,6 @@ function initBackground() {
 initBackground();
 
 loadSession();
-updateEmbedPreview();
-
 loadRules();
 loadHealth();
 loadServers();

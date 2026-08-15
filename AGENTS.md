@@ -6,7 +6,7 @@ Guidance for AI coding agents working in the Squared One repository.
 
 Squared One is a multitool Discord bot with a web dashboard:
 
-- **Bot** (discord.js v14): rules management, announcements, rich embeds,
+- **Bot** (discord.js v14): rules management, announcements, rule embeds,
   moderation (`ban`/`kick`/`timeout`/`purge`), and utility commands
   (`userinfo`, `serverinfo`, `avatar`, `ping`).
 - **Web** (Express): a red/black neon dashboard behind Discord OAuth login,
@@ -42,12 +42,11 @@ src/
   index.js      # entry point — loads env, starts web server + bot
   bot.js        # Discord client, slash commands, interaction handlers
   rules.js      # rule store (defaults + JSON persistence to data/rules.json)
-  embed.js      # embed validation, color parsing, builder
   auth.js       # HMAC-signed session cookie + Discord OAuth helpers
   server.js     # Express server: OAuth routes, API, static pages
 public/
   home.html       # public landing page
-  dashboard.html  # authenticated dashboard (sidebar: overview/rules/embeds/servers)
+  dashboard.html  # authenticated dashboard (sidebar: overview/rules/servers/tools)
   login.html      # OAuth login page
   privacy.html    # privacy policy
   terms.html      # terms of service

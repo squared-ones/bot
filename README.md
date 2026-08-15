@@ -14,13 +14,12 @@ that you can extend with your own.
   any channel with `/postrules`.
 - **Markdown formatting** — rule titles/descriptions and announcements support
   Discord markdown (**bold**, *italic*, `code`, links, blockquotes, etc.).
-- **Rich embeds** — build custom embeds (title, description, color, fields,
-  author, footer, thumbnail, image) via `/embed` in Discord or the dashboard's
-  live embed builder.
-- **Web dashboard** — red/black neon UI with live bot stats, markdown preview,
-  and an embed builder.
-- **Discord OAuth login** — sign in with Discord; channel listing and embed
-  posting are scoped to servers you actually belong to.
+- **Rule embeds** — `/rules` and `/postrules` present the server rules in
+  consistent Discord embeds.
+- **Web dashboard** — red/black neon UI with live bot stats, rules, moderation,
+  verification, voting, and server management.
+- **Discord OAuth login** — sign in with Discord; channel listing is scoped
+  to servers you actually belong to.
 - **Dashboard moderation** — ban, kick, timeout, and purge members from the
   dashboard, scoped to servers where you hold the matching permission.
 - **Verification** — a self-hosted CAPTCHA gate that grants a "Verified" role
@@ -91,7 +90,7 @@ Setting `CLIENT_SECRET` enables login. Configure your Discord application:
 3. Copy the **Client Secret** into `CLIENT_SECRET`.
 
 With OAuth enabled the dashboard redirects unauthenticated visitors to
-`/login`, and `/api/channels` + `/api/embed` are restricted to servers the
+`/login`, and `/api/channels` are restricted to servers the
 logged-in user is a member of — so nobody can post to channels in servers they
 don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 (handy for local dev).
@@ -108,8 +107,9 @@ Squared One can gate a "Verified" role behind a self-hosted CAPTCHA. Open the
 
 Configurations are saved in `data/verification.json`, keyed by Discord server ID.
 A server manager can configure any server they manage without editing `.env` or
-restarting the bot. Users run `/verify`, sign in with Discord, and solve the
-CAPTCHA; on success the configured role is added. Verification links use the
+restarting the bot. Users run `/verify` or click a panel posted with
+`/verification-panel`, sign in with Discord, and solve the CAPTCHA; on success
+the configured role is added. Verification links use the
 fixed application URL `https://squared-one.onrender.com`, not a per-server URL
 setting.
 
@@ -159,8 +159,7 @@ failure and falls back to the local data directory.
 | `/addrule`     | moderators  | Adds a custom rule (title + description)       |
 | `/removerule`  | moderators  | Removes a custom rule (autocomplete list)      |
 | `/postrules`   | moderators  | Posts the rules embed to a channel             |
-| `/announce`    | moderators  | Posts a markdown announcement (optionally as an embed) |
-| `/embed`       | moderators  | Builds and posts a rich embed                  |
+| `/announce`    | moderators  | Posts a markdown announcement                    |
 | `/ban`         | moderators  | Bans a member (Ban Members permission)         |
 | `/kick`        | moderators  | Kicks a member (Kick Members permission)       |
 | `/timeout`     | moderators  | Times out a member, e.g. `10m` (Moderate Members) |
@@ -170,15 +169,14 @@ failure and falls back to the local data directory.
 | `/avatar`      | everyone    | Shows a user's avatar                        |
 | `/ping`        | everyone    | Checks bot latency                           |
 | `/vote`        | everyone    | Vote links for top.gg and Discord Bot List   |
+| `/help`        | everyone    | Shows all Squared One commands               |
 | `/verify`      | everyone    | Sends a link to complete verification        |
+| `/verification-panel` | moderators | Posts a button-based verification panel   |
 
 > "Moderators" means anyone with the **Manage Server** permission.
 > Slash commands are registered globally on boot (may take up to an hour to
 > propagate; restart Discord to see them immediately).
 >
-> `/embed` accepts a `fields` option as a JSON array, e.g.
-> `[{"name":"Info","value":"hi","inline":true}]`. `color` takes a hex value
-> like `#5865F2`.
 
 ## Web endpoints
 
@@ -202,7 +200,6 @@ failure and falls back to the local data directory.
 | POST   | `/api/rules`            | Add a custom rule `{ title, description }`         |
 | DELETE | `/api/rules/:id`        | Remove a custom rule                               |
 | GET    | `/api/channels`         | Guilds/channels the bot can post in (scoped to you) |
-| POST   | `/api/embed`            | Post an embed `{ channelId, embed }` (scoped to you) |
 | POST   | `/webhooks/topgg`       | Receive authenticated Top.gg vote events            |
 | POST   | `/webhooks/discordbotlist` | Receive authenticated Discord Bot List vote events |
 | GET    | `/api/votes`            | Vote totals and recent vote history                 |
@@ -257,14 +254,13 @@ src/
   index.js    # entry point — starts web server + bot
   bot.js      # Discord client, slash commands, join DM
   rules.js    # rule store (defaults + JSON persistence)
-  embed.js    # embed validation + builder helper
   moderation.js # shared moderation helpers (permissions, ban/kick/timeout/purge)
   auth.js     # Discord OAuth + signed session cookie
   captcha.js  # self-hosted SVG captcha
   network-detection.js # self-hosted VPN/proxy/Tor CIDR detection
   verification.js # per-server config store + anti-alt / anti-raid detection
   voting.js   # vote tracking, deduplication, and reminder state
-  server.js   # Express server, /health, rules + embed + moderation + verification API
+  server.js   # Express server, /health, rules + moderation + verification API
 scripts/
   build.js    # bundle server + obfuscate frontend → dist/
 public/
@@ -276,7 +272,7 @@ public/
   support.html   # support / help-center page
   verify.html    # verification page
   style.css      # red/black neon theme
-  app.js         # dashboard logic, markdown preview, embed builder
+  app.js         # dashboard logic, server picker, voting, and moderation
   particles.js   # shared particle-canvas background
 dist/
   index.js    # readable bundled server build (generated by npm run build)

@@ -14,7 +14,6 @@ import {
   addCustomRule,
   removeCustomRule,
 } from './rules.js';
-import { buildEmbedFromSpec, validateEmbedSpec } from './embed.js';
 import { parseDuration, formatDuration, purgeMessages } from './moderation.js';
 import {
   getVerificationConfig,
@@ -119,62 +118,6 @@ const commands = [
         .setDescription('Announcement text (supports **bold**, *italic*, `code`, etc.)')
         .setRequired(true)
     )
-    .addStringOption((o) =>
-      o
-        .setName('title')
-        .setDescription('Embed title (only used when embed is enabled)')
-        .setRequired(false)
-    )
-    .addBooleanOption((o) =>
-      o
-        .setName('embed')
-        .setDescription('Send the message inside an embed')
-        .setRequired(false)
-    )
-    .addChannelOption((o) =>
-      o
-        .setName('channel')
-        .setDescription('Channel to post in (defaults to the current channel)')
-        .setRequired(false)
-    ),
-  new SlashCommandBuilder()
-    .setName('embed')
-    .setDescription('Build and post a rich embed (moderators only)')
-    .addStringOption((o) =>
-      o.setName('title').setDescription('Embed title (supports markdown)').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o
-        .setName('description')
-        .setDescription('Embed description (supports markdown)')
-        .setRequired(false)
-    )
-    .addStringOption((o) =>
-      o.setName('color').setDescription('Hex color, e.g. #5865F2').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o.setName('author').setDescription('Author name').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o.setName('footer').setDescription('Footer text').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o.setName('thumbnail').setDescription('Thumbnail image URL').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o.setName('image').setDescription('Main image URL').setRequired(false)
-    )
-    .addStringOption((o) =>
-      o
-        .setName('fields')
-        .setDescription(
-          'JSON array of fields, e.g. [{"name":"Info","value":"hi","inline":true}]'
-        )
-        .setRequired(false)
-    )
-    .addBooleanOption((o) =>
-      o.setName('timestamp').setDescription('Show a timestamp').setRequired(false)
-    )
     .addChannelOption((o) =>
       o
         .setName('channel')
@@ -262,8 +205,20 @@ const commands = [
     .setName('vote')
     .setDescription('Vote for Squared One on bot lists'),
   new SlashCommandBuilder()
+    .setName('help')
+    .setDescription('Show all Squared One commands'),
+  new SlashCommandBuilder()
     .setName('verify')
     .setDescription('Verify yourself to get the verified role'),
+  new SlashCommandBuilder()
+    .setName('verification-panel')
+    .setDescription('Post a verification panel (moderators only)')
+    .addChannelOption((o) =>
+      o
+        .setName('channel')
+        .setDescription('Channel for the panel (defaults to the current channel)')
+        .setRequired(false)
+    ),
 ];
 
 function isModerator(interaction) {
@@ -308,7 +263,51 @@ function canModerate(interaction, member) {
 }
 
 
+async function sendVerificationLink(interaction) {
+  const guild = interaction.guild;
+  const config = getVerificationConfig(guild?.id);
+  if (!guild || !config.roleId) {
+    await interaction.reply({
+      content:
+        '❌ Verification is not configured for this server. Ask a server manager to configure it in the dashboard.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  if (interaction.member?.roles?.cache?.has(config.roleId)) {
+    await interaction.reply({
+      content: '✅ You are already verified.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const url = `${APP_URL}/verify?guild=${guild.id}`;
+  try {
+    await interaction.user.send(
+      `🔒 **Verify for ${guild.name}**\nOpen this link to complete verification:\n${url}`
+    );
+    await interaction.reply({
+      content: '📬 Check your DMs — I sent you a verification link.',
+      ephemeral: true,
+    });
+  } catch {
+    await interaction.reply({
+      content: `🔒 Open this link to verify:\n${url}`,
+      ephemeral: true,
+    });
+  }
+}
+
 async function handleInteraction(interaction) {
+  if (interaction.isButton()) {
+    if (interaction.customId === 'verification:open') {
+      await sendVerificationLink(interaction);
+    }
+    return;
+  }
+
   if (interaction.isAutocomplete()) {
     const focused = interaction.options.getFocused().toLowerCase();
     const matches = getCustomRules()
@@ -325,6 +324,44 @@ async function handleInteraction(interaction) {
   const guildName = interaction.guild?.name ?? 'Rules';
 
   try {
+    if (commandName === 'help') {
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle('🧭 Squared One Help')
+        .setDescription('Here are the commands available in this server.')
+        .addFields(
+          {
+            name: '📜 Rules',
+            value:
+              '`/rules` View the server rules\n`/addrule` Add a custom rule\n`/removerule` Remove a custom rule\n`/postrules` Post the rules to a channel',
+          },
+          {
+            name: '📣 Messaging',
+            value:
+              '`/announce` Post an announcement',
+          },
+          {
+            name: '🛡️ Moderation',
+            value:
+              '`/ban` Ban a member\n`/kick` Kick a member\n`/timeout` Timeout a member\n`/purge` Delete recent messages',
+          },
+          {
+            name: '🔧 Utility',
+            value:
+              '`/userinfo` Show user information\n`/serverinfo` Show server information\n`/avatar` Show an avatar\n`/ping` Check bot latency',
+          },
+          {
+            name: '🌐 Community',
+            value:
+              '`/vote` Vote for Squared One\n`/verify` Complete server verification\n`/verification-panel` Post a verification panel\n`/help` Show this help message',
+          }
+        )
+        .setFooter({ text: 'Squared One · Use /help any time' })
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
     if (commandName === 'rules') {
       await interaction.reply({
         embeds: [buildRulesEmbed('📜 Server Rules', guildName)],
@@ -408,8 +445,6 @@ async function handleInteraction(interaction) {
         return;
       }
       const message = interaction.options.getString('message');
-      const title = interaction.options.getString('title');
-      const asEmbed = interaction.options.getBoolean('embed') ?? false;
       const channel =
         interaction.options.getChannel('channel') ?? interaction.channel;
       if (!channel?.isTextBased()) {
@@ -419,83 +454,9 @@ async function handleInteraction(interaction) {
         });
         return;
       }
-      if (asEmbed) {
-        const embed = new EmbedBuilder().setDescription(message);
-        if (title) embed.setTitle(title);
-        await channel.send({ embeds: [embed] });
-      } else {
-        await channel.send(message);
-      }
+      await channel.send(message);
       await interaction.reply({
         content: `📢 Announcement posted in ${channel}.`,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    if (commandName === 'embed') {
-      if (!isModerator(interaction)) {
-        await interaction.reply({
-          content: '⛔ You need the **Manage Server** permission to post embeds.',
-          ephemeral: true,
-        });
-        return;
-      }
-
-      const spec = {
-        title: interaction.options.getString('title') ?? undefined,
-        description: interaction.options.getString('description') ?? undefined,
-        color: interaction.options.getString('color') ?? undefined,
-        author: interaction.options.getString('author') ?? undefined,
-        footer: interaction.options.getString('footer') ?? undefined,
-        thumbnail: interaction.options.getString('thumbnail') ?? undefined,
-        image: interaction.options.getString('image') ?? undefined,
-        timestamp: interaction.options.getBoolean('timestamp') ?? false,
-        fields: [],
-      };
-
-      const rawFields = interaction.options.getString('fields');
-      if (rawFields) {
-        let parsed;
-        try {
-          parsed = JSON.parse(rawFields);
-        } catch {
-          await interaction.reply({
-            content:
-              '❌ `fields` must be valid JSON, e.g. `[{"name":"Info","value":"hi","inline":true}]`.',
-            ephemeral: true,
-          });
-          return;
-        }
-        if (!Array.isArray(parsed)) {
-          await interaction.reply({
-            content: '❌ `fields` must be a JSON array.',
-            ephemeral: true,
-          });
-          return;
-        }
-        spec.fields = parsed;
-      }
-
-      const err = validateEmbedSpec(spec);
-      if (err) {
-        await interaction.reply({ content: `❌ ${err}`, ephemeral: true });
-        return;
-      }
-
-      const channel =
-        interaction.options.getChannel('channel') ?? interaction.channel;
-      if (!channel?.isTextBased()) {
-        await interaction.reply({
-          content: '❌ Please provide a valid text channel.',
-          ephemeral: true,
-        });
-        return;
-      }
-
-      await channel.send({ embeds: [buildEmbedFromSpec(spec)] });
-      await interaction.reply({
-        content: `📢 Embed posted in ${channel}.`,
         ephemeral: true,
       });
       return;
@@ -756,38 +717,60 @@ async function handleInteraction(interaction) {
       return;
     }
 
-    if (commandName === 'verify') {
+    if (commandName === 'verification-panel') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to post a verification panel.',
+          ephemeral: true,
+        });
+        return;
+      }
+
       const config = getVerificationConfig(interaction.guild?.id);
       if (!config.roleId) {
         await interaction.reply({
           content:
-            '❌ Verification is not configured for this server. Ask a server manager to configure it in the dashboard.',
+            '❌ Configure a verified role in the dashboard before posting a verification panel.',
           ephemeral: true,
         });
         return;
       }
-      if (interaction.member.roles.cache.has(config.roleId)) {
+
+      const channel =
+        interaction.options.getChannel('channel') ?? interaction.channel;
+      if (!channel?.isTextBased()) {
         await interaction.reply({
-          content: '✅ You are already verified.',
+          content: '❌ Please provide a valid text channel.',
           ephemeral: true,
         });
         return;
       }
-      const url = `${APP_URL}/verify?guild=${interaction.guild.id}`;
-      try {
-        await interaction.user.send(
-          `🔒 **Verify for ${interaction.guild.name}**\nOpen this link to complete verification:\n${url}`
-        );
-        await interaction.reply({
-          content: '📬 Check your DMs — I sent you a verification link.',
-          ephemeral: true,
-        });
-      } catch {
-        await interaction.reply({
-          content: `🔒 Open this link to verify:\n${url}`,
-          ephemeral: true,
-        });
-      }
+
+      const panel = new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle('🔒 Server Verification')
+        .setDescription(
+          'Click the button below to receive a private verification link. Complete the CAPTCHA to get access to the server.'
+        )
+        .setFooter({ text: 'Squared One Verification' });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('verification:open')
+          .setLabel('Verify now')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      await channel.send({ embeds: [panel], components: [row] });
+      await interaction.reply({
+        content: `✅ Verification panel posted in ${channel}.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (commandName === 'verify') {
+      await sendVerificationLink(interaction);
       return;
     }
   } catch (err) {
@@ -923,7 +906,7 @@ export async function startBot(token) {
   });
   botState.client = client;
 
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     botState.username = client.user.tag;
     botState.startedAt = new Date();
     updateStats(client);

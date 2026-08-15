@@ -43,9 +43,6 @@
           <button class="nav-item" data-view="rules" type="button">
             <span class="nav-glyph">§</span> Rules
           </button>
-          <button class="nav-item" data-view="embeds" type="button">
-            <span class="nav-glyph">▤</span> Embeds
-          </button>
           <button class="nav-item" data-view="servers" type="button">
             <span class="nav-glyph">▣</span> Servers
           </button>
@@ -109,9 +106,10 @@
               <div class="terminal-body">
                 <p><span class="t-prompt">$</span> squared-one --help</p>
                 <p class="t-dim">rules — /rules · /addrule · /removerule · /postrules</p>
-                <p class="t-dim">messaging — /announce · /embed</p>
+                <p class="t-dim">messaging — /announce</p>
                 <p class="t-dim">moderation — /ban · /kick · /timeout · /purge</p>
                 <p class="t-dim">utility — /userinfo · /serverinfo · /avatar · /ping</p>
+                <p class="t-dim">community — /vote · /verify · /verification-panel</p>
                 <p><span class="t-prompt">$</span> <span class="t-cursor">▌</span></p>
               </div>
             </div>
@@ -199,89 +197,6 @@
             </section>
           </section>
 
-          <!-- Embeds -->
-          <section class="view" id="view-embeds">
-            <h2 class="view-title">Embeds</h2>
-
-            <section class="panel">
-              <span class="corner-br" aria-hidden="true"></span>
-              <span class="corner-bl" aria-hidden="true"></span>
-              <div class="panel-head">
-                <h2><span class="prompt">$</span> embed.build <span class="accent">--custom</span></h2>
-                <span id="embed-channel-status" class="count-chip">…</span>
-              </div>
-              <div class="embed-builder">
-                <form id="embed-form" class="rule-form embed-form" autocomplete="off">
-                  <div class="embed-grid">
-                    <label class="field">
-                      <span class="field-label">Title</span>
-                      <input id="embed-title" type="text" maxlength="256" placeholder="Optional title" />
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Color</span>
-                      <input id="embed-color" type="color" value="#5865f2" />
-                    </label>
-                  </div>
-
-                  <label class="field">
-                    <span class="field-label">Description</span>
-                    <textarea id="embed-desc" rows="4" maxlength="4096" placeholder="Supports **bold**, *italic*, `code`, links, etc."></textarea>
-                  </label>
-
-                  <div class="embed-grid">
-                    <label class="field">
-                      <span class="field-label">Author</span>
-                      <input id="embed-author" type="text" maxlength="256" placeholder="Optional" />
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Footer</span>
-                      <input id="embed-footer" type="text" maxlength="2048" placeholder="Optional" />
-                    </label>
-                  </div>
-
-                  <div class="embed-grid">
-                    <label class="field">
-                      <span class="field-label">Thumbnail URL</span>
-                      <input id="embed-thumbnail" type="url" placeholder="https://…" />
-                    </label>
-                    <label class="field">
-                      <span class="field-label">Image URL</span>
-                      <input id="embed-image" type="url" placeholder="https://…" />
-                    </label>
-                  </div>
-
-                  <label class="checkbox-row">
-                    <input id="embed-timestamp" type="checkbox" />
-                    <span>Show timestamp</span>
-                  </label>
-
-                  <div class="field">
-                    <span class="field-label">Fields</span>
-                    <div id="embed-fields" class="embed-fields"></div>
-                    <button type="button" class="btn btn-secondary btn-sm" id="embed-add-field">
-                      <span class="btn-glyph">+</span> Add field
-                    </button>
-                  </div>
-
-                  <div class="embed-post-row">
-                    <label class="field field-grow">
-                      <span class="field-label">Post to channel</span>
-                      <select id="embed-channel"></select>
-                    </label>
-                    <button type="submit" class="btn btn-primary" id="embed-post">
-                      Post embed
-                    </button>
-                  </div>
-                </form>
-
-                <div class="preview-wrap">
-                  <span class="field-label">Live preview</span>
-                  <div id="embed-preview" class="embed-preview"></div>
-                </div>
-              </div>
-            </section>
-          </section>
-
           <!-- Servers -->
           <section class="view" id="view-servers">
             <h2 class="view-title">Servers</h2>
@@ -301,7 +216,7 @@
               </div>
 
               <p class="verification-help">
-                Configure verification independently for every server. Saving without a role or public URL disables verification for that server.
+                Configure verification independently for every server. Saving without a verified role disables verification for that server.
               </p>
               <label class="field">
                 <span class="field-label">Current server</span>
@@ -471,7 +386,7 @@
           <h2 id="server-modal-title"><span class="prompt">$</span> select.server</h2>
           <button id="server-modal-close" class="btn-icon" type="button" data-close-server-modal>✕</button>
         </div>
-        <p class="server-modal-help">Choose the server you want to manage. This selection is used across embeds, moderation, and verification.</p>
+        <p class="server-modal-help">Choose the server you want to manage. This selection is used across moderation and verification tools.</p>
         <div id="server-picker-list" class="server-picker-list"></div>
       </section>
     </div>
