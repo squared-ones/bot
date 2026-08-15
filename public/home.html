@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Discord rules bot</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .home-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .home-cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 30px;
+      }
+
+      .home-cta .btn {
+        align-self: auto;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 48px;
+      }
+
+      .feature-card {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 22px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .feature-card::before,
+      .feature-card::after {
+        content: "";
+        position: absolute;
+        width: 11px;
+        height: 11px;
+        border-color: var(--red);
+        border-style: solid;
+        pointer-events: none;
+      }
+
+      .feature-card::before {
+        top: -1px;
+        left: -1px;
+        border-width: 2px 0 0 2px;
+      }
+
+      .feature-card::after {
+        bottom: -1px;
+        right: -1px;
+        border-width: 0 2px 2px 0;
+      }
+
+      .feature-card:hover {
+        border-color: var(--red);
+        box-shadow: 0 0 18px rgba(255, 0, 0, 0.22);
+      }
+
+      .feature-card h3 {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+        margin-bottom: 10px;
+      }
+
+      .feature-card p {
+        font-family: var(--sans);
+        font-weight: 300;
+        color: var(--text-dim);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .servers {
+        margin-top: 56px;
+      }
+
+      .servers-title {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
+        text-align: center;
+        margin-bottom: 26px;
+      }
+
+      .marquee {
+        position: relative;
+        overflow: hidden;
+        padding: 4px 0;
+      }
+
+      .marquee::before,
+      .marquee::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 72px;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .marquee::before {
+        left: 0;
+        background: linear-gradient(to right, #050000, transparent);
+      }
+
+      .marquee::after {
+        right: 0;
+        background: linear-gradient(to left, #050000, transparent);
+      }
+
+      .marquee-track {
+        display: flex;
+        gap: 16px;
+        width: max-content;
+        animation: marquee 35s linear infinite;
+      }
+
+      .marquee:hover .marquee-track {
+        animation-play-state: paused;
+      }
+
+      @keyframes marquee {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      .server-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 18px;
+        border: 1px solid var(--red-dim);
+        background: var(--red-faint);
+        white-space: nowrap;
+      }
+
+      .server-icon-wrap {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        flex: none;
+      }
+
+      .server-icon-fallback {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 1px solid var(--red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--mono);
+        font-weight: 600;
+        color: var(--red);
+        font-size: 0.8rem;
+      }
+
+      .server-icon {
+        position: absolute;
+        inset: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--red-dim);
+      }
+
+      .server-name {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+
+      .servers-empty {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 560px) {
+        .home-nav .btn {
+          padding: 10px 14px;
+          font-size: 0.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/dashboard">Open dashboard</a>
+          <a
+            class="btn btn-primary btn-sm"
+            id="invite-btn"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            >Add to Discord</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Discord bot</span>
+        </span>
+        <h1 class="hero-title">Your server rules,<br />on autopilot.<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="hero-sub">
+          Squared One manages your Discord server's rules — post them to any
+          channel, format them with markdown, and build rich embeds from one
+          red-hot dashboard.
+        </p>
+        <div class="home-cta">
+          <a class="btn btn-primary" href="/dashboard">Open dashboard</a>
+          <a class="btn btn-secondary" href="#features">See features</a>
+        </div>
+
+        <div class="terminal" aria-hidden="true">
+          <div class="terminal-bar">
+            <i></i><i></i><i></i>
+            <span class="terminal-title">squared-one</span>
+          </div>
+          <div class="terminal-body">
+            <p><span class="t-prompt">$</span> squared-one --help</p>
+            <p class="t-dim">/rules — view server rules</p>
+            <p class="t-dim">/addrule — add a custom rule</p>
+            <p class="t-dim">/postrules — post rules to a channel</p>
+            <p class="t-dim">/embed — build and post a rich embed</p>
+            <p><span class="t-prompt">$</span> <span class="t-cursor">▌</span></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="servers" id="servers">
+        <h2 class="servers-title">Trusted by these servers</h2>
+        <div class="marquee" id="servers-marquee">
+          <div class="marquee-track" id="servers-track"></div>
+        </div>
+        <p class="servers-empty" id="servers-empty" hidden>
+          No servers yet — add the bot to your server to see it here.
+        </p>
+      </section>
+
+      <section class="features" id="features">
+        <div class="feature-card">
+          <h3>Default rules</h3>
+          <p>
+            Six sensible rules ship out of the box — respect, no spam, no NSFW,
+            no ads, follow ToS, listen to mods. They can't be removed.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Custom rules</h3>
+          <p>
+            Add and remove your own rules via slash commands or the dashboard.
+            Persisted to disk, so nothing gets lost.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Auto-posting</h3>
+          <p>
+            DM new members the rules the moment they join, or drop the full
+            rules embed into any channel with /postrules.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Markdown formatting</h3>
+          <p>
+            Bold, italics, code, links, and blockquotes in rules and
+            announcements — with a live preview in the dashboard.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Rich embeds</h3>
+          <p>
+            Build embeds with a title, description, color, fields, author,
+            footer, and media — via /embed or the visual builder.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>Discord OAuth</h3>
+          <p>
+            Sign in with Discord. Channel access is scoped to servers you
+            actually belong to, so nothing leaks across servers.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <span>health: <a href="/health" target="_blank" rel="noopener">/health</a></span>
+      <span>·</span>
+      <a href="/dashboard">dashboard</a>
+    </footer>
+
+    <script>
+      // Populate the invite link from the server (uses CLIENT_ID).
+      fetch('/api/invite')
+        .then((r) => r.json())
+        .then((d) => {
+          const btn = document.getElementById('invite-btn');
+          if (d && d.url) {
+            btn.href = d.url;
+          } else {
+            btn.remove();
+          }
+        })
+        .catch(() => {
+          document.getElementById('invite-btn').remove();
+        });
+
+      // Auto-scrolling servers marquee.
+      (function () {
+        const track = document.getElementById('servers-track');
+        const empty = document.getElementById('servers-empty');
+        if (!track) return;
+
+        const esc = (s) =>
+          String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        function item(s) {
+          const initial = (s.name || '?').charAt(0).toUpperCase();
+          const icon = s.icon
+            ? `<img class="server-icon" src="${esc(s.icon)}" alt="" loading="lazy" onerror="this.remove()" />`
+            : '';
+          return (
+            `<div class="server-item">` +
+            `<span class="server-icon-wrap"><span class="server-icon-fallback">${esc(initial)}</span>${icon}</span>` +
+            `<span class="server-name">${esc(s.name)}</span>` +
+            `</div>`
+          );
+        }
+
+        fetch('/api/servers')
+          .then((r) => r.json())
+          .then((d) => {
+            const servers = (d && d.servers) || [];
+            if (!servers.length) {
+              empty.hidden = false;
+              return;
+            }
+            const base = servers.map(item).join('');
+            // Repeat until one "half" fills the viewport, then duplicate it
+            // so the -50% translate loops seamlessly.
+            let html = '';
+            do {
+              html += base;
+              track.innerHTML = html;
+            } while (track.scrollWidth < window.innerWidth);
+            track.innerHTML = html + html;
+          })
+          .catch(() => {
+            empty.hidden = false;
+          });
+      })();
+
+      // Particle background.
+      (function () {
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let W, H;
+        function resize() {
+          W = canvas.width = window.innerWidth;
+          H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Dot {
+          constructor() { this.reset(); }
+          reset() {
+            this.x = Math.random() * W;
+            this.y = Math.random() * H;
+            this.vx = (Math.random() - 0.5) * 0.4;
+            this.vy = (Math.random() - 0.5) * 0.4;
+            this.r = Math.random() * 1.5 + 0.5;
+          }
+          step() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > W) this.vx *= -1;
+            if (this.y < 0 || this.y > H) this.vy *= -1;
+          }
+        }
+
+        const DOTS = Array.from({ length: 55 }, () => new Dot());
+
+        function frame() {
+          ctx.fillStyle = 'rgba(5,0,0,0.22)';
+          ctx.fillRect(0, 0, W, H);
+          DOTS.forEach((d) => d.step());
+          for (let i = 0; i < DOTS.length; i++) {
+            for (let j = i + 1; j < DOTS.length; j++) {
+              const dx = DOTS[i].x - DOTS[j].x;
+              const dy = DOTS[i].y - DOTS[j].y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < 110) {
+                ctx.strokeStyle = `rgba(255,0,0,${(1 - dist / 110) * 0.35})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(DOTS[i].x, DOTS[i].y);
+                ctx.lineTo(DOTS[j].x, DOTS[j].y);
+                ctx.stroke();
+              }
+            }
+            ctx.fillStyle = 'rgba(255,0,0,0.25)';
+            ctx.beginPath();
+            ctx.arc(DOTS[i].x, DOTS[i].y, DOTS[i].r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          if (!reduced) requestAnimationFrame(frame);
+        }
+        frame();
+      })();
+    </script>
+  </body>
+</html>

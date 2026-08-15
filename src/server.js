@@ -20,7 +20,8 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const INDEX_FILE = path.join(PUBLIC_DIR, 'index.html');
+const HOME_FILE = path.join(PUBLIC_DIR, 'home.html');
+const DASHBOARD_FILE = path.join(PUBLIC_DIR, 'dashboard.html');
 
 export function startServer(port = 3000) {
   const clientId = process.env.CLIENT_ID;
@@ -53,7 +54,7 @@ export function startServer(port = 3000) {
 
   // ---------- OAuth ----------
   app.get('/login', (req, res) => {
-    if (req.user) return res.redirect('/');
+    if (req.user) return res.redirect('/dashboard');
     if (!authEnabled) {
       return res
         .status(503)
@@ -104,7 +105,7 @@ export function startServer(port = 3000) {
         },
         sessionSecret
       );
-      res.redirect('/');
+      res.redirect('/dashboard');
     } catch (err) {
       console.error('[auth] oauth callback error:', err.message);
       res.redirect('/login?error=' + encodeURIComponent('Failed to sign in.'));
@@ -113,10 +114,37 @@ export function startServer(port = 3000) {
 
   app.get('/logout', (req, res) => {
     clearSessionCookie(res);
-    res.redirect('/login');
+    res.redirect('/');
   });
 
   // ---------- Public ----------
+  app.get('/api/invite', (req, res) => {
+    const clientId = process.env.CLIENT_ID;
+    if (!clientId) return res.json({ url: null });
+    res.json({
+      url: `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`,
+    });
+  });
+
+  // Servers the bot is in (name + icon), for the homepage marquee.
+  app.get('/api/servers', (req, res) => {
+    const client = botState.client;
+    const connected = Boolean(client?.isReady());
+    const servers = connected
+      ? client.guilds.cache.map((g) => {
+          const ext = g.icon?.startsWith('a_') ? 'gif' : 'png';
+          return {
+            id: g.id,
+            name: g.name,
+            icon: g.icon
+              ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`
+              : null,
+          };
+        })
+      : [];
+    res.json({ connected, servers });
+  });
+
   app.get('/health', (req, res) => {
     res.json({
       status: 'ok',
@@ -132,9 +160,12 @@ export function startServer(port = 3000) {
     });
   });
 
+  // ---------- Homepage (public) ----------
+  app.get('/', (req, res) => res.sendFile(HOME_FILE));
+  app.get('/index.html', (req, res) => res.redirect('/dashboard'));
+
   // ---------- Dashboard (protected) ----------
-  app.get('/', guard, (req, res) => res.sendFile(INDEX_FILE));
-  app.get('/index.html', guard, (req, res) => res.sendFile(INDEX_FILE));
+  app.get('/dashboard', guard, (req, res) => res.sendFile(DASHBOARD_FILE));
 
   app.get('/api/session', guard, (req, res) => {
     if (!req.user) {

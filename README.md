@@ -56,7 +56,8 @@ npm start          # or: npm run dev (auto-reload)
 ```
 
 On boot the console prints an invite link (if `CLIENT_ID` is set) — open it to
-add the bot to your server. The dashboard is at <http://localhost:3000>.
+add the bot to your server. The homepage is at <http://localhost:3000> and the
+dashboard at <http://localhost:3000/dashboard>.
 
 ### Discord OAuth login
 
@@ -95,11 +96,13 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 
 ## Web endpoints
 
-| Method | Path            | Description                                 |
-| ------ | --------------- | ------------------------------------------- |
 | Method | Path                    | Description                                        |
 | ------ | ----------------------- | -------------------------------------------------- |
+| GET    | `/`                     | Public homepage                                    |
+| GET    | `/dashboard`            | Dashboard (requires login when OAuth is enabled)   |
 | GET    | `/health`               | JSON health + bot status (public)                  |
+| GET    | `/api/invite`           | Bot invite URL (public)                            |
+| GET    | `/api/servers`          | Servers the bot is in — name + icon (public)       |
 | GET    | `/login`                | Discord OAuth login page                           |
 | GET    | `/auth/discord/login`   | Redirects to Discord OAuth                         |
 | GET    | `/auth/discord/callback`| OAuth callback                                     |
@@ -110,10 +113,10 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 | DELETE | `/api/rules/:id`        | Remove a custom rule                               |
 | GET    | `/api/channels`         | Guilds/channels the bot can post in (scoped to you) |
 | POST   | `/api/embed`            | Post an embed `{ channelId, embed }` (scoped to you) |
-| GET    | `/`                     | Dashboard (requires login when OAuth is enabled)   |
 
-> All `/api/*` routes (and `/`) require a valid session when `CLIENT_SECRET`
-> is set. Only `/health`, `/login`, and the OAuth routes are public.
+> All `/api/*` routes and `/dashboard` require a valid session when
+> `CLIENT_SECRET` is set. The homepage, `/health`, `/api/invite`, `/login`,
+> and the OAuth routes are public.
 
 ## Project structure
 
@@ -126,10 +129,11 @@ src/
   auth.js     # Discord OAuth + signed session cookie
   server.js   # Express server, /health, rules + embed API
 public/
-  index.html  # dashboard markup
-  login.html  # Discord OAuth login page
-  style.css   # red/black neon theme
-  app.js      # dashboard logic, markdown preview, embed builder
+  home.html      # public homepage
+  dashboard.html # dashboard markup
+  login.html     # Discord OAuth login page
+  style.css      # red/black neon theme
+  app.js         # dashboard logic, markdown preview, embed builder
 data/
   rules.json  # custom rules (created at runtime)
 ```
