@@ -3,6 +3,9 @@ import {
   GatewayIntentBits,
   SlashCommandBuilder,
   EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   PermissionFlagsBits,
 } from 'discord.js';
 import {
@@ -18,6 +21,10 @@ import {
   detectFlags,
   isJoinBurst,
 } from './verification.js';
+import {
+  getDueVoteReminders,
+  markVoteReminded,
+} from './voting.js';
 
 export const botState = {
   client: null,
@@ -41,6 +48,7 @@ export async function isApplicationOwner(userId) {
   }
 }
 
+const APP_URL = 'https://squared-one.onrender.com';
 const COLOR = 0xff0000;
 
 function buildRulesEmbed(title, footer) {
@@ -734,7 +742,17 @@ async function handleInteraction(interaction) {
             inline: true,
           }
         );
-      await interaction.reply({ embeds: [embed] });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Vote on top.gg')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://top.gg/bot/${botId}/vote`),
+        new ButtonBuilder()
+          .setLabel('Vote on Discord Bot List')
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://discordbotlist.com/bots/${botId}/upvote`)
+      );
+      await interaction.reply({ embeds: [embed], components: [row] });
       return;
     }
 
@@ -755,10 +773,7 @@ async function handleInteraction(interaction) {
         });
         return;
       }
-      const publicUrl = (
-        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`
-      ).replace(/\/$/, '');
-      const url = `${publicUrl}/verify?guild=${interaction.guild.id}`;
+      const url = `${APP_URL}/verify?guild=${interaction.guild.id}`;
       try {
         await interaction.user.send(
           `🔒 **Verify for ${interaction.guild.name}**\nOpen this link to complete verification:\n${url}`
@@ -879,6 +894,25 @@ async function handleFlaggedMember(member, flags, config) {
   }
 }
 
+async function sendDueVoteReminders(client) {
+  const due = getDueVoteReminders();
+  for (const vote of due) {
+    try {
+      const user = await client.users.fetch(vote.userId);
+      const botId = client.user.id;
+      await user.send(
+        `🗳️ You can vote for Squared One again!\n\n` +
+          `Top.gg: https://top.gg/bot/${botId}/vote\n` +
+          `Discord Bot List: https://discordbotlist.com/bots/${botId}/upvote`
+      );
+    } catch {
+      // Ignore users with DMs disabled or accounts that no longer exist.
+    } finally {
+      markVoteReminded(vote.id);
+    }
+  }
+}
+
 export async function startBot(token) {
   const client = new Client({
     intents: [
@@ -941,5 +975,11 @@ export async function startBot(token) {
   client.on('interactionCreate', handleInteraction);
 
   await client.login(token);
+  const reminderTimer = setInterval(() => {
+    sendDueVoteReminders(client).catch((error) => {
+      console.error('[vote] reminder error:', error.message);
+    });
+  }, 10 * 60 * 1000);
+  reminderTimer.unref?.();
   return client;
 }

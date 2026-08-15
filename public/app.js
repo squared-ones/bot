@@ -67,6 +67,12 @@ const el = {
   vpnFlag: $('#vpn-flag'),
   vpnBlocklist: $('#vpn-blocklist'),
   vpnBlocklistStatus: $('#vpn-blocklist-status'),
+  voteTotal: $('#vote-total'),
+  voteWeighted: $('#vote-weighted'),
+  voteTopgg: $('#vote-topgg'),
+  voteDbl: $('#vote-dbl'),
+  voteStatus: $('#vote-status'),
+  voteRecent: $('#vote-recent'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -232,6 +238,7 @@ async function loadHealth() {
       if (!modGuildsLoaded) loadModerationGuilds();
       if (!verificationGuildsLoaded) loadVerificationGuilds();
       if (!vpnBlocklistLoaded) loadVpnBlocklist();
+      if (!votesLoaded) loadVotes();
     }
   } catch (err) {
     setBotStatus(false);
@@ -294,6 +301,39 @@ async function loadServers() {
   } catch {
     el.serversList.innerHTML =
       '<div class="empty">Failed to load servers.</div>';
+  }
+}
+
+/* ---------- Vote tracking ---------- */
+let votesLoaded = false;
+
+async function loadVotes() {
+  try {
+    const res = await apiFetch('/api/votes');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    votesLoaded = true;
+    el.voteTotal.textContent = String(data.total || 0);
+    el.voteWeighted.textContent = String(data.weightedTotal || 0);
+    el.voteTopgg.textContent = String(data.byProvider?.topgg?.votes || 0);
+    el.voteDbl.textContent = String(data.byProvider?.discordbotlist?.votes || 0);
+    el.voteStatus.textContent = `${data.total || 0} vote${data.total === 1 ? '' : 's'}`;
+    const recent = data.recent || [];
+    el.voteRecent.innerHTML = recent.length
+      ? recent
+          .map(
+            (vote) => `
+              <div class="vote-recent-entry">
+                <span class="vote-provider">${escapeHtml(vote.provider === 'topgg' ? 'TOP.GG' : 'DISCORD BOT LIST')}</span>
+                <span class="vote-user">${escapeHtml(vote.username || vote.userId)}</span>
+                <span class="vote-date">${escapeHtml(new Date(vote.createdAt).toLocaleString())}</span>
+              </div>`
+          )
+          .join('')
+      : '<div class="empty">No votes received yet.</div>';
+  } catch {
+    el.voteStatus.textContent = 'unavailable';
+    el.voteRecent.innerHTML = '<div class="empty">Unable to load vote tracking.</div>';
   }
 }
 
@@ -1063,4 +1103,5 @@ loadServers();
 loadModerationGuilds();
 loadVerificationGuilds();
 loadVpnBlocklist();
+loadVotes();
 setInterval(loadHealth, 5000);

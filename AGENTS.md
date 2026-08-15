@@ -82,8 +82,6 @@ data/
 | `CLIENT_SECRET` | for OAuth | OAuth2 client secret (enables login) |
 | `SESSION_SECRET` | recommended | Signs session cookies (falls back to `CLIENT_SECRET`) |
 | `PORT` | no (3000) | Web server port |
-| `PUBLIC_URL` | no | Public base URL (used to build the OAuth redirect URI) |
-| `REDIRECT_URI` | no | Explicit OAuth redirect URI override |
 | `COOKIE_SECURE` | no | `true` to send cookies over HTTPS only |
 
 ## Verification checklist

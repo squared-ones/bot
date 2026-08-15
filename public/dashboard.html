@@ -31,6 +31,9 @@
           <button class="nav-item active" data-view="overview" type="button">
             <span class="nav-glyph">▦</span> Overview
           </button>
+          <button class="nav-item" data-view="voting" type="button">
+            <span class="nav-glyph">◉</span> Voting
+          </button>
           <button class="nav-item" data-view="rules" type="button">
             <span class="nav-glyph">§</span> Rules
           </button>
@@ -106,6 +109,52 @@
                 <p><span class="t-prompt">$</span> <span class="t-cursor">▌</span></p>
               </div>
             </div>
+          </section>
+
+          <!-- Voting -->
+          <section class="view" id="view-voting">
+            <h2 class="view-title">Voting</h2>
+
+            <section class="vote-stats">
+              <div class="stat-card">
+                <span class="stat-label">Total votes</span>
+                <span id="vote-total" class="stat-value">--</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Weighted votes</span>
+                <span id="vote-weighted" class="stat-value">--</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Top.gg</span>
+                <span id="vote-topgg" class="stat-value">--</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Discord Bot List</span>
+                <span id="vote-dbl" class="stat-value">--</span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> votes.recent <span class="accent">--25</span></h2>
+                <span id="vote-status" class="count-chip">…</span>
+              </div>
+              <div id="vote-recent" class="vote-recent"></div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> votes.webhooks <span class="accent">--setup</span></h2>
+              </div>
+              <p class="verification-help">Configure these URLs in the Top.gg and Discord Bot List dashboards. Keep the webhook secrets in your environment variables.</p>
+              <div class="vote-webhook-row"><code>/webhooks/topgg</code><span>TOPGG_WEBHOOK_SECRET</span></div>
+              <div class="vote-webhook-row"><code>/webhooks/discordbotlist</code><span>DBL_WEBHOOK_TOKEN</span></div>
+              <p class="verification-help">Voters receive a private DM reminder after their 12-hour cooldown. Vote rewards are currently disabled.</p>
+            </section>
           </section>
 
           <!-- Rules -->

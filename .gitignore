@@ -3,6 +3,7 @@ node_modules/
 data/rules.json
 data/verification.json
 data/vpn-blocklist.json
+data/votes.json
 dist/
 npm-debug.log*
 .DS_Store

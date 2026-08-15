@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import { PermissionFlagsBits } from 'discord.js';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -40,6 +41,7 @@ import {
   purgeMessages,
 } from './moderation.js';
 import { createCaptcha, verifyCaptcha } from './captcha.js';
+import { getVoteStats, recordVote } from './voting.js';
 import {
   addManualBlockedIp,
   getClientIp,
@@ -54,6 +56,7 @@ import {
   isVerificationConfigured,
 } from './verification.js';
 
+const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Resolves the public directory in both dev (src/) and built (dist/) layouts.
@@ -82,15 +85,17 @@ export function startServer(port = 3000) {
   const sessionSecret = process.env.SESSION_SECRET || clientSecret;
   const authEnabled = Boolean(clientId && clientSecret);
 
-  const redirectUri =
-    process.env.REDIRECT_URI ||
-    (process.env.PUBLIC_URL
-      ? `${process.env.PUBLIC_URL.replace(/\/$/, '')}/auth/discord/callback`
-      : `http://localhost:${port}/auth/discord/callback`);
+  const redirectUri = `${APP_URL}/auth/discord/callback`;
 
   const app = express();
   app.set('trust proxy', process.env.TRUST_PROXY === 'true');
-  app.use(express.json());
+  app.use(
+    express.json({
+      verify(req, res, buffer) {
+        req.rawBody = Buffer.from(buffer);
+      },
+    })
+  );
   app.use(sessionMiddleware(sessionSecret));
 
   // Auth guard — a no-op when OAuth isn't configured, so the dashboard
@@ -171,6 +176,98 @@ export function startServer(port = 3000) {
   app.get('/logout', (req, res) => {
     clearSessionCookie(res);
     res.redirect('/');
+  });
+
+  // ---------- Vote webhooks and tracking ----------
+  function timingSafeMatch(received, expected) {
+    const a = Buffer.from(String(received || ''));
+    const b = Buffer.from(String(expected || ''));
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+
+  function verifyTopggWebhook(req) {
+    const secret = process.env.TOPGG_WEBHOOK_SECRET;
+    if (!secret) return false;
+    const signature = String(req.headers['x-topgg-signature'] || '');
+    if (signature) {
+      const parts = Object.fromEntries(
+        signature.split(',').map((part) => {
+          const index = part.indexOf('=');
+          return index === -1
+            ? [part, '']
+            : [part.slice(0, index).trim(), part.slice(index + 1).trim()];
+        })
+      );
+      const timestamp = Number(parts.t);
+      if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) {
+        return false;
+      }
+      const rawBody = String(req.rawBody || '');
+      const expected = crypto
+        .createHmac('sha256', secret)
+        .update(`${timestamp}.${rawBody}`)
+        .digest('hex');
+      return timingSafeMatch(parts.v1, expected);
+    }
+    // Legacy Top.gg webhooks use the Authorization header.
+    return timingSafeMatch(req.headers.authorization, secret);
+  }
+
+  function topggVote(body) {
+    if (body?.type === 'webhook.test' || body?.type === 'test') return null;
+    const data = body?.data || body || {};
+    const user = data.user || {};
+    return {
+      provider: 'topgg',
+      userId: user.platform_id || body?.user || user.id,
+      username: user.name || null,
+      eventId: data.id || body?.id || null,
+      weight: data.weight || (body?.isWeekend ? 2 : 1),
+      createdAt: data.created_at || body?.createdAt || Date.now(),
+      expiresAt: data.expires_at || null,
+    };
+  }
+
+  app.post('/webhooks/topgg', (req, res) => {
+    if (!process.env.TOPGG_WEBHOOK_SECRET) {
+      return res.status(503).json({ error: 'Top.gg webhook secret is not configured' });
+    }
+    if (!verifyTopggWebhook(req)) return res.status(401).json({ error: 'invalid webhook signature' });
+    const vote = topggVote(req.body);
+    if (!vote) return res.json({ ok: true, test: true });
+    try {
+      const result = recordVote(vote);
+      console.log(`[vote] Top.gg vote recorded for ${vote.userId}${result.duplicate ? ' (duplicate)' : ''}.`);
+      res.json({ ok: true, duplicate: result.duplicate });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/webhooks/discordbotlist', (req, res) => {
+    const secret = process.env.DBL_WEBHOOK_TOKEN;
+    if (!secret) return res.status(503).json({ error: 'Discord Bot List webhook token is not configured' });
+    const authorization = req.headers.authorization || req.headers['x-webhook-token'];
+    if (!timingSafeMatch(authorization, secret)) return res.status(401).json({ error: 'invalid webhook token' });
+    const body = req.body || {};
+    if (body.type === 'test') return res.json({ ok: true, test: true });
+    try {
+      const result = recordVote({
+        provider: 'discordbotlist',
+        userId: body.id,
+        username: body.username || null,
+        eventId: body.voteId || null,
+        weight: 1,
+      });
+      console.log(`[vote] Discord Bot List vote recorded for ${body.id}${result.duplicate ? ' (duplicate)' : ''}.`);
+      res.json({ ok: true, duplicate: result.duplicate });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/votes', guard, (req, res) => {
+    res.json(getVoteStats());
   });
 
   // ---------- Public ----------

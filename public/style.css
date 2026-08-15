@@ -499,6 +499,56 @@ main {
   line-height: 1.65;
 }
 
+/* ---------- Voting ---------- */
+.vote-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.vote-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vote-recent-entry,
+.vote-webhook-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 13px;
+  border: 1px solid var(--red-dim);
+  background: rgba(20, 0, 0, 0.5);
+}
+
+.vote-provider {
+  min-width: 145px;
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+}
+
+.vote-user {
+  flex: 1;
+  color: var(--text);
+}
+
+.vote-date,
+.vote-webhook-row span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+
+.vote-webhook-row code {
+  color: var(--text);
+  font-family: var(--mono);
+}
+
 /* ---------- Terminal ---------- */
 .terminal {
   position: relative;

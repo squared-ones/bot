@@ -26,6 +26,8 @@ that you can extend with your own.
 - **Verification** — a self-hosted CAPTCHA gate that grants a "Verified" role
   after passing, plus anti-alt/anti-raid detections (account age, default
   avatar, and join bursts).
+- **Voting system** — clickable `/vote` buttons for Top.gg and Discord Bot List,
+  signed webhook tracking, vote statistics, and private-DM cooldown reminders.
 - **Private GitHub data storage** — runtime files in `data/` are loaded from and
   committed to the private `squared-ones/data` repository.
 - **`/health` endpoint** — JSON health/status check.
@@ -60,6 +62,10 @@ GITHUB_TOKEN=your-github-token
 GITHUB_DATA_REPO=squared-ones/data
 GITHUB_DATA_BRANCH=main
 
+# Voting webhook secrets
+TOPGG_WEBHOOK_SECRET=whs_your-topgg-webhook-secret
+DBL_WEBHOOK_TOKEN=your-discord-bot-list-webhook-token
+
 # Optional — links shown on the /support page
 # SUPPORT_SERVER=https://discord.gg/your-invite
 # GITHUB_URL=https://github.com/you/squared-one
@@ -80,9 +86,8 @@ dashboard at <http://localhost:3000/dashboard>.
 Setting `CLIENT_SECRET` enables login. Configure your Discord application:
 
 1. Go to **OAuth2** in the [developer portal](https://discord.com/developers/applications).
-2. Add a **Redirect** URL pointing at your dashboard, e.g.
-   `http://localhost:3000/auth/discord/callback`. Use the `REDIRECT_URI` env
-   var to change it (or `PUBLIC_URL` for a hosted setup).
+2. Add this **Redirect** URL exactly:
+   `https://squared-one.onrender.com/auth/discord/callback`.
 3. Copy the **Client Secret** into `CLIENT_SECRET`.
 
 With OAuth enabled the dashboard redirects unauthenticated visitors to
@@ -105,8 +110,8 @@ Configurations are saved in `data/verification.json`, keyed by Discord server ID
 A server manager can configure any server they manage without editing `.env` or
 restarting the bot. Users run `/verify`, sign in with Discord, and solve the
 CAPTCHA; on success the configured role is added. Verification links use the
-application's global `PUBLIC_URL` (or localhost when it is unset), not a
-per-server URL setting.
+fixed application URL `https://squared-one.onrender.com`, not a per-server URL
+setting.
 
 VPN blocking is self-hosted: the server evaluates the verifier's IP against
 Tor exit-node and VPN/datacenter CIDR lists refreshed in memory every hour. The
@@ -118,6 +123,21 @@ flow because Discord does not provide member IP addresses. If the public lists
 cannot be refreshed, manually flagged addresses still work and automatic list
 detection fails open. When running behind a trusted reverse proxy, set
 `TRUST_PROXY=true` so Express can obtain the original client IP.
+
+### Voting
+
+`/vote` sends clickable buttons for both listing sites. Configure the following
+webhook URLs in the respective bot dashboards:
+
+- Top.gg: `https://your-domain.example/webhooks/topgg`
+- Discord Bot List: `https://your-domain.example/webhooks/discordbotlist`
+
+Store the Top.gg v1 secret in `TOPGG_WEBHOOK_SECRET` and the Discord Bot List
+Authorization token in `DBL_WEBHOOK_TOKEN`. Incoming webhooks are authenticated
+before they are recorded in `data/votes.json`. The dashboard's **Voting** page
+shows totals and recent votes. The bot checks for due votes every ten minutes
+and privately DMs voters after the 12-hour cooldown with fresh vote links.
+Vote rewards are currently disabled.
 
 ### GitHub data storage
 
@@ -183,6 +203,9 @@ failure and falls back to the local data directory.
 | DELETE | `/api/rules/:id`        | Remove a custom rule                               |
 | GET    | `/api/channels`         | Guilds/channels the bot can post in (scoped to you) |
 | POST   | `/api/embed`            | Post an embed `{ channelId, embed }` (scoped to you) |
+| POST   | `/webhooks/topgg`       | Receive authenticated Top.gg vote events            |
+| POST   | `/webhooks/discordbotlist` | Receive authenticated Discord Bot List vote events |
+| GET    | `/api/votes`            | Vote totals and recent vote history                 |
 | GET    | `/api/moderation/guilds` | Servers you can moderate + per-action permissions |
 | GET    | `/api/moderation/members`| Search members (`?guildId=&query=`)                 || POST   | `/api/moderation/action` | Ban / kick / timeout / purge (scoped + permission-checked) |
 | GET    | `/api/verification/guilds` | Servers manageable for verification + saved configs |
@@ -240,6 +263,7 @@ src/
   captcha.js  # self-hosted SVG captcha
   network-detection.js # self-hosted VPN/proxy/Tor CIDR detection
   verification.js # per-server config store + anti-alt / anti-raid detection
+  voting.js   # vote tracking, deduplication, and reminder state
   server.js   # Express server, /health, rules + embed + moderation + verification API
 scripts/
   build.js    # bundle server + obfuscate frontend → dist/
@@ -263,4 +287,5 @@ data/
   rules.json        # custom rules (created at runtime)
   verification.json # per-server verification settings (synced to GitHub)
   vpn-blocklist.json # manually flagged exact IPs (synced to GitHub)
+  votes.json        # vote events and reminder state (synced to GitHub)
 ```
