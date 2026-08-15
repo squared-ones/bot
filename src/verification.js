@@ -7,7 +7,6 @@ const CONFIG_FILE = path.join(DATA_DIR, 'verification.json');
 const ACTIONS = ['none', 'kick', 'ban'];
 const DEFAULT_CONFIG = {
   roleId: null,
-  publicUrl: null,
   minAccountAgeDays: 0,
   requireAvatar: false,
   joinBurst: 0,
@@ -34,18 +33,23 @@ function readConfigs() {
 let configs = null;
 
 function getConfigs() {
-  if (!configs) configs = new Map(Object.entries(readConfigs()));
+  if (!configs) {
+    configs = new Map(
+      Object.entries(readConfigs()).map(([guildId, config]) => [
+        guildId,
+        normalizeVerificationConfig(config),
+      ])
+    );
+  }
   return configs;
 }
 
 export function normalizeVerificationConfig(input = {}) {
+  input = input && typeof input === 'object' ? input : {};
   const action = String(input.action || DEFAULT_CONFIG.action).toLowerCase();
   return {
     roleId: typeof input.roleId === 'string' && input.roleId.trim()
       ? input.roleId.trim()
-      : null,
-    publicUrl: typeof input.publicUrl === 'string' && input.publicUrl.trim()
-      ? input.publicUrl.trim().replace(/\/$/, '')
       : null,
     minAccountAgeDays: Math.min(
       3650,
@@ -92,7 +96,7 @@ export function saveVerificationConfig(guildId, input) {
 }
 
 export function isVerificationConfigured(config) {
-  return Boolean(config?.roleId && config?.publicUrl);
+  return Boolean(config?.roleId);
 }
 
 // Returns an array of detection reason strings for a joining member.

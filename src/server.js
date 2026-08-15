@@ -644,14 +644,6 @@ export function startServer(port = 3000) {
     if (!guild) return;
 
     const config = normalizeVerificationConfig(req.body ?? {});
-    if (config.publicUrl) {
-      try {
-        const url = new URL(config.publicUrl);
-        if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
-      } catch {
-        return res.status(400).json({ error: 'public URL must be a valid http(s) URL' });
-      }
-    }
 
     if (config.roleId) {
       const role = guild.roles.cache.get(config.roleId);

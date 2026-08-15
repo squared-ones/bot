@@ -726,7 +726,7 @@ async function handleInteraction(interaction) {
 
     if (commandName === 'verify') {
       const config = getVerificationConfig(interaction.guild?.id);
-      if (!config.roleId || !config.publicUrl) {
+      if (!config.roleId) {
         await interaction.reply({
           content:
             '❌ Verification is not configured for this server. Ask a server manager to configure it in the dashboard.',
@@ -741,9 +741,10 @@ async function handleInteraction(interaction) {
         });
         return;
       }
-      const url = `${config.publicUrl.replace(/\/$/, '')}/verify?guild=${
-        interaction.guild.id
-      }`;
+      const publicUrl = (
+        process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`
+      ).replace(/\/$/, '');
+      const url = `${publicUrl}/verify?guild=${interaction.guild.id}`;
       try {
         await interaction.user.send(
           `🔒 **Verify for ${interaction.guild.name}**\nOpen this link to complete verification:\n${url}`

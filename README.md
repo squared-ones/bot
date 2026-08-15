@@ -96,14 +96,16 @@ don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
 Squared One can gate a "Verified" role behind a self-hosted CAPTCHA. Open the
 **Verification** section of the dashboard to configure each server separately:
 
-- Choose the role granted after a successful CAPTCHA and the public verification URL.
+- Choose the role granted after a successful CAPTCHA.
 - Configure account-age and default-avatar detection.
 - Configure join-burst detection, the action for flagged joins (`none`, `kick`, or `ban`), and an optional log channel.
 
 Configurations are saved in `data/verification.json`, keyed by Discord server ID.
 A server manager can configure any server they manage without editing `.env` or
 restarting the bot. Users run `/verify`, sign in with Discord, and solve the
-CAPTCHA; on success the configured role is added.
+CAPTCHA; on success the configured role is added. Verification links use the
+application's global `PUBLIC_URL` (or localhost when it is unset), not a
+per-server URL setting.
 
 ### GitHub data storage
 

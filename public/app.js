@@ -54,7 +54,6 @@ const el = {
   verificationForm: $('#verification-form'),
   verificationStatus: $('#verification-status'),
   verificationRole: $('#verification-role'),
-  verificationPublicUrl: $('#verification-public-url'),
   verificationMinAge: $('#verification-min-age'),
   verificationAction: $('#verification-action'),
   verificationRequireAvatar: $('#verification-require-avatar'),
@@ -332,7 +331,6 @@ function renderVerificationConfig() {
     (channel) => `#${channel.name}`
   );
   el.verificationRole.value = config.roleId || '';
-  el.verificationPublicUrl.value = config.publicUrl || '';
   el.verificationMinAge.value = String(config.minAccountAgeDays ?? 0);
   el.verificationAction.value = config.action || 'none';
   el.verificationRequireAvatar.checked = config.requireAvatar === true;
@@ -385,7 +383,6 @@ el.verificationForm.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roleId: el.verificationRole.value || null,
-        publicUrl: el.verificationPublicUrl.value.trim() || null,
         minAccountAgeDays: parseInt(el.verificationMinAge.value, 10),
         requireAvatar: el.verificationRequireAvatar.checked,
         joinBurst: parseInt(el.verificationJoinBurst.value, 10),
