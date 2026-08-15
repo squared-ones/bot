@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
-import { PermissionFlagsBits } from 'discord.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -55,9 +55,30 @@ import {
   normalizeVerificationConfig,
   isVerificationConfigured,
 } from './verification.js';
+import { getAutoroleConfig, setAutoroleRoles } from './autoroles.js';
+import { isRestoreEnabled, setRestoreEnabled } from './restore.js';
+import { getTicketConfig, setTicketConfig } from './tickets.js';
+import {
+  createAppeal,
+  listAppeals,
+  getAppeal,
+  reviewAppeal,
+} from './appeals.js';
+import { checkRateLimit } from './rate-limit.js';
+import {
+  getLevelConfig,
+  setLevelConfig,
+  getLeaderboard,
+  resetGuildXp,
+} from './levels.js';
 
 const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Anti-spam limits for the public ban-appeal form.
+const APPEAL_IP_LIMIT = 5; // appeals per IP address...
+const APPEAL_IP_WINDOW_MS = 10 * 60 * 1000; // ...within 10 minutes
+const APPEAL_USER_COOLDOWN_MS = 2 * 60 * 1000; // per (guild, user) cooldown
 
 // Resolves the public directory in both dev (src/) and built (dist/) layouts.
 function resolvePublicDir() {
@@ -110,6 +131,44 @@ export function startServer(port = 3000) {
     }
     next();
   };
+
+  // Whether the signed-in user can manage (Manage Server) a given guild.
+  async function canManageGuild(req, guildId) {
+    const client = botState.client;
+    if (!req.user) return true; // OAuth disabled (dev mode).
+    if (!client?.isReady()) return false;
+    const guild = client.guilds.cache.get(String(guildId));
+    if (!guild || !(req.user.guildIds || []).includes(guild.id)) return false;
+    const member = await getMember(guild, req.user.id);
+    if (!member) return false;
+    return (
+      guild.ownerId === req.user.id ||
+      member.permissions.has(PermissionFlagsBits.ManageGuild)
+    );
+  }
+
+  // Guilds the signed-in user can manage (Manage Server or owner).
+  async function listManageableGuilds(req) {
+    const client = botState.client;
+    if (!client?.isReady()) return [];
+    const allowed = req.user ? new Set(req.user.guildIds || []) : null;
+    const result = [];
+    for (const guild of client.guilds.cache.values()) {
+      if (allowed && !allowed.has(guild.id)) continue;
+      if (req.user) {
+        const member = await getMember(guild, req.user.id);
+        const isOwner = guild.ownerId === req.user.id;
+        if (
+          !member ||
+          (!isOwner && !member.permissions.has(PermissionFlagsBits.ManageGuild))
+        ) {
+          continue;
+        }
+      }
+      result.push(guild);
+    }
+    return result;
+  }
 
   // ---------- OAuth ----------
   app.get('/login', (req, res) => {
@@ -293,6 +352,55 @@ export function startServer(port = 3000) {
     });
   });
 
+  // Public ban-appeal submission (no login — banned users aren't in the server).
+  app.post('/api/appeals', (req, res) => {
+    const ip = getClientIp(req);
+    const ipLimit = checkRateLimit(`appeal:ip:${ip}`, {
+      limit: APPEAL_IP_LIMIT,
+      windowMs: APPEAL_IP_WINDOW_MS,
+    });
+    if (!ipLimit.ok) {
+      res.set('Retry-After', String(ipLimit.retryAfterSeconds));
+      return res.status(429).json({
+        error: `Too many appeals from your address. Please wait ${ipLimit.retryAfterSeconds} seconds and try again.`,
+      });
+    }
+
+    const { guildId, userId, username, reason } = req.body ?? {};
+    if (typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ error: 'reason is required' });
+    }
+    if (typeof guildId !== 'string' || !guildId.trim()) {
+      return res.status(400).json({ error: 'guild is required' });
+    }
+    const guild = botState.client?.guilds.cache.get(guildId);
+    if (!guild) return res.status(404).json({ error: 'guild not found' });
+
+    // Per (guild, user) cooldown so a single user can't flood one server with
+    // appeals, even from different addresses.
+    if (typeof userId === 'string' && userId.trim()) {
+      const userLimit = checkRateLimit(
+        `appeal:user:${guildId}:${userId.trim()}`,
+        { limit: 1, windowMs: APPEAL_USER_COOLDOWN_MS }
+      );
+      if (!userLimit.ok) {
+        res.set('Retry-After', String(userLimit.retryAfterSeconds));
+        return res.status(429).json({
+          error: `You already submitted an appeal for that server recently. Please wait ${userLimit.retryAfterSeconds} seconds and try again.`,
+        });
+      }
+    }
+
+    const appeal = createAppeal({
+      guildId: guild.id,
+      guildName: guild.name,
+      userId,
+      username,
+      reason,
+    });
+    res.status(201).json(appeal);
+  });
+
   // Servers the bot is in (name + icon). Scoped to the logged-in user's
   // guilds when a session is present; public (all bot guilds) for the homepage.
   app.get('/api/servers', (req, res) => {
@@ -302,18 +410,35 @@ export function startServer(port = 3000) {
     const servers = connected
       ? client.guilds.cache
           .filter((g) => !allowed || allowed.has(g.id))
-          .map((g) => {
-            const ext = g.icon?.startsWith('a_') ? 'gif' : 'png';
-            return {
-              id: g.id,
-              name: g.name,
-              icon: g.icon
-                ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`
-                : null,
-            };
-          })
+          .map((g) => ({
+            id: g.id,
+            name: g.name,
+            icon: g.icon ? `/icons/${g.id}/${g.icon}` : null,
+          }))
       : [];
     res.json({ connected, servers });
+  });
+
+  // Proxies Discord CDN server icons so the homepage and dashboard don't set a
+  // third-party Cloudflare (`__cf_bm`) cookie, which Chrome flags. The hash in
+  // the URL identifies the icon content, so responses can be cached immutably.
+  app.get('/icons/:guildId/:iconHash', async (req, res) => {
+    const guildId = String(req.params.guildId || '');
+    const iconHash = String(req.params.iconHash || '');
+    if (!/^\d{16,22}$/.test(guildId) || !/^a?[0-9a-f]+$/i.test(iconHash)) {
+      return res.status(404).end();
+    }
+    const ext = iconHash.startsWith('a_') ? 'gif' : 'png';
+    const url = `https://cdn.discordapp.com/icons/${guildId}/${iconHash}.${ext}?size=64`;
+    try {
+      const upstream = await fetch(url);
+      if (!upstream.ok) return res.status(upstream.status).end();
+      res.set('Content-Type', `image/${ext === 'gif' ? 'gif' : 'png'}`);
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      res.send(Buffer.from(await upstream.arrayBuffer()));
+    } catch {
+      res.status(502).end();
+    }
   });
 
   app.get('/health', (req, res) => {
@@ -344,6 +469,9 @@ export function startServer(port = 3000) {
   );
   app.get('/support', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'support.html'))
+  );
+  app.get('/appeal', (req, res) =>
+    res.sendFile(path.join(PUBLIC_DIR, 'appeal.html'))
   );
 
   // ---------- Dashboard (protected) ----------
@@ -880,6 +1008,196 @@ export function startServer(port = 3000) {
     } catch (e) {
       res.status(503).json({ error: e.message });
     }
+  });
+
+  // ---------- Automation (autorole + role restore) ----------
+  app.get('/api/automation/guilds', guard, async (req, res) => {
+    const guilds = await listManageableGuilds(req);
+    res.json({
+      connected: Boolean(botState.client?.isReady()),
+      guilds: guilds.map((guild) => ({
+        id: guild.id,
+        name: guild.name,
+        roles: [...guild.roles.cache.values()]
+          .filter((role) => role.id !== guild.id && !role.managed)
+          .sort((a, b) => b.position - a.position)
+          .map((role) => ({
+            id: role.id,
+            name: role.name,
+            position: role.position,
+          })),
+        autoroles: getAutoroleConfig(guild.id).roleIds,
+        restoreEnabled: isRestoreEnabled(guild.id),
+      })),
+    });
+  });
+
+  app.put('/api/automation/:guildId', guard, async (req, res) => {
+    const guildId = String(req.params.guildId || '');
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    const body = req.body ?? {};
+    if (Array.isArray(body.autoroles)) {
+      setAutoroleRoles(guildId, body.autoroles.map(String).filter(Boolean));
+    }
+    if (typeof body.restoreEnabled === 'boolean') {
+      setRestoreEnabled(guildId, body.restoreEnabled);
+    }
+    res.json({
+      ok: true,
+      autoroles: getAutoroleConfig(guildId).roleIds,
+      restoreEnabled: isRestoreEnabled(guildId),
+    });
+  });
+
+  // ---------- Tickets ----------
+  app.get('/api/tickets/guilds', guard, async (req, res) => {
+    const guilds = await listManageableGuilds(req);
+    res.json({
+      connected: Boolean(botState.client?.isReady()),
+      guilds: guilds.map((guild) => ({
+        id: guild.id,
+        name: guild.name,
+        categories: [...guild.channels.cache.values()]
+          .filter((channel) => channel.type === ChannelType.GuildCategory)
+          .map((channel) => ({ id: channel.id, name: channel.name })),
+        roles: [...guild.roles.cache.values()]
+          .filter((role) => role.id !== guild.id && !role.managed)
+          .sort((a, b) => b.position - a.position)
+          .map((role) => ({ id: role.id, name: role.name })),
+        config: getTicketConfig(guild.id),
+      })),
+    });
+  });
+
+  app.put('/api/tickets/:guildId', guard, async (req, res) => {
+    const guildId = String(req.params.guildId || '');
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    const config = setTicketConfig(guildId, {
+      categoryId: req.body?.categoryId || null,
+      staffRoleId: req.body?.staffRoleId || null,
+    });
+    res.json({ config });
+  });
+
+  // ---------- Appeals (review) ----------
+  app.get('/api/appeals/guilds', guard, async (req, res) => {
+    const guilds = await listManageableGuilds(req);
+    res.json({
+      connected: Boolean(botState.client?.isReady()),
+      guilds: guilds.map((guild) => ({ id: guild.id, name: guild.name })),
+    });
+  });
+
+  app.get('/api/appeals', guard, async (req, res) => {
+    const guildId = String(req.query.guildId || '');
+    if (!guildId) return res.status(400).json({ error: 'guildId is required' });
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    res.json({ appeals: listAppeals({ guildId }) });
+  });
+
+  app.post('/api/appeals/:id/review', guard, async (req, res) => {
+    const appeal = getAppeal(req.params.id);
+    if (!appeal) return res.status(404).json({ error: 'appeal not found' });
+    if (!(await canManageGuild(req, appeal.guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    const { decision, note } = req.body ?? {};
+    if (decision !== 'approve' && decision !== 'deny') {
+      return res.status(400).json({ error: 'decision must be approve or deny' });
+    }
+    if (appeal.status !== 'pending') {
+      return res.status(400).json({ error: 'appeal already reviewed' });
+    }
+    if (decision === 'approve' && appeal.userId) {
+      const guild = botState.client?.guilds.cache.get(appeal.guildId);
+      try {
+        await guild?.bans.remove(
+          appeal.userId,
+          `Appeal approved by ${req.user?.username || 'dashboard'}`
+        );
+      } catch {
+        // The user may already be unbanned; the review still proceeds.
+      }
+    }
+    const updated = reviewAppeal(appeal.id, {
+      status: decision === 'approve' ? 'approved' : 'denied',
+      reviewedBy: req.user?.username || 'dashboard',
+      note,
+    });
+    res.json(updated);
+  });
+
+  // ---------- Leveling ----------
+  app.get('/api/leveling/guilds', guard, async (req, res) => {
+    const guilds = await listManageableGuilds(req);
+    res.json({
+      connected: Boolean(botState.client?.isReady()),
+      guilds: guilds.map((guild) => ({
+        id: guild.id,
+        name: guild.name,
+        channels: [...guild.channels.cache.values()]
+          .filter((channel) => channel.isTextBased())
+          .map((channel) => ({ id: channel.id, name: channel.name })),
+        config: getLevelConfig(guild.id),
+        leaderboard: getLeaderboard(guild.id, 10).map((entry) => {
+          const member = guild.members.cache.get(entry.userId);
+          return {
+            ...entry,
+            username: member
+              ? member.displayName || member.user.username
+              : entry.userId,
+          };
+        }),
+      })),
+    });
+  });
+
+  app.put('/api/leveling/:guildId', guard, async (req, res) => {
+    const guildId = String(req.params.guildId || '');
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    const body = req.body ?? {};
+    const input = {};
+    if (body.levelUpChannelId !== undefined) {
+      input.levelUpChannelId =
+        typeof body.levelUpChannelId === 'string' && body.levelUpChannelId.trim()
+          ? body.levelUpChannelId.trim()
+          : null;
+    }
+    if (typeof body.announce === 'boolean') input.announce = body.announce;
+    if (body.voiceXpPerMinute !== undefined) {
+      input.voiceXpPerMinute = body.voiceXpPerMinute;
+    }
+    const config = setLevelConfig(guildId, input);
+    res.json({ config });
+  });
+
+  app.post('/api/leveling/:guildId/reset', guard, async (req, res) => {
+    const guildId = String(req.params.guildId || '');
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    resetGuildXp(guildId);
+    res.json({ ok: true });
   });
 
   // ---------- Static (public, but never auto-serve index.html) ----------

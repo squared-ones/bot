@@ -63,6 +63,30 @@ const el = {
   voteDbl: $('#vote-dbl'),
   voteStatus: $('#vote-status'),
   voteRecent: $('#vote-recent'),
+  automationGuild: $('#automation-guild'),
+  automationForm: $('#automation-form'),
+  automationStatus: $('#automation-status'),
+  automationRestore: $('#automation-restore'),
+  automationRoles: $('#automation-roles'),
+  automationSave: $('#automation-save'),
+  ticketsGuild: $('#tickets-guild'),
+  ticketsForm: $('#tickets-form'),
+  ticketsStatus: $('#tickets-status'),
+  ticketsCategory: $('#tickets-category'),
+  ticketsStaffRole: $('#tickets-staffrole'),
+  ticketsSave: $('#tickets-save'),
+  appealsGuild: $('#appeals-guild'),
+  appealsStatus: $('#appeals-status'),
+  appealsList: $('#appeals-list'),
+  levelingGuild: $('#leveling-guild'),
+  levelingForm: $('#leveling-form'),
+  levelingStatus: $('#leveling-status'),
+  levelingChannel: $('#leveling-channel'),
+  levelingAnnounce: $('#leveling-announce'),
+  levelingVoiceXp: $('#leveling-voicexp'),
+  levelingSave: $('#leveling-save'),
+  levelingReset: $('#leveling-reset'),
+  levelingLeaderboard: $('#leveling-leaderboard'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -214,9 +238,17 @@ function loadSelectedServerData() {
   channelsData = null;
   modGuildsLoaded = false;
   verificationGuildsLoaded = false;
+  automationGuildsLoaded = false;
+  ticketsGuildsLoaded = false;
+  appealsGuildsLoaded = false;
+  levelingGuildsLoaded = false;
   loadChannels();
   loadModerationGuilds();
   loadVerificationGuilds();
+  loadAutomationGuilds();
+  loadTicketsGuilds();
+  loadAppealsGuilds();
+  loadLevelingGuilds();
 }
 
 function selectServer(guildId) {
@@ -317,6 +349,10 @@ async function loadHealth() {
         if (!channelsLoaded) loadChannels();
         if (!modGuildsLoaded) loadModerationGuilds();
         if (!verificationGuildsLoaded) loadVerificationGuilds();
+        if (!automationGuildsLoaded) loadAutomationGuilds();
+        if (!ticketsGuildsLoaded) loadTicketsGuilds();
+        if (!appealsGuildsLoaded) loadAppealsGuilds();
+        if (!levelingGuildsLoaded) loadLevelingGuilds();
       }
       if (!vpnBlocklistLoaded) loadVpnBlocklist();
       if (!votesLoaded) loadVotes();
@@ -950,6 +986,449 @@ el.modPurge.addEventListener('click', () => {
     channelId,
     amount,
   });
+});
+
+/* ---------- Automation (autorole + role restore) ---------- */
+let automationGuilds = [];
+let automationGuildsLoaded = false;
+
+function automationGuildInfo() {
+  return automationGuilds.find((guild) => guild.id === el.automationGuild.value);
+}
+
+function renderAutomation() {
+  const guild = automationGuildInfo();
+  el.automationForm.hidden = !guild;
+  if (!guild) return;
+  el.automationRestore.checked = guild.restoreEnabled === true;
+  const roles = guild.roles || [];
+  const autoroles = guild.autoroles || [];
+  el.automationRoles.innerHTML = roles.length
+    ? roles
+        .map((role) => {
+          const checked = autoroles.includes(role.id) ? ' checked' : '';
+          return `<label class="checkbox-row automation-role">
+            <input type="checkbox" value="${escapeHtml(role.id)}"${checked} />
+            <span>${escapeHtml(role.name)}</span>
+          </label>`;
+        })
+        .join('')
+    : '<div class="empty">No assignable roles in this server.</div>';
+  el.automationStatus.textContent =
+    autoroles.length + ' autorole' + (autoroles.length === 1 ? '' : 's');
+}
+
+async function loadAutomationGuilds() {
+  try {
+    const res = await apiFetch('/api/automation/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    const manageableGuilds = data.guilds || [];
+    automationGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
+    automationGuildsLoaded = data.connected;
+
+    setSelectOptions(
+      el.automationGuild,
+      automationGuilds,
+      automationGuilds.length ? 'Current server' : 'Selected server is not manageable',
+      (guild) => guild.name
+    );
+    el.automationGuild.disabled = true;
+    el.automationStatus.textContent = data.connected
+      ? `${automationGuilds.length} server${automationGuilds.length === 1 ? '' : 's'}`
+      : 'bot offline';
+    el.automationForm.hidden = true;
+    if (automationGuilds.length) {
+      el.automationGuild.value = automationGuilds[0].id;
+      renderAutomation();
+    }
+  } catch {
+    el.automationStatus.textContent = 'unavailable';
+    el.automationForm.hidden = true;
+  }
+}
+
+el.automationGuild.addEventListener('change', renderAutomation);
+
+el.automationForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const guildId = el.automationGuild.value;
+  if (!guildId) return;
+  const autoroles = [
+    ...el.automationRoles.querySelectorAll('input[type="checkbox"]:checked'),
+  ].map((checkbox) => checkbox.value);
+  el.automationSave.disabled = true;
+  try {
+    const res = await apiFetch(`/api/automation/${encodeURIComponent(guildId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        autoroles,
+        restoreEnabled: el.automationRestore.checked,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to save automation');
+    const guild = automationGuildInfo();
+    if (guild) {
+      guild.autoroles = data.autoroles;
+      guild.restoreEnabled = data.restoreEnabled;
+    }
+    renderAutomation();
+    showToast('Automation saved.');
+  } catch (error) {
+    showToast(error.message || 'Failed to save automation.', 'err');
+  } finally {
+    el.automationSave.disabled = false;
+  }
+});
+
+/* ---------- Tickets ---------- */
+let ticketsGuilds = [];
+let ticketsGuildsLoaded = false;
+
+function ticketsGuildInfo() {
+  return ticketsGuilds.find((guild) => guild.id === el.ticketsGuild.value);
+}
+
+function renderTickets() {
+  const guild = ticketsGuildInfo();
+  el.ticketsForm.hidden = !guild;
+  if (!guild) return;
+  setSelectOptions(
+    el.ticketsCategory,
+    guild.categories || [],
+    'No category (disabled)',
+    (category) => category.name
+  );
+  setSelectOptions(
+    el.ticketsStaffRole,
+    guild.roles || [],
+    'No staff role',
+    (role) => role.name
+  );
+  el.ticketsCategory.value = guild.config?.categoryId || '';
+  el.ticketsStaffRole.value = guild.config?.staffRoleId || '';
+  const configured = Boolean(guild.config?.categoryId && guild.config?.staffRoleId);
+  el.ticketsStatus.textContent = configured ? 'configured' : 'not configured';
+  el.ticketsStatus.className = `count-chip ${configured ? 'config-enabled' : ''}`;
+}
+
+async function loadTicketsGuilds() {
+  try {
+    const res = await apiFetch('/api/tickets/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    const manageableGuilds = data.guilds || [];
+    ticketsGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
+    ticketsGuildsLoaded = data.connected;
+
+    setSelectOptions(
+      el.ticketsGuild,
+      ticketsGuilds,
+      ticketsGuilds.length ? 'Current server' : 'Selected server is not manageable',
+      (guild) => guild.name
+    );
+    el.ticketsGuild.disabled = true;
+    el.ticketsStatus.textContent = data.connected
+      ? `${ticketsGuilds.length} server${ticketsGuilds.length === 1 ? '' : 's'}`
+      : 'bot offline';
+    el.ticketsForm.hidden = true;
+    if (ticketsGuilds.length) {
+      el.ticketsGuild.value = ticketsGuilds[0].id;
+      renderTickets();
+    }
+  } catch {
+    el.ticketsStatus.textContent = 'unavailable';
+    el.ticketsForm.hidden = true;
+  }
+}
+
+el.ticketsGuild.addEventListener('change', renderTickets);
+
+el.ticketsForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const guildId = el.ticketsGuild.value;
+  if (!guildId) return;
+  el.ticketsSave.disabled = true;
+  try {
+    const res = await apiFetch(`/api/tickets/${encodeURIComponent(guildId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        categoryId: el.ticketsCategory.value || null,
+        staffRoleId: el.ticketsStaffRole.value || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to save ticket config');
+    const guild = ticketsGuildInfo();
+    if (guild) guild.config = data.config;
+    renderTickets();
+    showToast('Ticket configuration saved.');
+  } catch (error) {
+    showToast(error.message || 'Failed to save ticket config.', 'err');
+  } finally {
+    el.ticketsSave.disabled = false;
+  }
+});
+
+/* ---------- Appeals ---------- */
+let appealsGuilds = [];
+let appealsGuildsLoaded = false;
+
+function renderAppeals(appeals) {
+  el.appealsStatus.textContent = `${appeals.length} appeal${appeals.length === 1 ? '' : 's'}`;
+  if (!appeals.length) {
+    el.appealsList.innerHTML = '<div class="empty">No appeals for this server.</div>';
+    return;
+  }
+  el.appealsList.innerHTML = appeals
+    .map((appeal) => {
+      const reviewed = appeal.status !== 'pending';
+      const actions = reviewed
+        ? ''
+        : `<div class="appeal-actions">
+            <button class="btn btn-primary btn-sm appeal-review" data-id="${escapeHtml(
+              appeal.id
+            )}" data-decision="approve">Approve</button>
+            <button class="btn btn-secondary btn-sm appeal-review" data-id="${escapeHtml(
+              appeal.id
+            )}" data-decision="deny">Deny</button>
+          </div>`;
+      const meta = [
+        appeal.username || 'Unknown',
+        appeal.userId ? 'ID ' + appeal.userId : '',
+        new Date(appeal.createdAt).toLocaleString(),
+        appeal.status.toUpperCase(),
+        appeal.id,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      return `<div class="appeal-entry">
+        <div class="appeal-meta">${escapeHtml(meta)}</div>
+        <p class="appeal-reason">${escapeHtml(appeal.reason)}</p>
+        ${
+          appeal.note
+            ? `<p class="appeal-note">Note: ${escapeHtml(appeal.note)}</p>`
+            : ''
+        }
+        ${actions}
+      </div>`;
+    })
+    .join('');
+}
+
+async function loadAppeals() {
+  const guildId = el.appealsGuild.value;
+  if (!guildId) {
+    el.appealsList.innerHTML =
+      '<div class="empty">Select a server to review appeals.</div>';
+    return;
+  }
+  try {
+    const res = await apiFetch(
+      `/api/appeals?guildId=${encodeURIComponent(guildId)}`
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      el.appealsList.innerHTML = `<div class="empty">${escapeHtml(
+        data.error || 'Failed to load appeals.'
+      )}</div>`;
+      return;
+    }
+    renderAppeals(data.appeals || []);
+  } catch {
+    el.appealsList.innerHTML = '<div class="empty">Failed to load appeals.</div>';
+  }
+}
+
+async function loadAppealsGuilds() {
+  try {
+    const res = await apiFetch('/api/appeals/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    const manageableGuilds = data.guilds || [];
+    appealsGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
+    appealsGuildsLoaded = data.connected;
+
+    setSelectOptions(
+      el.appealsGuild,
+      appealsGuilds,
+      appealsGuilds.length ? 'Current server' : 'Selected server is not manageable',
+      (guild) => guild.name
+    );
+    el.appealsGuild.disabled = true;
+    if (appealsGuilds.length) {
+      el.appealsGuild.value = appealsGuilds[0].id;
+      await loadAppeals();
+    } else {
+      el.appealsStatus.textContent = data.connected ? '0 servers' : 'bot offline';
+      el.appealsList.innerHTML = '<div class="empty">No manageable servers.</div>';
+    }
+  } catch {
+    el.appealsStatus.textContent = 'unavailable';
+    el.appealsList.innerHTML = '<div class="empty">Failed to load appeals.</div>';
+  }
+}
+
+el.appealsGuild.addEventListener('change', loadAppeals);
+
+el.appealsList.addEventListener('click', async (event) => {
+  const button = event.target.closest('.appeal-review');
+  if (!button) return;
+  const id = button.dataset.id;
+  const decision = button.dataset.decision;
+  if (!confirm(`Are you sure you want to ${decision} appeal ${id}?`)) return;
+  button.disabled = true;
+  try {
+    const res = await apiFetch(`/api/appeals/${encodeURIComponent(id)}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to review appeal.');
+    showToast(`Appeal ${decision === 'approve' ? 'approved' : 'denied'}.`);
+    await loadAppeals();
+  } catch (error) {
+    showToast(error.message || 'Failed to review appeal.', 'err');
+    button.disabled = false;
+  }
+});
+
+/* ---------- Leveling ---------- */
+let levelingGuilds = [];
+let levelingGuildsLoaded = false;
+
+function levelingGuildInfo() {
+  return levelingGuilds.find((guild) => guild.id === el.levelingGuild.value);
+}
+
+function renderLevelingLeaderboard(board) {
+  if (!board.length) {
+    el.levelingLeaderboard.innerHTML =
+      '<div class="empty">No XP earned yet — start chatting!</div>';
+    return;
+  }
+  el.levelingLeaderboard.innerHTML = board
+    .map(
+      (entry, i) => `<div class="appeal-entry">
+        <div class="appeal-meta">#${i + 1} · LEVEL ${entry.level} · ${entry.xp.toLocaleString()} XP</div>
+        <p class="appeal-reason">${escapeHtml(entry.username || entry.userId)}</p>
+      </div>`
+    )
+    .join('');
+}
+
+function renderLeveling() {
+  const guild = levelingGuildInfo();
+  el.levelingForm.hidden = !guild;
+  if (!guild) return;
+  setSelectOptions(
+    el.levelingChannel,
+    guild.channels || [],
+    'No channel (announcements off)',
+    (channel) => `#${channel.name}`
+  );
+  const config = guild.config || {};
+  el.levelingChannel.value = config.levelUpChannelId || '';
+  el.levelingAnnounce.checked = config.announce !== false;
+  el.levelingVoiceXp.value = String(config.voiceXpPerMinute ?? 5);
+  el.levelingStatus.textContent = config.announce === false ? 'silent' : 'announcing';
+  el.levelingStatus.className = `count-chip ${config.announce !== false ? 'config-enabled' : ''}`;
+  renderLevelingLeaderboard(guild.leaderboard || []);
+}
+
+async function loadLevelingGuilds() {
+  try {
+    const res = await apiFetch('/api/leveling/guilds');
+    if (!res.ok) throw new Error('failed');
+    const data = await res.json();
+    const manageableGuilds = data.guilds || [];
+    levelingGuilds = selectedGuildId
+      ? manageableGuilds.filter((guild) => guild.id === selectedGuildId)
+      : manageableGuilds;
+    levelingGuildsLoaded = data.connected;
+
+    setSelectOptions(
+      el.levelingGuild,
+      levelingGuilds,
+      levelingGuilds.length ? 'Current server' : 'Selected server is not manageable',
+      (guild) => guild.name
+    );
+    el.levelingGuild.disabled = true;
+    el.levelingStatus.textContent = data.connected
+      ? `${levelingGuilds.length} server${levelingGuilds.length === 1 ? '' : 's'}`
+      : 'bot offline';
+    el.levelingForm.hidden = true;
+    el.levelingLeaderboard.innerHTML = '';
+    if (levelingGuilds.length) {
+      el.levelingGuild.value = levelingGuilds[0].id;
+      renderLeveling();
+    }
+  } catch {
+    el.levelingStatus.textContent = 'unavailable';
+    el.levelingForm.hidden = true;
+  }
+}
+
+el.levelingGuild.addEventListener('change', renderLeveling);
+
+el.levelingForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const guildId = el.levelingGuild.value;
+  if (!guildId) return;
+  el.levelingSave.disabled = true;
+  try {
+    const res = await apiFetch(`/api/leveling/${encodeURIComponent(guildId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        levelUpChannelId: el.levelingChannel.value || null,
+        announce: el.levelingAnnounce.checked,
+        voiceXpPerMinute: parseInt(el.levelingVoiceXp.value, 10) || 0,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to save leveling config');
+    const guild = levelingGuildInfo();
+    if (guild) guild.config = data.config;
+    renderLeveling();
+    showToast('Leveling configuration saved.');
+  } catch (error) {
+    showToast(error.message || 'Failed to save leveling config.', 'err');
+  } finally {
+    el.levelingSave.disabled = false;
+  }
+});
+
+el.levelingReset.addEventListener('click', async () => {
+  const guildId = el.levelingGuild.value;
+  if (!guildId) return;
+  if (!confirm('Reset ALL XP in this server? This cannot be undone.')) return;
+  el.levelingReset.disabled = true;
+  try {
+    const res = await apiFetch(`/api/leveling/${encodeURIComponent(guildId)}/reset`, {
+      method: 'POST',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to reset XP');
+    const guild = levelingGuildInfo();
+    if (guild) guild.leaderboard = [];
+    renderLeveling();
+    showToast('XP reset for the server.');
+  } catch (error) {
+    showToast(error.message || 'Failed to reset XP.', 'err');
+  } finally {
+    el.levelingReset.disabled = false;
+  }
 });
 
 /* ---------- Particle background ---------- */

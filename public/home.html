@@ -415,14 +415,22 @@
               return;
             }
             const base = servers.map(item).join('');
-            // Repeat until one "half" fills the viewport, then duplicate it
-            // so the -50% translate loops seamlessly.
-            let html = '';
-            do {
-              html += base;
-              track.innerHTML = html;
-            } while (track.scrollWidth < window.innerWidth);
-            track.innerHTML = html + html;
+            // Measure the base width off-DOM once, then duplicate it enough to
+            // fill the viewport (twice) so the -50% translate loops seamlessly.
+            // Avoids repeatedly writing innerHTML + reading scrollWidth, which
+            // triggers forced reflows.
+            const probe = track.cloneNode(false);
+            probe.style.cssText =
+              'position:absolute;visibility:hidden;width:max-content;';
+            probe.innerHTML = base;
+            document.body.appendChild(probe);
+            const baseWidth = probe.scrollWidth;
+            probe.remove();
+            const repeats =
+              baseWidth > 0
+                ? Math.max(1, Math.ceil(window.innerWidth / baseWidth))
+                : 1;
+            track.innerHTML = base.repeat(repeats * 2);
           })
           .catch(() => {
             empty.hidden = false;

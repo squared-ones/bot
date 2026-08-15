@@ -68,6 +68,18 @@
           <button class="nav-item" data-view="vpn-blocklist" type="button">
             <span class="nav-glyph">⊘</span> VPN Blocklist
           </button>
+          <button class="nav-item" data-view="automation" type="button">
+            <span class="nav-glyph">⚙</span> Automation
+          </button>
+          <button class="nav-item" data-view="tickets" type="button">
+            <span class="nav-glyph">🎫</span> Tickets
+          </button>
+          <button class="nav-item" data-view="appeals" type="button">
+            <span class="nav-glyph">🪧</span> Appeals
+          </button>
+          <button class="nav-item" data-view="leveling" type="button">
+            <span class="nav-glyph">🎮</span> Leveling
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -376,6 +388,145 @@
                   </div>
                 </div>
               </div>
+            </section>
+          </section>
+
+          <!-- Automation (autorole + role restore) -->
+          <section class="view" id="view-automation">
+            <h2 class="view-title">Automation</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> automation <span class="accent">--autoroles</span></h2>
+                <span id="automation-status" class="count-chip">…</span>
+              </div>
+
+              <label class="field">
+                <span class="field-label">Current server</span>
+                <select id="automation-guild"></select>
+              </label>
+
+              <form id="automation-form" class="rule-form" autocomplete="off" hidden>
+                <label class="checkbox-row">
+                  <input id="automation-restore" type="checkbox" />
+                  <span>Restore a member's roles when they rejoin</span>
+                </label>
+
+                <div class="field">
+                  <span class="field-label">Autoroles (assigned to new members)</span>
+                  <div id="automation-roles" class="automation-roles"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="automation-save">Save automation</button>
+              </form>
+            </section>
+          </section>
+
+          <!-- Tickets -->
+          <section class="view" id="view-tickets">
+            <h2 class="view-title">Tickets</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> tickets <span class="accent">--config</span></h2>
+                <span id="tickets-status" class="count-chip">…</span>
+              </div>
+
+              <p class="verification-help">
+                Choose where ticket channels are created and which staff role
+                can see them. Users open tickets with <code>/ticket</code> or
+                the button panel posted via <code>/ticketpanel</code>.
+              </p>
+
+              <label class="field">
+                <span class="field-label">Current server</span>
+                <select id="tickets-guild"></select>
+              </label>
+
+              <form id="tickets-form" class="rule-form" autocomplete="off" hidden>
+                <label class="field">
+                  <span class="field-label">Ticket category</span>
+                  <select id="tickets-category"></select>
+                </label>
+                <label class="field">
+                  <span class="field-label">Staff role</span>
+                  <select id="tickets-staffrole"></select>
+                </label>
+                <button type="submit" class="btn btn-primary" id="tickets-save">Save ticket config</button>
+              </form>
+            </section>
+          </section>
+
+          <!-- Appeals -->
+          <section class="view" id="view-appeals">
+            <h2 class="view-title">Appeals</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> appeals <span class="accent">--review</span></h2>
+                <span id="appeals-status" class="count-chip">…</span>
+              </div>
+
+              <label class="field">
+                <span class="field-label">Current server</span>
+                <select id="appeals-guild"></select>
+              </label>
+
+              <div id="appeals-list" class="appeals-list"></div>
+            </section>
+          </section>
+
+          <!-- Leveling -->
+          <section class="view" id="view-leveling">
+            <h2 class="view-title">Leveling</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> leveling <span class="accent">--config</span></h2>
+                <span id="leveling-status" class="count-chip">…</span>
+              </div>
+
+              <label class="field">
+                <span class="field-label">Current server</span>
+                <select id="leveling-guild"></select>
+              </label>
+
+              <form id="leveling-form" class="rule-form" autocomplete="off" hidden>
+                <label class="field">
+                  <span class="field-label">Level-up channel</span>
+                  <select id="leveling-channel"></select>
+                </label>
+
+                <label class="checkbox-row">
+                  <input id="leveling-announce" type="checkbox" />
+                  <span>Announce level-ups in the selected channel</span>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">Voice XP per minute</span>
+                  <input id="leveling-voicexp" type="number" min="0" max="100" value="5" />
+                </label>
+
+                <button type="submit" class="btn btn-primary" id="leveling-save">Save leveling config</button>
+              </form>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> leveling <span class="accent">--leaderboard</span></h2>
+                <button class="btn btn-secondary btn-sm" id="leveling-reset" type="button">Reset all XP</button>
+              </div>
+              <div id="leveling-leaderboard" class="appeals-list"></div>
             </section>
           </section>
         </main>

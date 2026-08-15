@@ -1,13 +1,14 @@
 :root {
   --red: #ff0000;
+  --red-solid: #dd0000;
   --red-dim: rgba(255, 0, 0, 0.4);
   --red-faint: rgba(255, 0, 0, 0.08);
   --red-glow: rgba(255, 0, 0, 0.6);
   --bg: #050000;
   --panel: rgba(10, 0, 0, 0.92);
   --text: #ffe0e0;
-  --text-dim: rgba(255, 110, 110, 0.6);
-  --muted: rgba(255, 80, 80, 0.45);
+  --text-dim: #d47070;
+  --muted: #c86060;
   --green: #00ff88;
   --amber: #ffb020;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -435,7 +436,7 @@ main {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--red);
+  background: var(--red-solid);
   color: #fff;
   font-family: var(--mono);
   font-weight: 600;
@@ -493,7 +494,7 @@ main {
 .eyebrow-label {
   display: inline-flex;
   align-items: center;
-  background: var(--red);
+  background: var(--red-solid);
   color: #fff;
   font-family: var(--mono);
   font-weight: 600;
@@ -1068,7 +1069,7 @@ main {
 
 .btn-primary {
   align-self: flex-start;
-  background: var(--red);
+  background: var(--red-solid);
   color: #fff;
   box-shadow: 0 0 20px rgba(255, 0, 0, 0.35);
 }
@@ -1371,7 +1372,7 @@ main {
   flex-shrink: 0;
   place-items: center;
   border-radius: 50%;
-  background: var(--red);
+  background: var(--red-solid);
   color: #fff;
   font-family: var(--mono);
   font-weight: 600;
@@ -1503,7 +1504,7 @@ main {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--red);
+  background: var(--red-solid);
   color: #fff;
   font-family: var(--mono);
   font-weight: 600;
@@ -1677,4 +1678,64 @@ main {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- Automation ---------- */
+.automation-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--red-dim);
+  background: rgba(20, 0, 0, 0.4);
+}
+
+.automation-role {
+  padding: 8px 10px;
+  border: 1px solid var(--red-dim);
+  background: var(--panel);
+}
+
+/* ---------- Appeals ---------- */
+.appeals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.appeal-entry {
+  padding: 14px 16px;
+  border: 1px solid var(--red-dim);
+  background: rgba(20, 0, 0, 0.5);
+}
+
+.appeal-meta {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.appeal-reason {
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.appeal-note {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.appeal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
 }

@@ -1,6 +1,8 @@
 import {
   Client,
+  ChannelType,
   GatewayIntentBits,
+  MessageFlags,
   SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
@@ -24,6 +26,43 @@ import {
   getDueVoteReminders,
   markVoteReminded,
 } from './voting.js';
+import {
+  getAutoroleConfig,
+  addAutoroleRole,
+  removeAutoroleRole,
+} from './autoroles.js';
+import {
+  isRestoreEnabled,
+  setRestoreEnabled,
+  saveMemberRoles,
+  takeMemberRoles,
+} from './restore.js';
+import {
+  getTicketConfig,
+  setTicketConfig,
+  savePanel,
+  trackTicket,
+  untrackTicket,
+  getOpenTickets,
+} from './tickets.js';
+import {
+  createAppeal,
+  listAppeals,
+  getAppeal,
+  reviewAppeal,
+} from './appeals.js';
+import {
+  getLevelConfig,
+  setLevelConfig,
+  getUserXp,
+  addXp,
+  addMessageXp,
+  getLeaderboard,
+  getRank,
+  xpProgress,
+  resetUserXp,
+  resetGuildXp,
+} from './levels.js';
 
 export const botState = {
   client: null,
@@ -219,6 +258,196 @@ const commands = [
         .setDescription('Channel for the panel (defaults to the current channel)')
         .setRequired(false)
     ),
+  new SlashCommandBuilder()
+    .setName('autorole')
+    .setDescription('Manage roles assigned to new members (moderators only)')
+    .addSubcommand((s) =>
+      s
+        .setName('add')
+        .setDescription('Add an autorole')
+        .addRoleOption((o) =>
+          o.setName('role').setDescription('Role to assign on join').setRequired(true)
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('remove')
+        .setDescription('Remove an autorole')
+        .addRoleOption((o) =>
+          o.setName('role').setDescription('Role to remove').setRequired(true)
+        )
+    )
+    .addSubcommand((s) =>
+      s.setName('list').setDescription('List autoroles')
+    ),
+  new SlashCommandBuilder()
+    .setName('restoreroles')
+    .setDescription("Restore a member's roles when they rejoin (moderators only)")
+    .addSubcommand((s) =>
+      s.setName('enable').setDescription('Enable role restore on rejoin')
+    )
+    .addSubcommand((s) =>
+      s.setName('disable').setDescription('Disable role restore on rejoin')
+    )
+    .addSubcommand((s) =>
+      s.setName('status').setDescription('Show whether role restore is enabled')
+    ),
+  new SlashCommandBuilder()
+    .setName('ticket')
+    .setDescription('Open a support ticket')
+    .addStringOption((o) =>
+      o
+        .setName('topic')
+        .setDescription('What do you need help with?')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('ticketsetup')
+    .setDescription('Configure the ticket system (moderators only)')
+    .addChannelOption((o) =>
+      o
+        .setName('category')
+        .setDescription('Category for ticket channels')
+        .setRequired(true)
+    )
+    .addRoleOption((o) =>
+      o
+        .setName('staffrole')
+        .setDescription('Staff role that can see tickets')
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('ticketpanel')
+    .setDescription('Post an "Open ticket" button panel (moderators only)')
+    .addChannelOption((o) =>
+      o
+        .setName('channel')
+        .setDescription('Channel for the panel (defaults to the current channel)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('appeal')
+    .setDescription('Appeal a ban')
+    .addStringOption((o) =>
+      o
+        .setName('server')
+        .setDescription('Which server banned you (required when DMing the bot)')
+        .setRequired(false)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('reason')
+        .setDescription('Why should you be unbanned?')
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('appeals')
+    .setDescription('Review ban appeals (moderators only)')
+    .addSubcommand((s) =>
+      s
+        .setName('list')
+        .setDescription('List appeals')
+        .addStringOption((o) =>
+          o
+            .setName('status')
+            .setDescription('Filter by status')
+            .setRequired(false)
+            .addChoices(
+              { name: 'Pending', value: 'pending' },
+              { name: 'Approved', value: 'approved' },
+              { name: 'Denied', value: 'denied' }
+            )
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('review')
+        .setDescription('Approve or deny an appeal')
+        .addStringOption((o) =>
+          o.setName('id').setDescription('Appeal ID').setRequired(true)
+        )
+        .addStringOption((o) =>
+          o
+            .setName('decision')
+            .setDescription('Decision')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Approve (unban)', value: 'approve' },
+              { name: 'Deny', value: 'deny' }
+            )
+        )
+        .addStringOption((o) =>
+          o
+            .setName('note')
+            .setDescription('Note for the decision')
+            .setRequired(false)
+        )
+    ),
+  new SlashCommandBuilder()
+    .setName('rank')
+    .setDescription('Show your level and XP')
+    .addUserOption((o) =>
+      o
+        .setName('user')
+        .setDescription('User to look up (defaults to you)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
+    .setName('leaderboard')
+    .setDescription('Show the server XP leaderboard'),
+  new SlashCommandBuilder()
+    .setName('leveling')
+    .setDescription('Configure the leveling system (moderators only)')
+    .addSubcommand((s) =>
+      s
+        .setName('channel')
+        .setDescription('Set the level-up announcement channel')
+        .addChannelOption((o) =>
+          o
+            .setName('channel')
+            .setDescription('Channel for level-up messages')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('announce')
+        .setDescription('Toggle level-up announcements')
+        .addStringOption((o) =>
+          o
+            .setName('value')
+            .setDescription('on or off')
+            .setRequired(true)
+            .addChoices(
+              { name: 'On', value: 'on' },
+              { name: 'Off', value: 'off' }
+            )
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('voicexp')
+        .setDescription('Set XP awarded per minute in voice')
+        .addIntegerOption((o) =>
+          o
+            .setName('amount')
+            .setDescription('XP per minute (0-100)')
+            .setRequired(true)
+            .setMinValue(0)
+            .setMaxValue(100)
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('reset')
+        .setDescription("Reset a member's XP")
+        .addUserOption((o) =>
+          o.setName('user').setDescription('Member to reset').setRequired(true)
+        )
+    )
+    .addSubcommand((s) =>
+      s.setName('resetall').setDescription("Reset everyone's XP in this server")
+    ),
 ];
 
 function isModerator(interaction) {
@@ -270,7 +499,7 @@ async function sendVerificationLink(interaction) {
     await interaction.reply({
       content:
         '❌ Verification is not configured for this server. Ask a server manager to configure it in the dashboard.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -278,7 +507,7 @@ async function sendVerificationLink(interaction) {
   if (interaction.member?.roles?.cache?.has(config.roleId)) {
     await interaction.reply({
       content: '✅ You are already verified.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -290,13 +519,208 @@ async function sendVerificationLink(interaction) {
     );
     await interaction.reply({
       content: '📬 Check your DMs — I sent you a verification link.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   } catch {
     await interaction.reply({
       content: `🔒 Open this link to verify:\n${url}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
+  }
+}
+
+async function openTicket(interaction) {
+  const guild = interaction.guild;
+  if (!guild) {
+    await interaction.reply({
+      content: '❌ Tickets can only be opened inside a server.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+  const config = getTicketConfig(guild.id);
+  if (!config.categoryId || !config.staffRoleId) {
+    await interaction.reply({
+      content:
+        '❌ The ticket system is not configured. A moderator must run `/ticketsetup`.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+  const category = guild.channels.cache.get(config.categoryId);
+  if (category?.type !== ChannelType.GuildCategory) {
+    await interaction.reply({
+      content: '❌ The configured ticket category no longer exists.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+  const topic = interaction.options?.getString?.('topic') || null;
+  const slug =
+    (interaction.user.username || 'user')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 24) || 'user';
+
+  let channel;
+  try {
+    channel = await guild.channels.create({
+      name: `ticket-${slug}`,
+      type: ChannelType.GuildText,
+      parent: category.id,
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionFlagsBits.ViewChannel],
+        },
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+          ],
+        },
+        {
+          id: config.staffRoleId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    console.error('[ticket] failed to create channel:', err.message);
+    await interaction.reply({
+      content: '❌ I could not create the ticket channel. Check my permissions.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  trackTicket(guild.id, channel.id, interaction.user.id);
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('ticket:close')
+      .setLabel('Close ticket')
+      .setStyle(ButtonStyle.Danger)
+  );
+  await channel.send({
+    content: `🎫 <@${interaction.user.id}> opened a ticket${
+      topic ? ` — **${topic}**` : ''
+    }. <@&${config.staffRoleId}> will help you shortly.`,
+    components: [row],
+  });
+  await interaction.reply({
+    content: `✅ Ticket created: ${channel}`,
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+async function handleTicketClose(interaction) {
+  const channel = interaction.channel;
+  const guild = interaction.guild;
+  if (!channel || !guild) return;
+  const config = getTicketConfig(guild.id);
+  const ticket = getOpenTickets(guild.id)[channel.id];
+  const isOwner = ticket?.ownerId === interaction.user.id;
+  const isStaff =
+    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ===
+      true ||
+    (config.staffRoleId &&
+      interaction.member?.roles?.cache?.has(config.staffRoleId));
+  if (!isOwner && !isStaff) {
+    await interaction.reply({
+      content: '❌ Only the ticket owner or staff can close this ticket.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+  await interaction.reply({
+    content: '✅ Closing ticket…',
+    flags: MessageFlags.Ephemeral,
+  });
+  untrackTicket(guild.id, channel.id);
+  await channel.delete().catch(() => {});
+}
+
+async function applyAutomationOnJoin(member) {
+  const guild = member.guild;
+  const roleIds = new Set(getAutoroleConfig(guild.id).roleIds);
+  if (isRestoreEnabled(guild.id)) {
+    for (const roleId of takeMemberRoles(guild.id, member.id)) {
+      roleIds.add(roleId);
+    }
+  }
+  if (!roleIds.size) return;
+
+  const me = guild.members.me;
+  const assignable = [...roleIds].filter((roleId) => {
+    const role = guild.roles.cache.get(roleId);
+    if (!role || role.id === guild.id || role.managed) return false;
+    if (me && role.position >= me.roles.highest.position) return false;
+    return true;
+  });
+  if (!assignable.length) return;
+  try {
+    await member.roles.add(assignable, 'Automatic roles on join');
+  } catch (err) {
+    console.error(
+      `[automation] failed to assign roles to ${member.user.tag}:`,
+      err.message
+    );
+  }
+}
+
+function saveRolesOnLeave(member) {
+  if (!isRestoreEnabled(member.guild.id)) return;
+  const roleIds = member.roles.cache
+    .filter((role) => role.id !== member.guild.id && !role.managed)
+    .map((role) => role.id);
+  if (roleIds.length) saveMemberRoles(member.guild.id, member.id, roleIds);
+}
+
+async function resolveAppealGuild(interaction) {
+  if (interaction.guild) return interaction.guild;
+  const serverArg = interaction.options?.getString?.('server');
+  if (!serverArg) return null;
+  const query = serverArg.trim().toLowerCase();
+  return (
+    interaction.client.guilds.cache.find(
+      (guild) =>
+        guild.id === serverArg.trim() || guild.name.toLowerCase() === query
+    ) || null
+  );
+}
+
+async function announceLevelUp(guild, member, result) {
+  const config = getLevelConfig(guild.id);
+  if (!config.announce || !config.levelUpChannelId) return;
+  const channel = guild.channels.cache.get(config.levelUpChannelId);
+  if (!channel?.isTextBased()) return;
+  try {
+    await channel.send(`🎉 <@${member.id}> reached **level ${result.level}**!`);
+  } catch (err) {
+    console.error('[leveling] failed to announce level-up:', err.message);
+  }
+}
+
+// Awards voice XP to every non-bot member currently connected to a voice
+// channel. Runs on a one-minute interval.
+async function awardVoiceXp(client) {
+  for (const guild of client.guilds.cache.values()) {
+    const config = getLevelConfig(guild.id);
+    if (config.voiceXpPerMinute <= 0) continue;
+    for (const state of guild.voiceStates.cache.values()) {
+      const member = state.member;
+      if (!member || member.user.bot || !state.channelId) continue;
+      const result = addXp(guild.id, member.id, config.voiceXpPerMinute);
+      if (result.leveledUp) {
+        await announceLevelUp(guild, member, result);
+      }
+    }
   }
 }
 
@@ -304,6 +728,10 @@ async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     if (interaction.customId === 'verification:open') {
       await sendVerificationLink(interaction);
+    } else if (interaction.customId === 'ticket:open') {
+      await openTicket(interaction);
+    } else if (interaction.customId === 'ticket:close') {
+      await handleTicketClose(interaction);
     }
     return;
   }
@@ -353,8 +781,18 @@ async function handleInteraction(interaction) {
           {
             name: '🌐 Community',
             value:
-              '`/vote` Vote for Squared One\n`/verify` Complete server verification\n`/verification-panel` Post a verification panel\n`/help` Show this help message',
-          }
+              '`/vote` Vote for Squared One\n`/verify` Complete server verification\n`/verification-panel` Post a verification panel\n`/appeal` Appeal a ban',
+          },
+          {
+            name: '⚙️ Systems',
+            value:
+              '`/autorole` Manage join roles\n`/restoreroles` Restore roles on rejoin\n`/ticket` Open a support ticket\n`/ticketpanel` Post a ticket panel\n`/ticketsetup` Configure tickets\n`/appeals` Review appeals',
+          },
+          {
+            name: '🎮 Leveling',
+            value:
+              '`/rank` Show your level\n`/leaderboard` Top members\n`/leveling` Configure leveling',
+          },
         )
         .setFooter({ text: 'Squared One · Use /help any time' })
         .setTimestamp();
@@ -373,7 +811,7 @@ async function handleInteraction(interaction) {
       if (!isModerator(interaction)) {
         await interaction.reply({
           content: '⛔ You need the **Manage Server** permission to add rules.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -382,7 +820,7 @@ async function handleInteraction(interaction) {
       const rule = addCustomRule(title, description);
       await interaction.reply({
         content: `✅ Added rule **${rule.title}** (\`${rule.id}\`).`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -392,7 +830,7 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '⛔ You need the **Manage Server** permission to remove rules.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -402,7 +840,7 @@ async function handleInteraction(interaction) {
         content: ok
           ? '✅ Rule removed.'
           : '❌ That rule was not found (only custom rules can be removed).',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -412,7 +850,7 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '⛔ You need the **Manage Server** permission to post rules.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -421,7 +859,7 @@ async function handleInteraction(interaction) {
       if (!channel?.isTextBased()) {
         await interaction.reply({
           content: '❌ Please provide a valid text channel.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -430,7 +868,7 @@ async function handleInteraction(interaction) {
       });
       await interaction.reply({
         content: `📢 Rules posted in ${channel}.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -440,7 +878,7 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '⛔ You need the **Manage Server** permission to make announcements.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -450,14 +888,14 @@ async function handleInteraction(interaction) {
       if (!channel?.isTextBased()) {
         await interaction.reply({
           content: '❌ Please provide a valid text channel.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
       await channel.send(message);
       await interaction.reply({
         content: `📢 Announcement posted in ${channel}.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -470,7 +908,7 @@ async function handleInteraction(interaction) {
         'Ban Members'
       );
       if (permErr) {
-        await interaction.reply({ content: permErr, ephemeral: true });
+        await interaction.reply({ content: permErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const user = interaction.options.getUser('user');
@@ -482,7 +920,7 @@ async function handleInteraction(interaction) {
       if (member) {
         const modErr = canModerate(interaction, member);
         if (modErr) {
-          await interaction.reply({ content: modErr, ephemeral: true });
+          await interaction.reply({ content: modErr, flags: MessageFlags.Ephemeral });
           return;
         }
       }
@@ -491,7 +929,7 @@ async function handleInteraction(interaction) {
       });
       await interaction.reply({
         content: `✅ Banned **${user.tag}** (${reason}).`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -503,13 +941,13 @@ async function handleInteraction(interaction) {
         'Kick Members'
       );
       if (permErr) {
-        await interaction.reply({ content: permErr, ephemeral: true });
+        await interaction.reply({ content: permErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const member = interaction.options.getMember('user');
       const modErr = canModerate(interaction, member);
       if (modErr) {
-        await interaction.reply({ content: modErr, ephemeral: true });
+        await interaction.reply({ content: modErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const reason =
@@ -517,7 +955,7 @@ async function handleInteraction(interaction) {
       await member.kick(`Kicked by ${interaction.user.tag} — ${reason}`);
       await interaction.reply({
         content: `✅ Kicked **${member.user.tag}** (${reason}).`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -529,13 +967,13 @@ async function handleInteraction(interaction) {
         'Moderate Members'
       );
       if (permErr) {
-        await interaction.reply({ content: permErr, ephemeral: true });
+        await interaction.reply({ content: permErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const member = interaction.options.getMember('user');
       const modErr = canModerate(interaction, member);
       if (modErr) {
-        await interaction.reply({ content: modErr, ephemeral: true });
+        await interaction.reply({ content: modErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const ms = parseDuration(interaction.options.getString('duration'));
@@ -543,14 +981,14 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '❌ Invalid duration — use e.g. `30s`, `10m`, `1h`, or `2d`.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
       if (ms > 28 * 24 * 60 * 60 * 1000) {
         await interaction.reply({
           content: '❌ Timeouts can be at most 28 days.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -564,7 +1002,7 @@ async function handleInteraction(interaction) {
         content: `✅ Timed out **${member.user.tag}** for ${formatDuration(
           ms
         )} (${reason}).`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -576,12 +1014,12 @@ async function handleInteraction(interaction) {
         'Manage Messages'
       );
       if (permErr) {
-        await interaction.reply({ content: permErr, ephemeral: true });
+        await interaction.reply({ content: permErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const amount = interaction.options.getInteger('amount');
       const user = interaction.options.getUser('user') ?? null;
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const deleted = await purgeMessages(interaction.channel, amount, user);
       await interaction.editReply({
         content: `🧹 Deleted ${deleted} message${deleted === 1 ? '' : 's'}.`,
@@ -722,7 +1160,7 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '⛔ You need the **Manage Server** permission to post a verification panel.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -732,7 +1170,7 @@ async function handleInteraction(interaction) {
         await interaction.reply({
           content:
             '❌ Configure a verified role in the dashboard before posting a verification panel.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -742,7 +1180,7 @@ async function handleInteraction(interaction) {
       if (!channel?.isTextBased()) {
         await interaction.reply({
           content: '❌ Please provide a valid text channel.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
@@ -764,7 +1202,7 @@ async function handleInteraction(interaction) {
       await channel.send({ embeds: [panel], components: [row] });
       await interaction.reply({
         content: `✅ Verification panel posted in ${channel}.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -773,9 +1211,407 @@ async function handleInteraction(interaction) {
       await sendVerificationLink(interaction);
       return;
     }
+
+    // ---------- Automation (autorole + role restore) ----------
+    if (commandName === 'autorole') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to manage autoroles.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      if (sub === 'add') {
+        const role = interaction.options.getRole('role');
+        const config = addAutoroleRole(interaction.guild.id, role.id);
+        await interaction.reply({
+          content: `✅ ${role} will now be assigned to new members (${config.roleIds.length} autorole${config.roleIds.length === 1 ? '' : 's'}).`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'remove') {
+        const role = interaction.options.getRole('role');
+        const config = removeAutoroleRole(interaction.guild.id, role.id);
+        await interaction.reply({
+          content: `✅ ${role} removed from autoroles (${config.roleIds.length} autorole${config.roleIds.length === 1 ? '' : 's'}).`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const roleIds = getAutoroleConfig(interaction.guild.id).roleIds;
+      const names = roleIds
+        .map(
+          (id) =>
+            interaction.guild.roles.cache.get(id)?.toString() || `\`${id}\``
+        )
+        .join(', ');
+      await interaction.reply({
+        content: roleIds.length
+          ? `📜 Autoroles: ${names}`
+          : '📜 No autoroles configured.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'restoreroles') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to change role restore.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      if (sub === 'enable') {
+        setRestoreEnabled(interaction.guild.id, true);
+        await interaction.reply({
+          content:
+            '✅ Role restore enabled — members will get their roles back when they rejoin.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'disable') {
+        setRestoreEnabled(interaction.guild.id, false);
+        await interaction.reply({
+          content: '✅ Role restore disabled.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const enabled = isRestoreEnabled(interaction.guild.id);
+      await interaction.reply({
+        content: enabled
+          ? '✅ Role restore is enabled.'
+          : '❌ Role restore is disabled.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // ---------- Tickets ----------
+    if (commandName === 'ticket') {
+      await openTicket(interaction);
+      return;
+    }
+
+    if (commandName === 'ticketsetup') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to configure tickets.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const category = interaction.options.getChannel('category');
+      const staffRole = interaction.options.getRole('staffrole');
+      if (category?.type !== ChannelType.GuildCategory) {
+        await interaction.reply({
+          content: '❌ The category must be a channel category.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      setTicketConfig(interaction.guild.id, {
+        categoryId: category.id,
+        staffRoleId: staffRole.id,
+      });
+      await interaction.reply({
+        content: `✅ Ticket system configured — category ${category}, staff role ${staffRole}.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'ticketpanel') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to post a ticket panel.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const config = getTicketConfig(interaction.guild.id);
+      if (!config.categoryId || !config.staffRoleId) {
+        await interaction.reply({
+          content: '❌ Configure the ticket system first with `/ticketsetup`.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const channel =
+        interaction.options.getChannel('channel') ?? interaction.channel;
+      if (!channel?.isTextBased()) {
+        await interaction.reply({
+          content: '❌ Please provide a valid text channel.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket:open')
+          .setLabel('Open ticket')
+          .setEmoji('🎫')
+          .setStyle(ButtonStyle.Primary)
+      );
+      const message = await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(COLOR)
+            .setTitle('🎫 Support Tickets')
+            .setDescription('Click the button below to open a support ticket.'),
+        ],
+        components: [row],
+      });
+      savePanel(interaction.guild.id, channel.id, message.id);
+      await interaction.reply({
+        content: `✅ Ticket panel posted in ${channel}.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // ---------- Appeals ----------
+    if (commandName === 'appeal') {
+      const guild = await resolveAppealGuild(interaction);
+      if (!guild) {
+        await interaction.reply({
+          content:
+            "❌ I couldn't find that server. When DMing the bot, include the exact server name with `/appeal server:...`.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const appeal = createAppeal({
+        guildId: guild.id,
+        guildName: guild.name,
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        reason: interaction.options.getString('reason'),
+      });
+      await interaction.reply({
+        content: `✅ Your appeal for **${guild.name}** was submitted (ID \`${appeal.id}\`). Staff will review it soon.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'appeals') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to review appeals.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+      if (sub === 'list') {
+        const status = interaction.options.getString('status') || null;
+        const appeals = listAppeals({ guildId, status }).slice(0, 10);
+        if (!appeals.length) {
+          await interaction.reply({
+            content: '📭 No appeals found.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const embed = new EmbedBuilder()
+          .setColor(COLOR)
+          .setTitle('🪧 Ban Appeals')
+          .setDescription(
+            appeals
+              .map(
+                (a) =>
+                  `\`${a.id}\` · **${a.status.toUpperCase()}** · ${a.username || a.userId || 'Unknown'}\n${a.reason.slice(0, 120)}`
+              )
+              .join('\n\n')
+          )
+          .setTimestamp();
+        await interaction.reply({
+          embeds: [embed],
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'review') {
+        const id = interaction.options.getString('id');
+        const decision = interaction.options.getString('decision');
+        const note = interaction.options.getString('note') || null;
+        const appeal = getAppeal(id);
+        if (!appeal || appeal.guildId !== guildId) {
+          await interaction.reply({
+            content: '❌ Appeal not found.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (appeal.status !== 'pending') {
+          await interaction.reply({
+            content: `❌ Appeal \`${id}\` has already been ${appeal.status}.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (decision === 'approve' && appeal.userId) {
+          try {
+            await interaction.guild.bans.remove(
+              appeal.userId,
+              `Appeal approved by ${interaction.user.tag}`
+            );
+          } catch (err) {
+            console.error('[appeal] unban failed:', err.message);
+          }
+        }
+        reviewAppeal(id, {
+          status: decision === 'approve' ? 'approved' : 'denied',
+          reviewedBy: interaction.user.tag,
+          note,
+        });
+        await interaction.reply({
+          content: `✅ Appeal \`${id}\` ${decision === 'approve' ? 'approved — user unbanned.' : 'denied.'}`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      return;
+    }
+
+    // ---------- Leveling ----------
+    if (commandName === 'rank') {
+      const user = interaction.options.getUser('user') ?? interaction.user;
+      const xp = getUserXp(interaction.guild.id, user.id);
+      const progress = xpProgress(xp);
+      const rank = getRank(interaction.guild.id, user.id);
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+        .setTitle(`Level ${progress.level}`)
+        .setDescription(`${xp.toLocaleString()} XP`)
+        .addFields(
+          {
+            name: 'Rank',
+            value: rank ? `#${rank}` : 'Unranked',
+            inline: true,
+          },
+          {
+            name: 'Progress',
+            value: `${progress.progressXp.toLocaleString()} / ${progress.neededXp.toLocaleString()} XP`,
+            inline: true,
+          }
+        );
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'leaderboard') {
+      const board = getLeaderboard(interaction.guild.id, 10);
+      if (!board.length) {
+        await interaction.reply({
+          content: '📭 No one has earned XP yet. Start chatting!',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const lines = board.map((entry, i) => {
+        const member = interaction.guild.members.cache.get(entry.userId);
+        const name = member?.user.tag ?? entry.userId;
+        return `**${i + 1}.** ${name} — Level ${entry.level} · ${entry.xp.toLocaleString()} XP`;
+      });
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle('🏆 XP Leaderboard')
+        .setDescription(lines.join('\n'))
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'leveling') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to configure leveling.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      if (sub === 'channel') {
+        const channel = interaction.options.getChannel('channel');
+        if (!channel?.isTextBased()) {
+          await interaction.reply({
+            content: '❌ Please provide a text channel.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        setLevelConfig(interaction.guild.id, {
+          levelUpChannelId: channel.id,
+        });
+        await interaction.reply({
+          content: `✅ Level-up messages will be sent to ${channel}.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'announce') {
+        const value = interaction.options.getString('value');
+        const config = setLevelConfig(interaction.guild.id, {
+          announce: value === 'on',
+        });
+        await interaction.reply({
+          content: `✅ Level-up announcements ${config.announce ? 'enabled' : 'disabled'}.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'voicexp') {
+        const amount = interaction.options.getInteger('amount');
+        const config = setLevelConfig(interaction.guild.id, {
+          voiceXpPerMinute: amount,
+        });
+        await interaction.reply({
+          content: `✅ Voice XP set to ${config.voiceXpPerMinute} XP/minute.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'reset') {
+        const user = interaction.options.getUser('user');
+        const ok = resetUserXp(interaction.guild.id, user.id);
+        await interaction.reply({
+          content: ok
+            ? `✅ Reset ${user.tag}'s XP.`
+            : '❌ That user has no XP yet.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'resetall') {
+        const ok = resetGuildXp(interaction.guild.id);
+        await interaction.reply({
+          content: ok
+            ? '✅ Reset all XP in this server.'
+            : '❌ There was no XP to reset.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      return;
+    }
   } catch (err) {
     console.error('[bot] interaction error:', err);
-    const payload = { content: '❌ Something went wrong.', ephemeral: true };
+    const payload = { content: '❌ Something went wrong.', flags: MessageFlags.Ephemeral };
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(payload);
     } else {
@@ -902,6 +1738,7 @@ export async function startBot(token) {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildVoiceStates,
     ],
   });
   botState.client = client;
@@ -951,11 +1788,42 @@ export async function startBot(token) {
     } catch {
       // Member has DMs disabled — ignore.
     }
+
+    try {
+      await applyAutomationOnJoin(member);
+    } catch (err) {
+      console.error(
+        `[automation] failed for ${member.user.tag}:`,
+        err.message
+      );
+    }
+  });
+
+  client.on('guildMemberRemove', (member) => {
+    try {
+      saveRolesOnLeave(member);
+    } catch (err) {
+      console.error(
+        `[restore] failed to save roles for ${member.user.tag}:`,
+        err.message
+      );
+    }
   });
 
   client.on('guildCreate', () => updateStats(client));
   client.on('guildDelete', () => updateStats(client));
   client.on('interactionCreate', handleInteraction);
+
+  client.on('messageCreate', async (message) => {
+    if (message.author.bot || !message.guild) return;
+    const result = addMessageXp(message.guild.id, message.author.id);
+    if (result?.leveledUp) {
+      const member = await message.guild.members
+        .fetch(message.author.id)
+        .catch(() => null);
+      if (member) await announceLevelUp(message.guild, member, result);
+    }
+  });
 
   await client.login(token);
   const reminderTimer = setInterval(() => {
@@ -964,5 +1832,12 @@ export async function startBot(token) {
     });
   }, 10 * 60 * 1000);
   reminderTimer.unref?.();
+
+  const voiceXpTimer = setInterval(() => {
+    awardVoiceXp(client).catch((error) => {
+      console.error('[leveling] voice XP error:', error.message);
+    });
+  }, 60 * 1000);
+  voiceXpTimer.unref?.();
   return client;
 }
