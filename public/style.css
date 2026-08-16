@@ -1988,3 +1988,54 @@ main {
   background: #a3e635;
   box-shadow: 0 0 6px rgba(163, 230, 53, 0.7);
 }
+
+/* ---------- Cookie banner ---------- */
+.cookie-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: rgba(10, 0, 0, 0.94);
+  border: 1px solid var(--red-dim);
+  box-shadow: 0 0 24px rgba(255, 0, 0, 0.18);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.cookie-banner-copy {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.cookie-banner-copy a {
+  color: var(--red);
+  text-decoration: none;
+}
+
+.cookie-banner-copy a:hover {
+  text-decoration: underline;
+}
+
+.cookie-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.cookie-banner-hidden {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
