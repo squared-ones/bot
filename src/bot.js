@@ -426,15 +426,15 @@ const commands = [
     .setDescription('Appeal a ban')
     .addStringOption((o) =>
       o
-        .setName('server')
-        .setDescription('Which server banned you (required when DMing the bot)')
-        .setRequired(false)
-    )
-    .addStringOption((o) =>
-      o
         .setName('reason')
         .setDescription('Why should you be unbanned?')
         .setRequired(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('server')
+        .setDescription('Which server banned you (required when DMing the bot)')
+        .setRequired(false)
     ),
   new SlashCommandBuilder()
     .setName('appeals')

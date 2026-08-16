@@ -386,15 +386,51 @@ async function loadHealth() {
   }
 }
 
-/* ---------- Sidebar navigation ---------- */
+/* ---------- Navigation + drawer ---------- */
 const navItems = [...document.querySelectorAll('.nav-item')];
 const views = [...document.querySelectorAll('.view')];
+const menuToggle = $('#menu-toggle');
+const menuDrawer = $('#menu-drawer');
+
+function openMenu() {
+  if (!menuDrawer) return;
+  menuDrawer.hidden = false;
+  void menuDrawer.offsetWidth; // force reflow so the transition runs
+  menuDrawer.classList.add('open');
+  if (menuToggle) menuToggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeMenu() {
+  if (!menuDrawer) return;
+  menuDrawer.classList.remove('open');
+  if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+  setTimeout(() => {
+    if (!menuDrawer.classList.contains('open')) menuDrawer.hidden = true;
+  }, 300);
+}
+
+if (menuToggle && menuDrawer) {
+  menuToggle.addEventListener('click', () => {
+    if (menuDrawer.hidden || !menuDrawer.classList.contains('open')) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  });
+  document.querySelectorAll('[data-close-menu]').forEach((el) => {
+    el.addEventListener('click', closeMenu);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !menuDrawer.hidden) closeMenu();
+  });
+}
 
 navItems.forEach((btn) => {
   btn.addEventListener('click', () => {
     const view = btn.dataset.view;
     navItems.forEach((n) => n.classList.toggle('active', n === btn));
     views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
+    closeMenu();
   });
 });
 
