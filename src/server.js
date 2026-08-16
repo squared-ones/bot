@@ -201,6 +201,14 @@ export function startServer(port = 3000) {
   // identity snapshot (mirrors a session payload). The guard below decides
   // whether an API key can satisfy a route.
   app.use((req, res, next) => {
+    const rateKey = `auth:${getClientIp(req)}:${req.path}`;
+    if (!checkRateLimit(rateKey, 60, 60_000)) {
+      if (req.path.startsWith('/api/')) {
+        return res.status(429).json({ error: 'rate_limited' });
+      }
+      return res.status(429).send('Too many requests');
+    }
+
     const header = req.headers.authorization || '';
     const match = header.match(/^Bearer\s+(.+)$/i);
     if (match) req.apiKeyUser = authenticateApiKey(match[1].trim());
