@@ -31,74 +31,114 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <script src="/loader.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
 
     <div class="app">
-      <aside class="sidebar">
-        <a class="logo sidebar-logo" href="/">
-          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
-          <span class="logo-text">SQUARED ONE</span>
-        </a>
+      <header class="dash-topbar">
+        <svg class="icon-sprite" aria-hidden="true">
+          <symbol id="icon-home" viewBox="0 0 24 24">
+            <path d="M3 9.5 12 4l9 5.5v7.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5z"/>
+            <path d="M9 22V12h6v10"/>
+          </symbol>
+          <symbol id="icon-bell" viewBox="0 0 24 24">
+            <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2z"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </symbol>
+          <symbol id="icon-gear" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </symbol>
+          <symbol id="icon-help" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 3-3 3"/>
+            <circle cx="12" cy="17" r="1"/>
+          </symbol>
+          <symbol id="icon-shield" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </symbol>
+        </svg>
 
-        <button id="server-switcher" class="server-switcher" type="button">
-          <span class="server-switcher-label">Current server</span>
-          <strong id="server-switcher-name">Choose a server…</strong>
-          <span class="server-switcher-hint">change</span>
-        </button>
+        <div class="dash-topbar-inner">
+          <a class="logo dash-logo" href="/">
+            <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+            <span class="logo-text">SQUARED ONE</span>
+          </a>
 
-        <nav class="sidebar-nav" aria-label="Dashboard sections">
-          <button class="nav-item active" data-view="overview" type="button">
-            <span class="nav-glyph">▦</span> Overview
+          <button id="server-switcher" class="server-switcher" type="button">
+            <span class="server-switcher-label">Current server</span>
+            <strong id="server-switcher-name">Choose a server…</strong>
+            <span class="server-switcher-hint">change</span>
           </button>
-          <button class="nav-item" data-view="voting" type="button">
-            <span class="nav-glyph">◉</span> Voting
-          </button>
-          <button class="nav-item" data-view="rules" type="button">
-            <span class="nav-glyph">§</span> Rules
-          </button>
-          <button class="nav-item" data-view="servers" type="button">
-            <span class="nav-glyph">▣</span> Servers
-          </button>
-          <button class="nav-item" data-view="moderation" type="button">
-            <span class="nav-glyph">▩</span> Moderation
-          </button>
-          <button class="nav-item" data-view="verification" type="button">
-            <span class="nav-glyph">✓</span> Verification
-          </button>
-          <button class="nav-item" data-view="vpn-blocklist" type="button">
-            <span class="nav-glyph">⊘</span> VPN Blocklist
-          </button>
-          <button class="nav-item" data-view="automation" type="button">
-            <span class="nav-glyph">⚙</span> Automation
-          </button>
-          <button class="nav-item" data-view="tickets" type="button">
-            <span class="nav-glyph">🎫</span> Tickets
-          </button>
-          <button class="nav-item" data-view="appeals" type="button">
-            <span class="nav-glyph">🪧</span> Appeals
-          </button>
-          <button class="nav-item" data-view="leveling" type="button">
-            <span class="nav-glyph">🎮</span> Leveling
-          </button>
-          <button class="nav-item" data-view="billing" type="button">
-            <span class="nav-glyph">💳</span> Billing
-          </button>
-          <button class="nav-item" data-view="account" type="button">
-            <span class="nav-glyph">👤</span> Account
-          </button>
-        </nav>
 
-        <div class="sidebar-footer">
-          <div class="status-pill">
-            <span id="status-dot" class="dot"></span>
-            <span id="status-text">Connecting…</span>
+          <nav class="menu-bar" aria-label="Dashboard sections">
+            <button class="nav-item active" data-view="overview" type="button" title="Overview">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-home"/></svg></span>
+              <span class="nav-label">Overview</span>
+            </button>
+            <span class="menu-divider" aria-hidden="true"></span>
+            <button class="nav-item" data-view="voting" type="button" title="Voting">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-bell"/></svg></span>
+              <span class="nav-label">Voting</span>
+            </button>
+            <button class="nav-item" data-view="rules" type="button" title="Rules">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-help"/></svg></span>
+              <span class="nav-label">Rules</span>
+            </button>
+            <button class="nav-item" data-view="servers" type="button" title="Servers">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-home"/></svg></span>
+              <span class="nav-label">Servers</span>
+            </button>
+            <button class="nav-item" data-view="moderation" type="button" title="Moderation">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-shield"/></svg></span>
+              <span class="nav-label">Moderation</span>
+            </button>
+            <button class="nav-item" data-view="verification" type="button" title="Verification">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-shield"/></svg></span>
+              <span class="nav-label">Verification</span>
+            </button>
+            <button class="nav-item" data-view="vpn-blocklist" type="button" title="VPN Blocklist">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-shield"/></svg></span>
+              <span class="nav-label">VPN Blocklist</span>
+            </button>
+            <button class="nav-item" data-view="automation" type="button" title="Automation">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-gear"/></svg></span>
+              <span class="nav-label">Automation</span>
+            </button>
+            <button class="nav-item" data-view="tickets" type="button" title="Tickets">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-help"/></svg></span>
+              <span class="nav-label">Tickets</span>
+            </button>
+            <button class="nav-item" data-view="appeals" type="button" title="Appeals">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-bell"/></svg></span>
+              <span class="nav-label">Appeals</span>
+            </button>
+            <button class="nav-item" data-view="leveling" type="button" title="Leveling">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-gear"/></svg></span>
+              <span class="nav-label">Leveling</span>
+            </button>
+            <button class="nav-item" data-view="billing" type="button" title="Billing">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-gear"/></svg></span>
+              <span class="nav-label">Billing</span>
+            </button>
+            <button class="nav-item" data-view="account" type="button" title="Account">
+              <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#icon-shield"/></svg></span>
+              <span class="nav-label">Account</span>
+            </button>
+          </nav>
+
+          <div class="dash-topbar-right">
+            <div class="status-pill">
+              <span id="status-dot" class="dot"></span>
+              <span id="status-text">Connecting…</span>
+            </div>
+            <div class="user-chip" id="user-chip" hidden>
+              <span id="user-name"></span>
+            </div>
+            <a class="logout-link" id="logout-link" href="/logout" hidden>logout</a>
           </div>
-          <div class="user-chip" id="user-chip" hidden>
-            <span id="user-name"></span>
-          </div>
-          <a class="logout-link" id="logout-link" href="/logout" hidden>logout</a>
         </div>
-      </aside>
+      </header>
 
       <div class="app-main">
         <main>
