@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { loadRules } from './rules.js';
+import { loadCredits } from './credits.js';
 import { startBot } from './bot.js';
 import { startServer } from './server.js';
 import { loadDataFromGitHub } from './github-data.js';
@@ -11,6 +12,7 @@ async function main() {
 
   const ruleCount = loadRules().length;
   console.log(`[rules] loaded ${ruleCount} rules.`);
+  loadCredits();
 
   startServer(PORT);
 

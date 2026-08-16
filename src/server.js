@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   getAllRules,
+  getCustomRules,
   addCustomRule,
   removeCustomRule,
 } from './rules.js';
@@ -71,6 +72,19 @@ import {
   getLeaderboard,
   resetGuildXp,
 } from './levels.js';
+import {
+  CURRENCY,
+  PLANS,
+  getBalance,
+  grantCredits,
+  getGuildPlan,
+  getGuildSubscription,
+  getUserPlan,
+  subscribeGuild,
+  cancelSubscription,
+  planRequiredError,
+  FREE_CUSTOM_RULE_LIMIT,
+} from './credits.js';
 
 const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -145,6 +159,20 @@ export function startServer(port = 3000) {
       guild.ownerId === req.user.id ||
       member.permissions.has(PermissionFlagsBits.ManageGuild)
     );
+  }
+
+  // Returns a 402 error payload when the guild is on the Free plan and a paid
+  // feature is requested. Skipped when OAuth is disabled (dev mode).
+  function paidGate(req, guildId, featureLabel) {
+    if (!req.user) return null;
+    if (getGuildPlan(guildId) !== 'free') return null;
+    return { status: 402, error: planRequiredError(featureLabel) };
+  }
+
+  // Plan shown to the dashboard. In dev mode (OAuth disabled) everything is
+  // unlocked, so report enterprise rather than blocking on the Free plan.
+  function guildPlanFor(req, guildId) {
+    return req.user ? getGuildPlan(guildId) : 'enterprise';
   }
 
   // Guilds the signed-in user can manage (Manage Server or owner).
@@ -470,6 +498,9 @@ export function startServer(port = 3000) {
   app.get('/support', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'support.html'))
   );
+  app.get('/pricing', (req, res) =>
+    res.sendFile(path.join(PUBLIC_DIR, 'pricing.html'))
+  );
   app.get('/appeal', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'appeal.html'))
   );
@@ -508,6 +539,15 @@ export function startServer(port = 3000) {
       return res
         .status(400)
         .json({ error: 'title and description are required' });
+    }
+    if (
+      req.user &&
+      getUserPlan(req.user.id) === 'free' &&
+      getCustomRules().length >= FREE_CUSTOM_RULE_LIMIT
+    ) {
+      return res.status(402).json({
+        error: `The Free plan is limited to ${FREE_CUSTOM_RULE_LIMIT} custom rules. Subscribe to Pro for unlimited rules.`,
+      });
     }
     const rule = addCustomRule(title, description);
     await flushDataSync();
@@ -587,6 +627,7 @@ export function startServer(port = 3000) {
         icon: guild.icon
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${ext}?size=64`
           : null,
+        plan: guildPlanFor(req, guild.id),
         permissions,
       });
     }
@@ -622,6 +663,9 @@ export function startServer(port = 3000) {
           .json({ error: 'you need moderation permissions in that server' });
       }
     }
+
+    const gate = paidGate(req, guild.id, 'Dashboard moderation');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
 
     const query = String(req.query.query || '').trim().toLowerCase();
     let members;
@@ -694,6 +738,9 @@ export function startServer(port = 3000) {
       );
       if (permErr) return res.status(403).json({ error: permErr });
     }
+
+    const gate = paidGate(req, guild.id, 'Dashboard moderation');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
 
     const by = req.user?.username || 'dashboard';
     const reasonText = String(reason || `Action via dashboard by ${by}`);
@@ -889,6 +936,7 @@ export function startServer(port = 3000) {
         icon: guild.icon
           ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${ext}?size=64`
           : null,
+        plan: guildPlanFor(req, guild.id),
         config: getVerificationConfig(guild.id),
         configured: isVerificationConfigured(getVerificationConfig(guild.id)),
         roles,
@@ -904,6 +952,17 @@ export function startServer(port = 3000) {
     if (!guild) return;
 
     const config = normalizeVerificationConfig(req.body ?? {});
+
+    const advanced =
+      config.blockVpn ||
+      config.minAccountAgeDays > 0 ||
+      config.requireAvatar ||
+      config.joinBurst > 0 ||
+      config.action !== 'none';
+    if (advanced) {
+      const gate = paidGate(req, guild.id, 'Advanced verification');
+      if (gate) return res.status(gate.status).json({ error: gate.error });
+    }
 
     if (config.roleId) {
       const role = guild.roles.cache.get(config.roleId);
@@ -1026,6 +1085,7 @@ export function startServer(port = 3000) {
             name: role.name,
             position: role.position,
           })),
+        plan: guildPlanFor(req, guild.id),
         autoroles: getAutoroleConfig(guild.id).roleIds,
         restoreEnabled: isRestoreEnabled(guild.id),
       })),
@@ -1039,6 +1099,8 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, guildId, 'Automation');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     const body = req.body ?? {};
     if (Array.isArray(body.autoroles)) {
       setAutoroleRoles(guildId, body.autoroles.map(String).filter(Boolean));
@@ -1068,6 +1130,7 @@ export function startServer(port = 3000) {
           .filter((role) => role.id !== guild.id && !role.managed)
           .sort((a, b) => b.position - a.position)
           .map((role) => ({ id: role.id, name: role.name })),
+        plan: guildPlanFor(req, guild.id),
         config: getTicketConfig(guild.id),
       })),
     });
@@ -1080,6 +1143,8 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, guildId, 'Tickets');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     const config = setTicketConfig(guildId, {
       categoryId: req.body?.categoryId || null,
       staffRoleId: req.body?.staffRoleId || null,
@@ -1092,7 +1157,11 @@ export function startServer(port = 3000) {
     const guilds = await listManageableGuilds(req);
     res.json({
       connected: Boolean(botState.client?.isReady()),
-      guilds: guilds.map((guild) => ({ id: guild.id, name: guild.name })),
+      guilds: guilds.map((guild) => ({
+        id: guild.id,
+        name: guild.name,
+        plan: guildPlanFor(req, guild.id),
+      })),
     });
   });
 
@@ -1104,6 +1173,8 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, guildId, 'Appeals');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     res.json({ appeals: listAppeals({ guildId }) });
   });
 
@@ -1115,6 +1186,8 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, appeal.guildId, 'Appeals');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     const { decision, note } = req.body ?? {};
     if (decision !== 'approve' && decision !== 'deny') {
       return res.status(400).json({ error: 'decision must be approve or deny' });
@@ -1152,6 +1225,7 @@ export function startServer(port = 3000) {
         channels: [...guild.channels.cache.values()]
           .filter((channel) => channel.isTextBased())
           .map((channel) => ({ id: channel.id, name: channel.name })),
+        plan: guildPlanFor(req, guild.id),
         config: getLevelConfig(guild.id),
         leaderboard: getLeaderboard(guild.id, 10).map((entry) => {
           const member = guild.members.cache.get(entry.userId);
@@ -1173,6 +1247,8 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, guildId, 'Leveling');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     const body = req.body ?? {};
     const input = {};
     if (body.levelUpChannelId !== undefined) {
@@ -1196,8 +1272,89 @@ export function startServer(port = 3000) {
         .status(403)
         .json({ error: 'you need the Manage Server permission in that server' });
     }
+    const gate = paidGate(req, guildId, 'Leveling');
+    if (gate) return res.status(gate.status).json({ error: gate.error });
     resetGuildXp(guildId);
     res.json({ ok: true });
+  });
+
+  // ---------- Billing (internal credits + subscriptions) ----------
+  app.get('/api/billing', guard, async (req, res) => {
+    const userId = req.user?.id || null;
+    const guilds = req.user ? await listManageableGuilds(req) : [];
+    let isOwner = false;
+    if (userId) isOwner = await isApplicationOwner(userId);
+    res.json({
+      currency: CURRENCY,
+      balance: userId ? getBalance(userId) : 0,
+      plan: userId ? getUserPlan(userId) : 'free',
+      isOwner,
+      plans: Object.fromEntries(
+        Object.entries(PLANS).map(([key, plan]) => [key, { ...plan }])
+      ),
+      guilds: guilds.map((guild) => {
+        const sub = getGuildSubscription(guild.id);
+        return {
+          id: guild.id,
+          name: guild.name,
+          plan: guildPlanFor(req, guild.id),
+          expiresAt: sub ? sub.expiresAt : null,
+        };
+      }),
+    });
+  });
+
+  app.post('/api/billing/subscribe', guard, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'sign in to subscribe' });
+    const { guildId, plan = 'pro', months = 1 } = req.body ?? {};
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    try {
+      const result = subscribeGuild({
+        userId: req.user.id,
+        guildId: String(guildId || ''),
+        plan,
+        months,
+      });
+      if (!result.ok) return res.status(402).json({ error: result.error });
+      await flushDataSync();
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/billing/cancel', guard, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'sign in to cancel' });
+    const { guildId } = req.body ?? {};
+    if (!(await canManageGuild(req, guildId))) {
+      return res
+        .status(403)
+        .json({ error: 'you need the Manage Server permission in that server' });
+    }
+    const ok = cancelSubscription(String(guildId || ''));
+    await flushDataSync();
+    res.json({ ok });
+  });
+
+  app.post('/api/billing/grant', guard, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'sign in to grant' });
+    if (!(await isApplicationOwner(req.user.id))) {
+      return res
+        .status(403)
+        .json({ error: 'only the application owner can grant credits' });
+    }
+    const { userId, amount } = req.body ?? {};
+    try {
+      const balance = grantCredits(userId, amount);
+      await flushDataSync();
+      res.json({ balance });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   });
 
   // ---------- Static (public, but never auto-serve index.html) ----------

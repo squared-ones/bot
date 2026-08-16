@@ -85,6 +85,14 @@ const el = {
   levelingSave: $('#leveling-save'),
   levelingReset: $('#leveling-reset'),
   levelingLeaderboard: $('#leveling-leaderboard'),
+  billingStatus: $('#billing-status'),
+  billingCurrency: $('#billing-currency'),
+  billingBalance: $('#billing-balance'),
+  billingOwner: $('#billing-owner'),
+  billingGrantForm: $('#billing-grant-form'),
+  billingGrantUser: $('#billing-grant-user'),
+  billingGrantAmount: $('#billing-grant-amount'),
+  billingGuilds: $('#billing-guilds'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -354,6 +362,7 @@ async function loadHealth() {
       }
       if (!vpnBlocklistLoaded) loadVpnBlocklist();
       if (!votesLoaded) loadVotes();
+      if (!billingLoaded) loadBilling();
     }
   } catch (err) {
     setBotStatus(false);
@@ -766,10 +775,13 @@ async function loadModerationGuilds() {
       : manageableGuilds;
     modGuildsLoaded = data.connected;
 
+    const modFree = modGuilds.length === 1 && modGuilds[0].plan === 'free';
     el.modStatus.textContent = data.connected
-      ? `${modGuilds.length} server${modGuilds.length === 1 ? '' : 's'}`
+      ? (modFree
+        ? 'Pro required'
+        : `${modGuilds.length} server${modGuilds.length === 1 ? '' : 's'}`)
       : 'bot offline';
-    el.modBody.hidden = modGuilds.length === 0;
+    el.modBody.hidden = modGuilds.length === 0 || modFree;
     updateModActions();
   } catch {
     el.modStatus.textContent = 'unavailable';
@@ -1001,11 +1013,15 @@ async function loadAutomationGuilds() {
       (guild) => guild.name
     );
     el.automationGuild.disabled = true;
+    const automationFree =
+      automationGuilds.length === 1 && automationGuilds[0].plan === 'free';
     el.automationStatus.textContent = data.connected
-      ? `${automationGuilds.length} server${automationGuilds.length === 1 ? '' : 's'}`
+      ? (automationFree
+        ? 'Pro required'
+        : `${automationGuilds.length} server${automationGuilds.length === 1 ? '' : 's'}`)
       : 'bot offline';
     el.automationForm.hidden = true;
-    if (automationGuilds.length) {
+    if (automationGuilds.length && !automationFree) {
       el.automationGuild.value = automationGuilds[0].id;
       renderAutomation();
     }
@@ -1099,11 +1115,14 @@ async function loadTicketsGuilds() {
       (guild) => guild.name
     );
     el.ticketsGuild.disabled = true;
+    const ticketsFree = ticketsGuilds.length === 1 && ticketsGuilds[0].plan === 'free';
     el.ticketsStatus.textContent = data.connected
-      ? `${ticketsGuilds.length} server${ticketsGuilds.length === 1 ? '' : 's'}`
+      ? (ticketsFree
+        ? 'Pro required'
+        : `${ticketsGuilds.length} server${ticketsGuilds.length === 1 ? '' : 's'}`)
       : 'bot offline';
     el.ticketsForm.hidden = true;
-    if (ticketsGuilds.length) {
+    if (ticketsGuilds.length && !ticketsFree) {
       el.ticketsGuild.value = ticketsGuilds[0].id;
       renderTickets();
     }
@@ -1230,12 +1249,19 @@ async function loadAppealsGuilds() {
       (guild) => guild.name
     );
     el.appealsGuild.disabled = true;
-    if (appealsGuilds.length) {
+    const appealsFree = appealsGuilds.length === 1 && appealsGuilds[0].plan === 'free';
+    if (appealsGuilds.length && !appealsFree) {
       el.appealsGuild.value = appealsGuilds[0].id;
       await loadAppeals();
     } else {
-      el.appealsStatus.textContent = data.connected ? '0 servers' : 'bot offline';
-      el.appealsList.innerHTML = '<div class="empty">No manageable servers.</div>';
+      el.appealsStatus.textContent = appealsFree
+        ? 'Pro required'
+        : data.connected
+          ? '0 servers'
+          : 'bot offline';
+      el.appealsList.innerHTML = appealsFree
+        ? '<div class="empty">Appeals require the Pro plan.</div>'
+        : '<div class="empty">No manageable servers.</div>';
     }
   } catch {
     el.appealsStatus.textContent = 'unavailable';
@@ -1329,12 +1355,16 @@ async function loadLevelingGuilds() {
       (guild) => guild.name
     );
     el.levelingGuild.disabled = true;
+    const levelingFree =
+      levelingGuilds.length === 1 && levelingGuilds[0].plan === 'free';
     el.levelingStatus.textContent = data.connected
-      ? `${levelingGuilds.length} server${levelingGuilds.length === 1 ? '' : 's'}`
+      ? (levelingFree
+        ? 'Pro required'
+        : `${levelingGuilds.length} server${levelingGuilds.length === 1 ? '' : 's'}`)
       : 'bot offline';
     el.levelingForm.hidden = true;
     el.levelingLeaderboard.innerHTML = '';
-    if (levelingGuilds.length) {
+    if (levelingGuilds.length && !levelingFree) {
       el.levelingGuild.value = levelingGuilds[0].id;
       renderLeveling();
     }
@@ -1393,6 +1423,132 @@ el.levelingReset.addEventListener('click', async () => {
     showToast(error.message || 'Failed to reset XP.', 'err');
   } finally {
     el.levelingReset.disabled = false;
+  }
+});
+
+/* ---------- Billing ---------- */
+let billingLoaded = false;
+let billingData = null;
+
+function renderBilling() {
+  const data = billingData || {};
+  const cur = data.currency || { name: 'Square', code: 'SQ' };
+  el.billingCurrency.textContent = `${cur.name} (${cur.code})`;
+  el.billingBalance.textContent = `${(data.balance || 0).toLocaleString()} ${cur.code}`;
+  el.billingStatus.textContent = `${cur.code} credits`;
+  el.billingOwner.hidden = !data.isOwner;
+
+  const guilds = data.guilds || [];
+  if (!guilds.length) {
+    el.billingGuilds.innerHTML =
+      '<div class="empty">No manageable servers — make sure the bot is online and you manage a server it is in.</div>';
+    return;
+  }
+  const proCost = data.plans?.pro?.monthlyCost ?? 500;
+  el.billingGuilds.innerHTML = guilds
+    .map((g) => {
+      const expiry = g.expiresAt
+        ? ` · expires ${new Date(g.expiresAt).toLocaleDateString()}`
+        : g.plan === 'enterprise'
+          ? ' · no expiry'
+          : '';
+      const tagClass = g.plan === 'free' ? '' : 'custom';
+      const actions =
+        g.plan === 'free'
+          ? `<button class="btn btn-secondary btn-sm billing-subscribe" data-guild="${escapeHtml(
+              g.id
+            )}">Subscribe Pro — ${proCost.toLocaleString()} ${cur.code}/mo</button>`
+          : g.plan === 'pro'
+            ? `<button class="btn btn-secondary btn-sm billing-subscribe" data-guild="${escapeHtml(
+                g.id
+              )}">Extend 1 month</button>
+               <button class="btn btn-secondary btn-sm billing-cancel" data-guild="${escapeHtml(
+                 g.id
+               )}">Cancel</button>`
+            : '';
+      return `
+        <div class="billing-guild">
+          <div class="billing-guild-info">
+            <span class="billing-guild-name">${escapeHtml(g.name)}</span>
+            <span class="tag ${tagClass}">${escapeHtml(g.plan.toUpperCase())}</span>
+            <span class="billing-guild-meta">${escapeHtml(expiry)}</span>
+          </div>
+          <div class="billing-guild-actions">${actions}</div>
+        </div>`;
+    })
+    .join('');
+}
+
+async function loadBilling() {
+  try {
+    const res = await apiFetch('/api/billing');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to load billing');
+    billingData = data;
+    billingLoaded = true;
+    renderBilling();
+  } catch {
+    el.billingStatus.textContent = 'unavailable';
+  }
+}
+
+async function billingSubscribe(guildId) {
+  try {
+    const res = await apiFetch('/api/billing/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guildId, plan: 'pro', months: 1 }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to subscribe');
+    showToast('Server subscribed to Pro.');
+    await loadBilling();
+  } catch (err) {
+    showToast(err.message || 'Failed to subscribe.', 'err');
+  }
+}
+
+async function billingCancel(guildId) {
+  try {
+    const res = await apiFetch('/api/billing/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guildId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to cancel');
+    showToast('Subscription cancelled.');
+    await loadBilling();
+  } catch (err) {
+    showToast(err.message || 'Failed to cancel.', 'err');
+  }
+}
+
+el.billingGuilds.addEventListener('click', (event) => {
+  const sub = event.target.closest('.billing-subscribe');
+  const cancel = event.target.closest('.billing-cancel');
+  if (sub) billingSubscribe(sub.dataset.guild);
+  else if (cancel) billingCancel(cancel.dataset.guild);
+});
+
+el.billingGrantForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const userId = el.billingGrantUser.value.trim();
+  const amount = parseInt(el.billingGrantAmount.value, 10);
+  if (!userId || !Number.isInteger(amount) || amount < 1) return;
+  try {
+    const res = await apiFetch('/api/billing/grant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, amount }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to grant');
+    el.billingGrantUser.value = '';
+    showToast('Credits granted.');
+    await loadBilling();
+  } catch (err) {
+    showToast(err.message || 'Failed to grant.', 'err');
   }
 });
 
@@ -1470,4 +1626,5 @@ loadHealth();
 loadServers();
 loadVpnBlocklist();
 loadVotes();
+loadBilling();
 setInterval(loadHealth, 5000);

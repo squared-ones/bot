@@ -28,6 +28,9 @@ dashboard to manage it all.
   rejoin role restore.
 - **VPN blocklist** — self-hosted blocking of VPN, proxy, Tor, and datacenter
   IPs.
+- **Billing with its own currency** — Squared One uses an internal
+  "Squares (SQ)" currency: the application owner grants credits and servers
+  subscribe to Pro (500 SQ/month) to unlock paid features per server.
 - **Web dashboard** — red/black neon UI with live bot stats and per-server
   configuration for every feature.
 - **Discord OAuth login** — sign in with Discord; access is scoped to servers
@@ -69,6 +72,7 @@ GITHUB_DATA_BRANCH=main
 # Voting webhook secrets
 TOPGG_WEBHOOK_SECRET=whs_your-topgg-webhook-secret
 DBL_WEBHOOK_TOKEN=your-discord-bot-list-webhook-token
+DBL_API_TOKEN=your-discord-bot-list-api-token
 
 # Optional — links shown on the /support page
 # SUPPORT_SERVER=https://discord.gg/your-invite
@@ -144,6 +148,36 @@ shows totals and recent votes. The bot checks for due votes every ten minutes
 and privately DMs voters after the 12-hour cooldown with fresh vote links.
 Vote rewards are currently disabled.
 
+Set `DBL_API_TOKEN` (the Discord Bot List API token) to automatically publish
+the bot's slash-command list and post its guild/user/voice-connection counts to
+its discordbotlist.com page — see
+<https://docs.discordbotlist.com/commands-list> and
+<https://docs.discordbotlist.com/bot-statistics>. Commands sync on startup;
+stats post on startup and every 30 minutes.
+
+### Billing & credits
+
+Squared One runs on its own internal currency, **Squares (SQ)**. There is no
+external payment processor — the Discord application owner grants credits to
+users, and users spend them to subscribe servers to paid plans:
+
+- `/credits balance` — check your balance (moderators can check other users).
+- `/credits grant <user> <amount>` — grant credits (application owner only).
+- `/subscribe pro [months]` — subscribe the current server to Pro
+  (500 SQ/month, prepaid in 1–12 month blocks).
+- `/plan` — show the current server's plan and expiry.
+
+The dashboard's **Billing** page shows your balance, lets you subscribe or
+cancel a server, and (for the application owner) grant credits.
+
+Paid (Pro/Enterprise) features are gated per server: dashboard moderation,
+advanced verification (VPN/anti-raid), tickets, ban appeal review, leveling,
+and automation. Free servers keep the core commands, basic CAPTCHA
+verification, and up to 10 custom rules.
+
+Balances and subscriptions persist to `data/credits.json` and sync to the
+private data repository like every other data file.
+
 ### GitHub data storage
 
 Set `GITHUB_TOKEN` to a fine-grained GitHub token with **Contents: read and write**
@@ -177,6 +211,9 @@ failure and falls back to the local data directory.
 | `/help`        | everyone    | Shows all Squared One commands               |
 | `/verify`      | everyone    | Sends a link to complete verification        |
 | `/verification-panel` | moderators | Posts a button-based verification panel   |
+| `/credits`     | everyone    | Check a credit balance (owner can grant)     |
+| `/subscribe`   | moderators  | Subscribe the server to Pro using credits    |
+| `/plan`        | everyone    | Show the server's current plan               |
 
 > "Moderators" means anyone with the **Manage Server** permission.
 > Slash commands are registered globally on boot (may take up to an hour to
@@ -220,6 +257,10 @@ failure and falls back to the local data directory.
 | GET    | `/api/verify/status`    | Verification status for the signed-in user         |
 | GET    | `/api/verify/captcha`   | Fresh captcha image                                |
 | POST   | `/api/verify/complete`  | Submit captcha + grant the verified role           |
+| GET    | `/api/billing`          | Balance, plan, and per-server subscriptions        |
+| POST   | `/api/billing/subscribe`| Subscribe a server to Pro (spends credits)         |
+| POST   | `/api/billing/cancel`   | Cancel a server's subscription                     |
+| POST   | `/api/billing/grant`    | Grant credits (application owner)                  |
 
 > All `/api/*` routes and `/dashboard` require a valid session when
 > `CLIENT_SECRET` is set. The homepage, `/privacy`, `/terms`, `/health`,
@@ -259,6 +300,7 @@ src/
   index.js    # entry point — starts web server + bot
   bot.js      # Discord client, slash commands, join DM
   rules.js    # rule store (defaults + JSON persistence)
+  credits.js  # internal currency + per-server subscription store
   moderation.js # shared moderation helpers (permissions, ban/kick/timeout/purge)
   auth.js     # Discord OAuth + signed session cookie
   captcha.js  # self-hosted SVG captcha
@@ -286,6 +328,7 @@ dist/
   package.json
 data/
   rules.json        # custom rules (created at runtime)
+  credits.json      # user balances + per-server subscriptions (synced to GitHub)
   verification.json # per-server verification settings (synced to GitHub)
   vpn-blocklist.json # manually flagged exact IPs (synced to GitHub)
   votes.json        # vote events and reminder state (synced to GitHub)

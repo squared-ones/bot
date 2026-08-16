@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Pricing</title>
+    <meta
+      name="description"
+      content="Simple, scalable pricing for Squared One — the multitool Discord bot for moderation, rules, verification, tickets, and leveling."
+    />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .pricing-main {
+        position: relative;
+        z-index: 2;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 56px 24px 96px;
+      }
+
+      .pricing-hero {
+        text-align: center;
+        margin-bottom: 52px;
+      }
+
+      .pricing-hero .hero-title {
+        font-size: clamp(1.5rem, 4.5vw, 2.3rem);
+      }
+
+      .pricing-hero .hero-title .hero-dim {
+        color: var(--text-dim);
+        text-shadow: none;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .price-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 26px 24px 24px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .price-card::before,
+      .price-card::after,
+      .price-card .price-corner-br,
+      .price-card .price-corner-bl {
+        content: "";
+        position: absolute;
+        width: 13px;
+        height: 13px;
+        border-color: var(--red);
+        border-style: solid;
+        pointer-events: none;
+      }
+
+      .price-card::before {
+        top: -1px;
+        left: -1px;
+        border-width: 2px 0 0 2px;
+      }
+
+      .price-card::after {
+        top: -1px;
+        right: -1px;
+        border-width: 2px 2px 0 0;
+      }
+
+      .price-card .price-corner-br {
+        bottom: -1px;
+        right: -1px;
+        border-width: 0 2px 2px 0;
+      }
+
+      .price-card .price-corner-bl {
+        bottom: -1px;
+        left: -1px;
+        border-width: 0 0 2px 2px;
+      }
+
+      .price-card:hover {
+        border-color: var(--red);
+        box-shadow: 0 0 22px rgba(255, 0, 0, 0.2);
+        transform: translateY(-3px);
+      }
+
+      .price-card.featured {
+        border-color: var(--red);
+        box-shadow: var(--shadow-lg);
+        background: rgba(20, 0, 0, 0.96);
+      }
+
+      .price-card.featured:hover {
+        box-shadow: 0 0 46px rgba(255, 0, 0, 0.34);
+      }
+
+      .price-badge {
+        position: absolute;
+        top: -12px;
+        right: 16px;
+        background: var(--red-solid);
+        color: #fff;
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 0.62rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        box-shadow: 0 0 12px var(--red-glow);
+      }
+
+      .price-head {
+        border-bottom: 1px solid var(--red-dim);
+        padding-bottom: 18px;
+        margin-bottom: 18px;
+      }
+
+      .price-name {
+        font-family: var(--mono);
+        font-size: 1.15rem;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .price-card.featured .price-name {
+        color: var(--red);
+        text-shadow: 0 0 10px var(--red-glow);
+      }
+
+      .price-desc {
+        font-family: var(--sans);
+        font-weight: 300;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .price-amount {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+
+      .price-value {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 2.6rem;
+        color: var(--text);
+      }
+
+      .price-per {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 1px;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      .price-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+
+      .price-included {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 14px;
+      }
+
+      .price-features {
+        list-style: none;
+        margin: 0 0 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+      }
+
+      .price-features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-family: var(--sans);
+        font-weight: 300;
+        color: var(--text-dim);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .price-check {
+        flex: none;
+        margin-top: 1px;
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .price-card.featured .price-check {
+        color: var(--red);
+      }
+
+      .price-cta {
+        margin-top: auto;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .pricing-note {
+        margin-top: 34px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        letter-spacing: 1px;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .pricing-note a {
+        color: var(--red);
+        text-decoration: none;
+      }
+
+      .pricing-note a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/">Home</a>
+          <a class="btn btn-secondary btn-sm" href="/support">Support</a>
+          <a class="btn btn-secondary btn-sm" href="/dashboard">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="pricing-main">
+      <section class="pricing-hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Simple, scalable pricing</span>
+        </span>
+        <h1 class="hero-title">
+          Plans that fit your
+          <span class="hero-dim">community</span><span class="cursor" aria-hidden="true"></span>
+        </h1>
+        <p class="hero-sub">
+          Simple pricing with powerful moderation, verification, tickets, and
+          leveling tools to run your server.
+        </p>
+      </section>
+
+      <section class="pricing-grid">
+        <article class="price-card">
+          <span class="price-corner-br" aria-hidden="true"></span>
+          <span class="price-corner-bl" aria-hidden="true"></span>
+          <div class="price-head">
+            <h3 class="price-name">Free</h3>
+            <p class="price-desc">Perfect for getting started</p>
+          </div>
+          <div class="price-amount">
+            <span class="price-value">0 SQ</span>
+            <span class="price-per">forever</span>
+          </div>
+          <div class="price-body">
+            <p class="price-included">What's included:</p>
+            <ul class="price-features">
+              <li><span class="price-check">✓</span>Default rules + 10 custom rules</li>
+              <li><span class="price-check">✓</span>Moderation commands</li>
+              <li><span class="price-check">✓</span>Announcements &amp; utility commands</li>
+              <li><span class="price-check">✓</span>Basic CAPTCHA verification</li>
+              <li><span class="price-check">✓</span>Vote tracking</li>
+              <li><span class="price-check">✓</span>Community support</li>
+            </ul>
+            <a class="btn btn-secondary price-cta" href="/dashboard">Get started free</a>
+          </div>
+        </article>
+
+        <article class="price-card featured">
+          <span class="price-corner-br" aria-hidden="true"></span>
+          <span class="price-corner-bl" aria-hidden="true"></span>
+          <span class="price-badge">Most popular</span>
+          <div class="price-head">
+            <h3 class="price-name">Pro</h3>
+            <p class="price-desc">Best for active communities</p>
+          </div>
+          <div class="price-amount">
+            <span class="price-value">500 SQ</span>
+            <span class="price-per">/month</span>
+          </div>
+          <div class="price-body">
+            <p class="price-included">What's included:</p>
+            <ul class="price-features">
+              <li><span class="price-check">✓</span>Everything in Free</li>
+              <li><span class="price-check">✓</span>Unlimited custom rules</li>
+              <li><span class="price-check">✓</span>Dashboard moderation panel</li>
+              <li><span class="price-check">✓</span>Anti-raid verification + VPN blocking</li>
+              <li><span class="price-check">✓</span>Tickets &amp; ban appeals</li>
+              <li><span class="price-check">✓</span>Leveling &amp; leaderboards</li>
+              <li><span class="price-check">✓</span>Automation (autoroles + role restore)</li>
+              <li><span class="price-check">✓</span>Priority support</li>
+            </ul>
+            <a class="btn btn-primary price-cta" href="/dashboard">Subscribe with credits</a>
+          </div>
+        </article>
+
+        <article class="price-card">
+          <span class="price-corner-br" aria-hidden="true"></span>
+          <span class="price-corner-bl" aria-hidden="true"></span>
+          <div class="price-head">
+            <h3 class="price-name">Enterprise</h3>
+            <p class="price-desc">For networks and large teams</p>
+          </div>
+          <div class="price-amount">
+            <span class="price-value">Contact us</span>
+          </div>
+          <div class="price-body">
+            <p class="price-included">What's included:</p>
+            <ul class="price-features">
+              <li><span class="price-check">✓</span>Everything in Pro</li>
+              <li><span class="price-check">✓</span>Custom feature development</li>
+              <li><span class="price-check">✓</span>Dedicated support channel</li>
+              <li><span class="price-check">✓</span>Higher rate limits</li>
+              <li><span class="price-check">✓</span>Managed onboarding &amp; setup</li>
+              <li><span class="price-check">✓</span>SLA guarantees</li>
+            </ul>
+            <a class="btn btn-secondary price-cta" href="/support">Contact sales</a>
+          </div>
+        </article>
+      </section>
+
+      <p class="pricing-note">
+        Squared One runs on its own currency — <strong>Squares (SQ)</strong>.
+        Subscribe with <code>/subscribe</code> or the dashboard's Billing page;
+        the application owner grants credits. All plans cover every server you
+        add the bot to, and you can upgrade, downgrade, or cancel anytime.
+        Questions? <a href="/support">Get in touch</a>.
+      </p>
+    </main>
+
+    <footer class="footer">
+      <span>SQUARED ONE v1.0</span>
+      <span>·</span>
+      <a href="/">home</a>
+      <span>·</span>
+      <a href="/dashboard">dashboard</a>
+      <span>·</span>
+      <a href="/support">support</a>
+      <span>·</span>
+      <a href="/privacy">privacy</a>
+      <span>·</span>
+      <a href="/terms">terms</a>
+    </footer>
+
+    <script src="/particles.js"></script>
+  </body>
+</html>

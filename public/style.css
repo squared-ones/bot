@@ -1739,3 +1739,55 @@ main {
   gap: 10px;
   margin-top: 12px;
 }
+
+/* ---------- Billing ---------- */
+.billing-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.billing-balance .stat-value {
+  font-size: 1.9rem;
+}
+
+.billing-guilds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.billing-guild {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--red-dim);
+  background: rgba(20, 0, 0, 0.5);
+}
+
+.billing-guild-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.billing-guild-name {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+.billing-guild-meta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.billing-guild-actions {
+  display: flex;
+  gap: 8px;
+}

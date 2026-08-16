@@ -80,6 +80,9 @@
           <button class="nav-item" data-view="leveling" type="button">
             <span class="nav-glyph">🎮</span> Leveling
           </button>
+          <button class="nav-item" data-view="billing" type="button">
+            <span class="nav-glyph">💳</span> Billing
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -517,6 +520,55 @@
                 <button class="btn btn-secondary btn-sm" id="leveling-reset" type="button">Reset all XP</button>
               </div>
               <div id="leveling-leaderboard" class="appeals-list"></div>
+            </section>
+          </section>
+
+          <!-- Billing -->
+          <section class="view" id="view-billing">
+            <h2 class="view-title">Billing</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> billing <span class="accent">--balance</span></h2>
+                <span id="billing-status" class="count-chip">…</span>
+              </div>
+
+              <p class="verification-help">
+                Squared One runs on its own currency,
+                <strong id="billing-currency">Squares (SQ)</strong>. Subscribe a
+                server to Pro to unlock paid features — the application owner
+                grants credits to your account.
+              </p>
+
+              <div class="billing-balance">
+                <span class="stat-label">Your balance</span>
+                <span id="billing-balance" class="stat-value">--</span>
+              </div>
+
+              <div id="billing-owner" hidden>
+                <form id="billing-grant-form" class="rule-form" autocomplete="off">
+                  <label class="field field-grow">
+                    <span class="field-label">Grant credits (owner)</span>
+                    <input id="billing-grant-user" type="text" placeholder="Discord user ID" required />
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Amount</span>
+                    <input id="billing-grant-amount" type="number" min="1" value="500" required />
+                  </label>
+                  <button type="submit" class="btn btn-primary" id="billing-grant">Grant</button>
+                </form>
+              </div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> billing <span class="accent">--servers</span></h2>
+              </div>
+              <div id="billing-guilds" class="billing-guilds"></div>
             </section>
           </section>
         </main>

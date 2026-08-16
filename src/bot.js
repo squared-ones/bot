@@ -63,6 +63,18 @@ import {
   resetUserXp,
   resetGuildXp,
 } from './levels.js';
+import {
+  PLANS,
+  formatCredits,
+  getBalance,
+  grantCredits,
+  getGuildPlan,
+  getGuildSubscription,
+  getUserPlan,
+  subscribeGuild,
+  planRequiredError,
+  FREE_CUSTOM_RULE_LIMIT,
+} from './credits.js';
 
 export const botState = {
   client: null,
@@ -83,6 +95,73 @@ export async function isApplicationOwner(userId) {
     return owner?.id === userId;
   } catch {
     return false;
+  }
+}
+
+// Sends the bot's slash-command list to discordbotlist.com so it shows on the
+// bot page (https://docs.discordbotlist.com/commands-list). No-op unless
+// DBL_API_TOKEN is configured.
+async function syncDiscordBotListCommands(client) {
+  const token = process.env.DBL_API_TOKEN;
+  const botId = client.application?.id || process.env.CLIENT_ID;
+  if (!token || !botId) return;
+  try {
+    const res = await fetch(
+      `https://discordbotlist.com/api/v1/bots/${botId}/commands`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bot ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commands.map((c) => c.toJSON())),
+      }
+    );
+    if (!res.ok) throw new Error(`discordbotlist.com returned ${res.status}`);
+    console.log('[dbl] command list synced to discordbotlist.com.');
+  } catch (err) {
+    console.error('[dbl] failed to sync command list:', err.message);
+  }
+}
+
+// Posts guild/user/voice-connection counts to discordbotlist.com
+// (https://docs.discordbotlist.com/bot-statistics). No-op unless DBL_API_TOKEN
+// is configured.
+async function syncDiscordBotListStats(client) {
+  const token = process.env.DBL_API_TOKEN;
+  const botId = client.application?.id || process.env.CLIENT_ID;
+  if (!token || !botId) return;
+  try {
+    const guilds = client.guilds.cache.size;
+    const users = client.guilds.cache.reduce(
+      (sum, guild) => sum + (guild.memberCount || 0),
+      0
+    );
+    const voiceConnections = client.guilds.cache.reduce(
+      (sum, guild) => sum + guild.voiceStates.cache.size,
+      0
+    );
+    const res = await fetch(
+      `https://discordbotlist.com/api/v1/bots/${botId}/stats`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          guilds,
+          users,
+          voice_connections: voiceConnections,
+        }),
+      }
+    );
+    if (!res.ok) throw new Error(`discordbotlist.com returned ${res.status}`);
+    console.log(
+      `[dbl] stats posted: ${guilds} guilds, ${users} users, ${voiceConnections} voice.`
+    );
+  } catch (err) {
+    console.error('[dbl] failed to post stats:', err.message);
   }
 }
 
@@ -448,12 +527,70 @@ const commands = [
     .addSubcommand((s) =>
       s.setName('resetall').setDescription("Reset everyone's XP in this server")
     ),
+  new SlashCommandBuilder()
+    .setName('credits')
+    .setDescription('Manage your Squared One credits')
+    .addSubcommand((s) =>
+      s
+        .setName('balance')
+        .setDescription('Check a credit balance')
+        .addUserOption((o) =>
+          o
+            .setName('user')
+            .setDescription('User to check (moderators only)')
+            .setRequired(false)
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('grant')
+        .setDescription('Grant credits to a user (application owner only)')
+        .addUserOption((o) =>
+          o.setName('user').setDescription('User to grant').setRequired(true)
+        )
+        .addIntegerOption((o) =>
+          o
+            .setName('amount')
+            .setDescription('Amount to grant')
+            .setRequired(true)
+            .setMinValue(1)
+        )
+    ),
+  new SlashCommandBuilder()
+    .setName('subscribe')
+    .setDescription('Subscribe this server to a plan using your credits')
+    .addStringOption((o) =>
+      o
+        .setName('plan')
+        .setDescription('Plan to subscribe to')
+        .setRequired(true)
+        .addChoices({ name: 'Pro — 500 SQ/month', value: 'pro' })
+    )
+    .addIntegerOption((o) =>
+      o
+        .setName('months')
+        .setDescription('Number of months (default 1)')
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(12)
+    ),
+  new SlashCommandBuilder()
+    .setName('plan')
+    .setDescription("Show this server's current plan"),
 ];
 
 function isModerator(interaction) {
   return (
     interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) === true
   );
+}
+
+// Returns a Pro-upgrade error message when the server is on the Free plan.
+function requirePaid(interaction, featureLabel) {
+  if (!interaction.guild || getGuildPlan(interaction.guild.id) !== 'free') {
+    return null;
+  }
+  return `💳 ${planRequiredError(featureLabel)}`;
 }
 
 
@@ -793,10 +930,115 @@ async function handleInteraction(interaction) {
             value:
               '`/rank` Show your level\n`/leaderboard` Top members\n`/leveling` Configure leveling',
           },
+          {
+            name: '💳 Billing',
+            value:
+              '`/credits` Check or grant credits\n`/subscribe` Subscribe this server\n`/plan` Show this server plan',
+          },
         )
         .setFooter({ text: 'Squared One · Use /help any time' })
         .setTimestamp();
       await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'credits') {
+      const sub = interaction.options.getSubcommand();
+      if (sub === 'grant') {
+        if (!(await isApplicationOwner(interaction.user.id))) {
+          await interaction.reply({
+            content: '⛔ Only the application owner can grant credits.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const user = interaction.options.getUser('user');
+        const amount = interaction.options.getInteger('amount');
+        const balance = grantCredits(user.id, amount);
+        await interaction.reply({
+          content: `✅ Granted ${formatCredits(amount)} to ${user.tag}. Their balance is now ${formatCredits(balance)}.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const target = interaction.options.getUser('user');
+      if (target && target.id !== interaction.user.id && !isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to check other users.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const who = target ?? interaction.user;
+      const balance = getBalance(who.id);
+      await interaction.reply({
+        content:
+          who.id === interaction.user.id
+            ? `💰 You have **${formatCredits(balance)}**.`
+            : `💰 ${who.tag} has **${formatCredits(balance)}**.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'plan') {
+      if (!interaction.guild) {
+        await interaction.reply({
+          content: '❌ Run this command in a server.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const plan = getGuildPlan(interaction.guild.id);
+      const sub = getGuildSubscription(interaction.guild.id);
+      const expiry = sub && sub.expiresAt
+        ? ` Expires <t:${Math.floor(sub.expiresAt / 1000)}:R>.`
+        : sub
+          ? ' This plan does not expire.'
+          : ` Upgrade with /subscribe (${formatCredits(PLANS.pro.monthlyCost)}/month).`;
+      await interaction.reply({
+        content: `📊 This server is on the **${PLANS[plan].name}** plan.${expiry}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'subscribe') {
+      if (!interaction.guild) {
+        await interaction.reply({
+          content: '❌ Run this command in a server.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to subscribe this server.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const planKey = interaction.options.getString('plan');
+      const months = interaction.options.getInteger('months') || 1;
+      const result = subscribeGuild({
+        userId: interaction.user.id,
+        guildId: interaction.guild.id,
+        plan: planKey,
+        months,
+      });
+      if (!result.ok) {
+        await interaction.reply({
+          content: `❌ ${result.error}`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await interaction.reply({
+        content: `✅ Subscribed **${interaction.guild.name}** to ${PLANS[result.plan].name} for ${months} month${months === 1 ? '' : 's'} (${formatCredits(result.cost)}). Expires <t:${Math.floor(result.expiresAt / 1000)}:R>. Remaining balance: ${formatCredits(result.balance)}.`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -811,6 +1053,16 @@ async function handleInteraction(interaction) {
       if (!isModerator(interaction)) {
         await interaction.reply({
           content: '⛔ You need the **Manage Server** permission to add rules.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (
+        getUserPlan(interaction.user.id) === 'free' &&
+        getCustomRules().length >= FREE_CUSTOM_RULE_LIMIT
+      ) {
+        await interaction.reply({
+          content: `⛔ The Free plan is limited to ${FREE_CUSTOM_RULE_LIMIT} custom rules. Subscribe to Pro for unlimited rules (/subscribe).`,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -1222,6 +1474,11 @@ async function handleInteraction(interaction) {
         });
         return;
       }
+      const paidErr = requirePaid(interaction, 'Automation');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
+        return;
+      }
       const sub = interaction.options.getSubcommand();
       if (sub === 'add') {
         const role = interaction.options.getRole('role');
@@ -1264,6 +1521,11 @@ async function handleInteraction(interaction) {
             '⛔ You need the **Manage Server** permission to change role restore.',
           flags: MessageFlags.Ephemeral,
         });
+        return;
+      }
+      const paidErr = requirePaid(interaction, 'Automation');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const sub = interaction.options.getSubcommand();
@@ -1309,6 +1571,11 @@ async function handleInteraction(interaction) {
         });
         return;
       }
+      const paidErr = requirePaid(interaction, 'Tickets');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
+        return;
+      }
       const category = interaction.options.getChannel('category');
       const staffRole = interaction.options.getRole('staffrole');
       if (category?.type !== ChannelType.GuildCategory) {
@@ -1336,6 +1603,11 @@ async function handleInteraction(interaction) {
             '⛔ You need the **Manage Server** permission to post a ticket panel.',
           flags: MessageFlags.Ephemeral,
         });
+        return;
+      }
+      const paidErr = requirePaid(interaction, 'Tickets');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const config = getTicketConfig(interaction.guild.id);
@@ -1411,6 +1683,11 @@ async function handleInteraction(interaction) {
             '⛔ You need the **Manage Server** permission to review appeals.',
           flags: MessageFlags.Ephemeral,
         });
+        return;
+      }
+      const paidErr = requirePaid(interaction, 'Appeals');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const sub = interaction.options.getSubcommand();
@@ -1543,6 +1820,11 @@ async function handleInteraction(interaction) {
             '⛔ You need the **Manage Server** permission to configure leveling.',
           flags: MessageFlags.Ephemeral,
         });
+        return;
+      }
+      const paidErr = requirePaid(interaction, 'Leveling');
+      if (paidErr) {
+        await interaction.reply({ content: paidErr, flags: MessageFlags.Ephemeral });
         return;
       }
       const sub = interaction.options.getSubcommand();
@@ -1758,6 +2040,9 @@ export async function startBot(token) {
       console.error('[bot] failed to register commands:', err.message);
     }
 
+    await syncDiscordBotListCommands(client);
+    await syncDiscordBotListStats(client);
+
     if (process.env.CLIENT_ID) {
       const invite = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
       console.log(`[bot] invite: ${invite}`);
@@ -1839,5 +2124,10 @@ export async function startBot(token) {
     });
   }, 60 * 1000);
   voiceXpTimer.unref?.();
+
+  const statsTimer = setInterval(() => {
+    syncDiscordBotListStats(client);
+  }, 30 * 60 * 1000);
+  statsTimer.unref?.();
   return client;
 }
