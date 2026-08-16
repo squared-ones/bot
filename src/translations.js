@@ -152,6 +152,9 @@ const SEED_CATALOG = {
   'web.dash.apikeys.create': 'Create key',
   'web.dash.apikeys.reveal-note': 'Copy this key now — it will not be shown again.',
   'web.dash.apikeys.copy': 'Copy',
+  'web.dash.nav.review-translations': 'Review translations',
+  'web.dash.review.owner-only':
+    'Only the application owner can approve or reject translations.',
 };
 
 let store = null;

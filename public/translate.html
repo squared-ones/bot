@@ -63,10 +63,6 @@
 
       <div class="tr-list" id="tr-list"></div>
 
-      <section class="tr-pending" id="tr-pending" hidden>
-        <h2 class="tr-h2">Pending review</h2>
-        <div id="tr-pending-list"></div>
-      </section>
     </main>
 
     <div id="site-footer"></div>
@@ -85,8 +81,6 @@
         const listEl = $('#tr-list');
         const localeEl = $('#tr-locale');
         const filterEl = $('#tr-filter');
-        const pendingEl = $('#tr-pending');
-        const pendingListEl = $('#tr-pending-list');
         const rewardEl = $('#tr-reward');
         const noticeEl = $('#tr-notice');
         const statusEl = $('#tr-status');
@@ -95,10 +89,8 @@
           catalog: {},
           locales: [],
           reward: 0,
-          isOwner: false,
           signedIn: false,
           locale: 'fr',
-          pending: [],
         };
 
         function showStatus(message) {
@@ -184,57 +176,12 @@
           }
         }
 
-        function renderPending() {
-          if (!state.isOwner || !state.pending.length) {
-            pendingEl.hidden = true;
-            return;
-          }
-          pendingEl.hidden = false;
-          pendingListEl.innerHTML = state.pending
-            .map(
-              (entry) => `
-                <div class="tr-pending-item">
-                  <div class="tr-pending-meta">${esc(entry.locale)} · ${esc(entry.key)} · ${esc(entry.contributorId || 'anonymous')}</div>
-                  <div class="tr-pending-value">${esc(entry.value)}</div>
-                  <div class="tr-pending-actions">
-                    <button type="button" class="btn btn-primary btn-sm" data-approve="${esc(entry.id)}">Approve</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-reject="${esc(entry.id)}">Reject</button>
-                  </div>
-                </div>`
-            )
-            .join('');
-
-          pendingListEl.querySelectorAll('[data-approve]').forEach((btn) => {
-            btn.addEventListener('click', async () => {
-              try {
-                const data = await post('/api/i18n/approve', { id: btn.dataset.approve });
-                showStatus('Approved — ' + (data.reward || 0) + ' SQ granted to contributor.');
-                await loadCatalog();
-              } catch (error) {
-                showStatus(error.message);
-              }
-            });
-          });
-          pendingListEl.querySelectorAll('[data-reject]').forEach((btn) => {
-            btn.addEventListener('click', async () => {
-              try {
-                await post('/api/i18n/reject', { id: btn.dataset.reject });
-                showStatus('Rejected.');
-                await loadCatalog();
-              } catch (error) {
-                showStatus(error.message);
-              }
-            });
-          });
-        }
-
         function render() {
           rewardEl.textContent = '+' + state.reward + ' SQ per approved string';
           noticeEl.innerHTML = state.signedIn
             ? 'No machine translation — every entry is reviewed by a human before it ships.'
             : 'Please <a href="/login" style="color:var(--red)">sign in</a> to contribute translations.';
           renderStrings();
-          renderPending();
         }
 
         async function loadCatalog() {
@@ -243,16 +190,13 @@
             if (!res.ok) throw new Error('unauthorized');
             const data = await res.json();
             state.catalog = data.catalog || {};
-            state.pending = data.pending || [];
             state.reward = Number(data.reward) || 0;
-            state.isOwner = Boolean(data.isOwner);
             state.signedIn = Boolean(data.signedIn);
             if (data.locale) state.locale = data.locale;
             setLocaleSelect();
             render();
           } catch {
             state.signedIn = false;
-            state.isOwner = false;
             render();
           }
         }

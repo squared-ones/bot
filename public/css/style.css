@@ -194,6 +194,37 @@ body::before {
   color: var(--text-dim);
 }
 
+/* ---------- Review translations ---------- */
+.review-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--red-dim);
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-item-meta {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.review-item-value {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+
+.review-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

@@ -10,15 +10,24 @@ const RULES_FILE = path.join(DATA_DIR, 'rules.json');
 const DEFAULT_RULES = [
   {
     id: 'default-1',
-    title: 'Be respectful',
+    title: '📜 Community Rules & Guidelines',
     description:
-      'Treat everyone with respect. Harassment, hate speech, and personal attacks are not allowed.',
+    'Welcome to our Discord community. By joining this server, you agree to follow all rules outlined below. These rules are in place to ensure that everyone can enjoy a safe, welcoming, respectful, and enjoyable environment. Failure to comply with these rules may result in moderation actions, including warnings, mutes, kicks, temporary bans, permanent bans, or any other action deemed appropriate by the moderation team.' +
+    'The moderation team reserves the right to interpret these rules and make decisions in situations not explicitly covered below. Attempting to exploit loopholes or technicalities within these rules will not exempt members from moderation.',
   },
   {
     id: 'default-2',
-    title: 'No spam or self-promotion',
+    title: '1. Respect All Members',
     description:
-      'Do not spam messages, links, or promote yourself without permission from staff.',
+      'Every member deserves to be treated with respect regardless of their age, nationality, race, ethnicity, religion, gender, sexual orientation, identity, opinions, or experience.' +
+      'Members must:' +
+      'Remain polite and respectful.' +
+    '- Accept differing opinions.' +
+    '- Engage in civil discussions.' + 
+    '- Avoid unnecessary arguments.' +
+    '- Treat newcomers with kindness.' +
+    '- Respect moderators and staff members.',
+
   },
   {
     id: 'default-3',

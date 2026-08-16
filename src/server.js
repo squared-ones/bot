@@ -619,17 +619,27 @@ export function startServer(port = 3000) {
     res.json({ locale, strings: getStringsForLocale(locale) });
   });
 
-  // Full catalog + pending list for the translation contribution page.
+  // Full catalog for the translation contribution page (contributor-facing).
   app.get('/api/i18n/catalog', guard, async (req, res) => {
     const userId = billingIdOf(req);
     res.json({
       catalog: getCatalog(),
-      pending: listPendingTranslations(),
       locales: listLocales(),
       reward: TRANSLATION_REWARD,
       locale: userId ? getUserLocale(userId) : null,
-      isOwner: userId ? await isApplicationOwner(userId) : false,
       signedIn: Boolean(req.user),
+    });
+  });
+
+  // Pending queue + owner flag for the dashboard's review view. Approval and
+  // rejection happen in the dashboard, not on /translate.
+  app.get('/api/i18n/review', guard, async (req, res) => {
+    const userId = billingIdOf(req);
+    const isOwner = userId ? await isApplicationOwner(userId) : false;
+    res.json({
+      isOwner,
+      pending: isOwner ? listPendingTranslations() : [],
+      reward: TRANSLATION_REWARD,
     });
   });
 

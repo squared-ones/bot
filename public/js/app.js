@@ -120,6 +120,8 @@ const el = {
   apikeyValue: $('#apikey-value'),
   apikeyCopy: $('#apikey-copy'),
   apikeyList: $('#apikey-list'),
+  reviewOwnerNote: $('#review-owner-note'),
+  reviewTranslationsList: $('#review-translations-list'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -609,7 +611,10 @@ const NAV_SECTIONS = [
       },
       {
         title: 'Developer',
-        items: [{ view: 'apikeys', label: 'API keys', icon: 'icon-key' }],
+        items: [
+          { view: 'apikeys', label: 'API keys', icon: 'icon-key' },
+          { view: 'review-translations', label: 'Review translations', icon: 'icon-bell' },
+        ],
       },
     ],
   },
@@ -2169,6 +2174,72 @@ el.apikeyList.addEventListener('click', async (event) => {
   }
 });
 
+// ---------- Review translations ----------
+async function loadReviewTranslations() {
+  try {
+    const res = await apiFetch('/api/i18n/review');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to load');
+    el.reviewOwnerNote.hidden = data.isOwner;
+    if (!data.isOwner) {
+      el.reviewTranslationsList.innerHTML = '';
+      return;
+    }
+    const pending = data.pending || [];
+    el.reviewTranslationsList.innerHTML = pending.length
+      ? pending
+          .map(
+            (entry) => `
+        <div class="review-item">
+          <div class="review-item-meta">${escapeHtml(
+            entry.locale
+          )} · ${escapeHtml(entry.key)} · ${escapeHtml(
+            entry.contributorId || 'anonymous'
+          )}</div>
+          <div class="review-item-value">${escapeHtml(entry.value)}</div>
+          <div class="review-item-actions">
+            <button type="button" class="btn btn-primary btn-sm review-approve" data-id="${escapeHtml(
+              entry.id
+            )}">Approve</button>
+            <button type="button" class="btn btn-secondary btn-sm review-reject" data-id="${escapeHtml(
+              entry.id
+            )}">Reject</button>
+          </div>
+        </div>`
+          )
+          .join('')
+      : '<div class="empty">No pending translations.</div>';
+  } catch {
+    el.reviewOwnerNote.hidden = false;
+    el.reviewTranslationsList.innerHTML = '';
+  }
+}
+
+el.reviewTranslationsList.addEventListener('click', async (event) => {
+  const approve = event.target.closest('.review-approve');
+  const reject = event.target.closest('.review-reject');
+  if (!approve && !reject) return;
+  const btn = approve || reject;
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(
+      approve ? '/api/i18n/approve' : '/api/i18n/reject',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: btn.dataset.id }),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed');
+    showToast(approve ? 'Translation approved.' : 'Translation rejected.');
+    await loadReviewTranslations();
+  } catch (error) {
+    showToast(error.message || 'Failed.', 'err');
+    btn.disabled = false;
+  }
+});
+
 loadSession();
 loadRules();
 loadHealth();
@@ -2178,4 +2249,5 @@ loadVotes();
 loadBilling();
 loadAccount();
 loadApiKeys();
+loadReviewTranslations();
 setInterval(loadHealth, 5000);
