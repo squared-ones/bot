@@ -124,6 +124,14 @@ body::before {
   }
 }
 
+/* Fixed language control for the centered auth pages (login/signup). */
+.auth-lang {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 60;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

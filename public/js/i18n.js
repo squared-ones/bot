@@ -59,6 +59,9 @@
       }
       window.location.reload();
     },
+    // Re-runs the current translations over the DOM. Call this after
+    // injecting dynamic markup that carries data-i18n attributes.
+    apply,
   };
 
   fetch('/api/i18n/strings?locale=' + encodeURIComponent(detectLocale()))

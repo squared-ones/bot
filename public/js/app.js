@@ -652,10 +652,14 @@ function renderRail() {
   });
 }
 
+function groupKey(title) {
+  return 'web.dash.group.' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
 function navItemHtml(item) {
   return `<button class="nav-item${item.view === currentView ? ' active' : ''}" data-view="${item.view}" type="button">
     <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#${item.icon}"/></svg></span>
-    <span class="nav-label">${item.label}</span>
+    <span class="nav-label" data-i18n="web.dash.nav.${item.view}">${item.label}</span>
   </button>`;
 }
 
@@ -663,6 +667,7 @@ function renderDetail() {
   const section = NAV_SECTIONS.find((s) => s.id === activeSectionId);
   if (!section) return;
   detailTitle.textContent = section.title;
+  detailTitle.setAttribute('data-i18n', `web.dash.nav.${section.id}`);
   const q = (navSearch.value || '').trim().toLowerCase();
   const html = section.groups
     .map((group) => {
@@ -671,12 +676,15 @@ function renderDetail() {
       );
       if (!items.length) return '';
       return `<div class="detail-group">
-        <div class="detail-group-title">${group.title}</div>
+        <div class="detail-group-title" data-i18n="${groupKey(group.title)}">${group.title}</div>
         ${items.map(navItemHtml).join('')}
       </div>`;
     })
     .join('');
   detailNav.innerHTML = html || '<div class="empty">No matching sections.</div>';
+  if (window.I18N && typeof window.I18N.apply === 'function') {
+    window.I18N.apply();
+  }
 }
 
 function switchView(view) {

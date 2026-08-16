@@ -54,7 +54,7 @@ public/
   app.js          # dashboard logic
   particles.js    # shared particle-canvas background
 data/
-  rules.json    # custom rules (created at runtime)
+  *.json        # runtime data — synced to squared-ones/data via github-data.js
 ```
 
 ## Conventions
@@ -82,6 +82,9 @@ data/
 | `SESSION_SECRET` | recommended | Signs session cookies (falls back to `CLIENT_SECRET`) |
 | `PORT` | no (3000) | Web server port |
 | `COOKIE_SECURE` | no | `true` to send cookies over HTTPS only |
+| `GITHUB_TOKEN` | for data sync | Token for the `squared-ones/data` repository |
+| `GITHUB_DATA_REPO` | no (`squared-ones/data`) | Repo runtime data syncs to/from |
+| `GITHUB_DATA_BRANCH` | no (`main`) | Branch of the data repository |
 
 ## Verification checklist
 
@@ -93,6 +96,8 @@ data/
 
 ## Notes
 
-- Do not commit `data/rules.json`, `.env`, or `node_modules`.
+- Do not commit anything under `data/` (or `.env` / `node_modules`). All
+  runtime data lives in the external `squared-ones/data` GitHub repository and
+  is synced by `src/github-data.js`; set `GITHUB_TOKEN` to enable sync.
 - Slash commands are registered globally on boot and can take up to an hour to
   propagate to Discord.

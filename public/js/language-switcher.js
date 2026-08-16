@@ -1,6 +1,7 @@
 // Squared One — topbar language switcher.
-// Injects a compact locale <select> into the page's `.home-nav` and reloads
-// with ?lang=<locale> on change (public/i18n.js picks that up after reload).
+// Injects a compact locale <select> into the dashboard topbar
+// (`.dash-topbar-right`) or, on public pages, `.home-nav`. Reloads with
+// ?lang=<locale> on change (public/i18n.js picks that up after reload).
 (function () {
   'use strict';
 
@@ -26,8 +27,10 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
 
-  const nav = document.querySelector('.home-nav');
-  if (!nav) return;
+  const mount = document.querySelector(
+    '.dash-topbar-right, .home-nav, .auth-lang'
+  );
+  if (!mount) return;
 
   const select = document.createElement('select');
   select.className = 'lang-switcher';
@@ -64,5 +67,5 @@
     window.location.href = url.toString();
   });
 
-  nav.prepend(select);
+  mount.prepend(select);
 })();
