@@ -8,10 +8,10 @@
       name="description"
       content="Squared One is the multitool Discord bot — moderation, rules, verification, voting, tickets, and leveling, all managed from one red-hot dashboard."
     />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,321 +28,16 @@
         rel="stylesheet"
       />
     </noscript>
-    <link rel="stylesheet" href="/style.css" />
-    <style>
-      .home-nav {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .home-cta {
-        display: flex;
-        gap: 14px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-top: 30px;
-      }
-
-      .home-cta .btn {
-        align-self: auto;
-      }
-
-      .features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 16px;
-        margin-top: 48px;
-      }
-
-      .feature-card {
-        position: relative;
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-        padding: 22px;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      .feature-card::before,
-      .feature-card::after {
-        content: "";
-        position: absolute;
-        width: 11px;
-        height: 11px;
-        border-color: var(--red);
-        border-style: solid;
-        pointer-events: none;
-      }
-
-      .feature-card::before {
-        top: -1px;
-        left: -1px;
-        border-width: 2px 0 0 2px;
-      }
-
-      .feature-card::after {
-        bottom: -1px;
-        right: -1px;
-        border-width: 0 2px 2px 0;
-      }
-
-      .feature-card:hover {
-        border-color: var(--red);
-        box-shadow: 0 0 18px rgba(255, 0, 0, 0.22);
-      }
-
-      .feature-card h3 {
-        font-family: var(--mono);
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--red);
-        text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
-        margin-bottom: 10px;
-      }
-
-      .feature-card p {
-        font-family: var(--sans);
-        font-weight: 300;
-        color: var(--text-dim);
-        font-size: 0.95rem;
-        line-height: 1.6;
-      }
-
-      .servers {
-        margin-top: 56px;
-      }
-
-      .servers-title {
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        font-weight: 600;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--red);
-        text-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
-        text-align: center;
-        margin-bottom: 26px;
-      }
-
-      .marquee {
-        position: relative;
-        overflow: hidden;
-        padding: 4px 0;
-      }
-
-      .marquee::before,
-      .marquee::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 72px;
-        z-index: 2;
-        pointer-events: none;
-      }
-
-      .marquee::before {
-        left: 0;
-        background: linear-gradient(to right, #050000, transparent);
-      }
-
-      .marquee::after {
-        right: 0;
-        background: linear-gradient(to left, #050000, transparent);
-      }
-
-      .marquee-track {
-        display: flex;
-        gap: 16px;
-        width: max-content;
-        animation: marquee 35s linear infinite;
-      }
-
-      .marquee:hover .marquee-track {
-        animation-play-state: paused;
-      }
-
-      @keyframes marquee {
-        from {
-          transform: translateX(0);
-        }
-        to {
-          transform: translateX(-50%);
-        }
-      }
-
-      .server-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 18px;
-        border: 1px solid var(--red-dim);
-        background: var(--red-faint);
-        white-space: nowrap;
-      }
-
-      .server-icon-wrap {
-        position: relative;
-        width: 30px;
-        height: 30px;
-        flex: none;
-      }
-
-      .server-icon-fallback {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        border: 1px solid var(--red);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: var(--mono);
-        font-weight: 600;
-        color: var(--red);
-        font-size: 0.8rem;
-      }
-
-      .server-icon {
-        position: absolute;
-        inset: 0;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid var(--red-dim);
-      }
-
-      .server-name {
-        font-family: var(--mono);
-        font-size: 0.78rem;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        color: var(--text-dim);
-      }
-
-      .servers-empty {
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      .team {
-        margin-top: 56px;
-      }
-
-      .team-title {
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        font-weight: 600;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--red);
-        text-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
-        text-align: center;
-        margin-bottom: 26px;
-      }
-
-      .team-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 16px;
-      }
-
-      .member {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        padding: 24px 18px;
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      .member:hover {
-        border-color: var(--red);
-        box-shadow: 0 0 18px rgba(255, 0, 0, 0.22);
-      }
-
-      .member-avatar-wrap {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        padding: 3px;
-        background: var(--red-faint);
-        border: 1px solid var(--red-dim);
-        box-shadow: 0 0 18px rgba(255, 0, 0, 0.25);
-      }
-
-      .member-avatar {
-        display: block;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-
-      .member-name {
-        font-family: var(--mono);
-        font-size: 0.9rem;
-        font-weight: 600;
-        letter-spacing: 1px;
-        color: var(--text);
-        text-align: center;
-      }
-
-      .member-role {
-        font-family: var(--mono);
-        font-size: 0.66rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--red);
-        text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
-        text-align: center;
-      }
-
-      @media (max-width: 560px) {
-        .home-nav .btn {
-          padding: 10px 14px;
-          font-size: 0.7rem;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/pages.css" />
   </head>
   <body>
-    <script src="/loader.js"></script>
-    <script src="/cookie-banner.js"></script>
-    <script src="/cursor.js"></script>
+    <script src="/js/loader.js"></script>
+    <script src="/js/cookie-banner.js"></script>
+    <script src="/js/cursor.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
 
-    <header class="topbar">
-      <div class="topbar-inner">
-        <a class="logo" href="/">
-          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
-          <span class="logo-text">SQUARED ONE</span>
-        </a>
-        <nav class="home-nav">
-          <a class="btn btn-secondary btn-sm" href="/pricing" data-i18n="web.nav.pricing">Pricing</a>
-          <a class="btn btn-secondary btn-sm" href="/support" data-i18n="web.nav.support">Support</a>
-          <a class="btn btn-secondary btn-sm" href="/translate" data-i18n="web.nav.translate">Translate</a>
-          <a class="btn btn-secondary btn-sm" href="/dashboard" data-i18n="web.nav.dashboard">Open dashboard</a>
-          <a
-            class="btn btn-primary btn-sm"
-            id="invite-btn"
-            href="#"
-            target="_blank"
-            rel="noopener"
-            data-i18n="web.nav.invite"
-            >Add to Discord</a
-          >
-        </nav>
-      </div>
-    </header>
+    <div id="site-header"></div>
 
     <main>
       <section class="hero">
@@ -467,69 +162,14 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-top">
-          <a href="/" class="footer-brand" aria-label="Squared One">
-            <img class="footer-logo" src="/logo.png" alt="Squared One logo" />
-            <span class="footer-brand-name">SQUARED ONE</span>
-          </a>
-          <ul class="footer-social">
-            <li>
-              <a class="footer-social-btn" id="footer-discord" href="/support" aria-label="Discord support server">
-                <svg viewBox="0 0 127.14 96.36" aria-hidden="true"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
-              </a>
-            </li>
-            <li>
-              <a class="footer-social-btn" id="footer-github" href="https://github.com/squared-ones/bot" target="_blank" rel="noopener" aria-label="GitHub">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div class="footer-bottom">
-          <nav class="footer-main-nav" aria-label="Main">
-            <ul>
-              <li><a href="/dashboard">dashboard</a></li>
-              <li><a href="/pricing">pricing</a></li>
-              <li><a href="/support">support</a></li>
-              <li><a href="/translate">translate</a></li>
-              <li><a href="/">home</a></li>
-            </ul>
-          </nav>
-          <div class="footer-legal" aria-label="Legal">
-            <ul>
-              <li><a href="/privacy">privacy</a></li>
-              <li><a href="/terms">terms</a></li>
-            </ul>
-          </div>
-          <div class="footer-copyright">
-            <div>© 2026 Squared One</div>
-            <div>Apache License 2.0</div>
-          </div>
-        </div>
-      </div>
-    </footer>
-    <script src="/footer.js"></script>
-    <script src="/i18n.js"></script>
-    <script src="/language-switcher.js"></script>
+    <div id="site-footer"></div>
+    <script src="/js/site-chrome.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/i18n.js"></script>
+    <script src="/js/language-switcher.js"></script>
+    <script src="/js/particles.js"></script>
 
     <script>
-      // Populate the invite link from the server (uses CLIENT_ID).
-      fetch('/api/invite')
-        .then((r) => r.json())
-        .then((d) => {
-          const btn = document.getElementById('invite-btn');
-          if (d && d.url) {
-            btn.href = d.url;
-          } else {
-            btn.remove();
-          }
-        })
-        .catch(() => {
-          document.getElementById('invite-btn').remove();
-        });
-
       // Auto-scrolling servers marquee.
       (function () {
         const track = document.getElementById('servers-track');
@@ -588,65 +228,6 @@
           });
       })();
 
-      // Particle background.
-      (function () {
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let W, H;
-        function resize() {
-          W = canvas.width = window.innerWidth;
-          H = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Dot {
-          constructor() { this.reset(); }
-          reset() {
-            this.x = Math.random() * W;
-            this.y = Math.random() * H;
-            this.vx = (Math.random() - 0.5) * 0.4;
-            this.vy = (Math.random() - 0.5) * 0.4;
-            this.r = Math.random() * 1.5 + 0.5;
-          }
-          step() {
-            this.x += this.vx;
-            this.y += this.vy;
-            if (this.x < 0 || this.x > W) this.vx *= -1;
-            if (this.y < 0 || this.y > H) this.vy *= -1;
-          }
-        }
-
-        const DOTS = Array.from({ length: 55 }, () => new Dot());
-
-        function frame() {
-          ctx.fillStyle = 'rgba(5,0,0,0.22)';
-          ctx.fillRect(0, 0, W, H);
-          DOTS.forEach((d) => d.step());
-          for (let i = 0; i < DOTS.length; i++) {
-            for (let j = i + 1; j < DOTS.length; j++) {
-              const dx = DOTS[i].x - DOTS[j].x;
-              const dy = DOTS[i].y - DOTS[j].y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 110) {
-                ctx.strokeStyle = `rgba(255,0,0,${(1 - dist / 110) * 0.35})`;
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.moveTo(DOTS[i].x, DOTS[i].y);
-                ctx.lineTo(DOTS[j].x, DOTS[j].y);
-                ctx.stroke();
-              }
-            }
-            ctx.fillStyle = 'rgba(255,0,0,0.25)';
-            ctx.beginPath();
-            ctx.arc(DOTS[i].x, DOTS[i].y, DOTS[i].r, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (!reduced) requestAnimationFrame(frame);
-        }
-        frame();
-      })();
     </script>
   </body>
 </html>

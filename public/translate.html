@@ -8,10 +8,10 @@
       name="description"
       content="Help translate Squared One into your language. Human-reviewed translations — earn SQ for every approved string."
     />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,235 +27,16 @@
         rel="stylesheet"
       />
     </noscript>
-    <link rel="stylesheet" href="/style.css" />
-    <style>
-      .tr-main {
-        position: relative;
-        z-index: 2;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 48px 24px 96px;
-      }
-
-      .tr-hero {
-        text-align: center;
-        margin-bottom: 28px;
-      }
-
-      .tr-reward {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin: 18px auto 0;
-        padding: 8px 14px;
-        border: 1px solid var(--green);
-        background: rgba(0, 255, 136, 0.08);
-        color: var(--green);
-        font-family: var(--mono);
-        font-size: 0.74rem;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        box-shadow: 0 0 16px rgba(0, 255, 136, 0.2);
-      }
-
-      .tr-notice {
-        text-align: center;
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        color: var(--muted);
-        margin: 18px 0 26px;
-        line-height: 1.7;
-      }
-
-      .tr-controls {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      .tr-controls select,
-      .tr-controls input {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--red-dim);
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 0.82rem;
-        padding: 10px 12px;
-        outline: none;
-      }
-
-      .tr-controls select:focus,
-      .tr-controls input:focus {
-        border-color: var(--red);
-        box-shadow: 0 0 0 1px var(--red-glow);
-      }
-
-      .tr-controls select {
-        min-width: 160px;
-      }
-
-      .tr-controls input {
-        flex: 1;
-        min-width: 180px;
-      }
-
-      .tr-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .tr-row {
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-        padding: 14px 16px;
-      }
-
-      .tr-row-top {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 8px;
-      }
-
-      .tr-key {
-        font-family: var(--mono);
-        font-size: 0.68rem;
-        letter-spacing: 1px;
-        color: var(--red);
-      }
-
-      .tr-source {
-        font-family: var(--sans);
-        font-size: 0.9rem;
-        color: var(--text-dim);
-        line-height: 1.5;
-        margin-bottom: 10px;
-      }
-
-      .tr-row form {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .tr-row input {
-        flex: 1;
-        min-width: 0;
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--red-dim);
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 0.82rem;
-        padding: 9px 12px;
-        outline: none;
-      }
-
-      .tr-row input:focus {
-        border-color: var(--red);
-        box-shadow: 0 0 0 1px var(--red-glow);
-      }
-
-      .tr-empty {
-        color: var(--muted);
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        text-align: center;
-        padding: 30px 0;
-      }
-
-      .tr-pending {
-        margin-top: 40px;
-      }
-
-      .tr-h2 {
-        font-family: var(--mono);
-        font-size: 1rem;
-        font-weight: 600;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--red);
-        text-shadow: 0 0 10px var(--red-glow);
-        margin-bottom: 18px;
-        text-align: center;
-      }
-
-      .tr-pending-item {
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-        padding: 14px 16px;
-        margin-bottom: 10px;
-      }
-
-      .tr-pending-meta {
-        font-family: var(--mono);
-        font-size: 0.68rem;
-        color: var(--muted);
-        margin-bottom: 6px;
-      }
-
-      .tr-pending-value {
-        font-family: var(--sans);
-        font-size: 0.9rem;
-        color: var(--text);
-        margin-bottom: 10px;
-      }
-
-      .tr-pending-actions {
-        display: flex;
-        gap: 8px;
-      }
-
-      .tr-status {
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 60;
-        padding: 12px 18px;
-        border: 1px solid var(--red);
-        background: var(--panel);
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        box-shadow: var(--shadow-lg);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.25s ease, transform 0.25s ease;
-      }
-
-      .tr-status.show {
-        opacity: 1;
-        transform: translateX(-50%) translateY(-6px);
-      }
-    </style>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/pages.css" />
   </head>
   <body>
-    <script src="/loader.js"></script>
-    <script src="/cookie-banner.js"></script>
-    <script src="/cursor.js"></script>
+    <script src="/js/loader.js"></script>
+    <script src="/js/cookie-banner.js"></script>
+    <script src="/js/cursor.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
 
-    <header class="topbar">
-      <div class="topbar-inner">
-        <a class="logo" href="/">
-          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
-          <span class="logo-text">SQUARED ONE</span>
-        </a>
-        <nav class="home-nav">
-          <a class="btn btn-secondary btn-sm" href="/">Home</a>
-          <a class="btn btn-secondary btn-sm" href="/pricing">Pricing</a>
-          <a class="btn btn-secondary btn-sm" href="/support">Support</a>
-          <a class="btn btn-secondary btn-sm" href="/dashboard">Dashboard</a>
-        </nav>
-      </div>
-    </header>
+    <div id="site-header"></div>
 
     <main class="tr-main">
       <section class="tr-hero">
@@ -288,50 +69,10 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-top">
-          <a href="/" class="footer-brand" aria-label="Squared One">
-            <img class="footer-logo" src="/logo.png" alt="Squared One logo" />
-            <span class="footer-brand-name">SQUARED ONE</span>
-          </a>
-          <ul class="footer-social">
-            <li>
-              <a class="footer-social-btn" id="footer-discord" href="/support" aria-label="Discord support server">
-                <svg viewBox="0 0 127.14 96.36" aria-hidden="true"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
-              </a>
-            </li>
-            <li>
-              <a class="footer-social-btn" id="footer-github" href="https://github.com/squared-ones/bot" target="_blank" rel="noopener" aria-label="GitHub">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div class="footer-bottom">
-          <nav class="footer-main-nav" aria-label="Main">
-            <ul>
-              <li><a href="/dashboard">dashboard</a></li>
-              <li><a href="/pricing">pricing</a></li>
-              <li><a href="/support">support</a></li>
-              <li><a href="/">home</a></li>
-            </ul>
-          </nav>
-          <div class="footer-legal" aria-label="Legal">
-            <ul>
-              <li><a href="/privacy">privacy</a></li>
-              <li><a href="/terms">terms</a></li>
-            </ul>
-          </div>
-          <div class="footer-copyright">
-            <div>© 2026 Squared One</div>
-            <div>Apache License 2.0</div>
-          </div>
-        </div>
-      </div>
-    </footer>
-    <script src="/footer.js"></script>
-    <script src="/particles.js"></script>
+    <div id="site-footer"></div>
+    <script src="/js/site-chrome.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/particles.js"></script>
     <div class="tr-status" id="tr-status" role="status" aria-live="polite"></div>
 
     <script>

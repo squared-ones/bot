@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>404 — Page not found // Squared One</title>
     <meta name="description" content="Page not found — Squared One." />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,139 +24,16 @@
         rel="stylesheet"
       />
     </noscript>
-    <link rel="stylesheet" href="/style.css" />
-    <style>
-      .nf-wrap {
-        position: relative;
-        z-index: 2;
-        min-height: calc(100vh - 61px);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 48px 24px;
-      }
-
-      .nf-code {
-        font-family: var(--mono);
-        font-weight: 600;
-        font-size: clamp(4rem, 18vw, 8rem);
-        letter-spacing: 2px;
-        line-height: 1;
-        color: var(--red);
-        text-shadow: 0 0 18px var(--red-glow);
-        margin-bottom: 20px;
-      }
-
-      .nf-msg {
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        color: var(--text-dim);
-        margin-bottom: 30px;
-      }
-
-      .nf-term {
-        position: relative;
-        width: 100%;
-        max-width: 560px;
-        text-align: left;
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-        margin-bottom: 32px;
-      }
-
-      .nf-term::before,
-      .nf-term::after {
-        content: "";
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-color: var(--red);
-        border-style: solid;
-      }
-
-      .nf-term::before {
-        top: -1px;
-        left: -1px;
-        border-width: 2px 0 0 2px;
-      }
-
-      .nf-term::after {
-        bottom: -1px;
-        right: -1px;
-        border-width: 0 2px 2px 0;
-      }
-
-      .nf-term-bar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 13px 16px;
-        border-bottom: 1px solid var(--red-dim);
-        background: var(--red-faint);
-      }
-
-      .nf-term-bar i {
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        display: block;
-      }
-
-      .nf-term-bar i:nth-child(1) { background: var(--red); }
-      .nf-term-bar i:nth-child(2) { background: var(--amber); }
-      .nf-term-bar i:nth-child(3) { background: var(--green); }
-
-      .nf-term-title {
-        margin-left: 8px;
-        font-family: var(--mono);
-        font-size: 0.72rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-
-      .nf-term-body {
-        padding: 18px 20px;
-        font-family: var(--mono);
-        font-size: 0.86rem;
-        line-height: 1.9;
-        color: var(--text);
-      }
-
-      .nf-term-body .err { color: #ff5555; }
-      .nf-term-body .path { color: var(--red); }
-      .nf-term-body .dim { color: var(--muted); }
-      .nf-term-body a { color: var(--red); text-decoration: none; }
-      .nf-term-body a:hover { text-decoration: underline; }
-
-      .nf-path {
-        display: inline-block;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        vertical-align: bottom;
-      }
-    </style>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/pages.css" />
   </head>
   <body>
-    <script src="/loader.js"></script>
-    <script src="/cookie-banner.js"></script>
-    <script src="/cursor.js"></script>
+    <script src="/js/loader.js"></script>
+    <script src="/js/cookie-banner.js"></script>
+    <script src="/js/cursor.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
 
-    <header class="topbar">
-      <div class="topbar-inner">
-        <a class="logo" href="/">
-          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
-          <span class="logo-text">SQUARED ONE</span>
-        </a>
-      </div>
-    </header>
+    <div id="site-header"></div>
 
     <div class="nf-wrap">
       <div class="nf-code">404</div>
@@ -178,69 +55,13 @@
       <a href="/" class="btn btn-primary"><span class="btn-glyph">←</span> Back to dashboard</a>
     </div>
 
+    <div id="site-footer"></div>
+    <script src="/js/site-chrome.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/particles.js"></script>
     <script>
       document.getElementById('nf-path').textContent =
         window.location.pathname || '/';
-
-      // Particle background
-      (function () {
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let W, H;
-        function resize() {
-          W = canvas.width = window.innerWidth;
-          H = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Dot {
-          constructor() { this.reset(); }
-          reset() {
-            this.x = Math.random() * W;
-            this.y = Math.random() * H;
-            this.vx = (Math.random() - 0.5) * 0.4;
-            this.vy = (Math.random() - 0.5) * 0.4;
-            this.r = Math.random() * 1.5 + 0.5;
-          }
-          step() {
-            this.x += this.vx;
-            this.y += this.vy;
-            if (this.x < 0 || this.x > W) this.vx *= -1;
-            if (this.y < 0 || this.y > H) this.vy *= -1;
-          }
-        }
-
-        const DOTS = Array.from({ length: 55 }, () => new Dot());
-
-        function frame() {
-          ctx.fillStyle = 'rgba(5,0,0,0.22)';
-          ctx.fillRect(0, 0, W, H);
-          DOTS.forEach((d) => d.step());
-          for (let i = 0; i < DOTS.length; i++) {
-            for (let j = i + 1; j < DOTS.length; j++) {
-              const dx = DOTS[i].x - DOTS[j].x;
-              const dy = DOTS[i].y - DOTS[j].y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 110) {
-                ctx.strokeStyle = `rgba(255,0,0,${(1 - dist / 110) * 0.35})`;
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.moveTo(DOTS[i].x, DOTS[i].y);
-                ctx.lineTo(DOTS[j].x, DOTS[j].y);
-                ctx.stroke();
-              }
-            }
-            ctx.fillStyle = 'rgba(255,0,0,0.25)';
-            ctx.beginPath();
-            ctx.arc(DOTS[i].x, DOTS[i].y, DOTS[i].r, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (!reduced) requestAnimationFrame(frame);
-        }
-        frame();
-      })();
     </script>
   </body>
 </html>

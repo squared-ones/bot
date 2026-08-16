@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create account — Squared One</title>
     <meta name="description" content="Create a Squared One account to manage your Discord servers." />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/img/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,275 +24,13 @@
         rel="stylesheet"
       />
     </noscript>
-    <link rel="stylesheet" href="/style.css" />
-    <style>
-      [hidden] {
-        display: none !important;
-      }
-
-      .signup-wrap {
-        position: relative;
-        z-index: 2;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-
-      .signup-card {
-        position: relative;
-        width: 100%;
-        max-width: 400px;
-        padding: 48px 40px 44px;
-        background: var(--panel);
-        border: 1px solid var(--red-dim);
-      }
-
-      .signup-card::before,
-      .signup-card::after,
-      .signup-card .corner-br,
-      .signup-card .corner-bl {
-        content: "";
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-color: var(--red);
-        border-style: solid;
-        pointer-events: none;
-      }
-
-      .signup-card::before {
-        top: -1px;
-        left: -1px;
-        border-width: 2px 0 0 2px;
-      }
-
-      .signup-card::after {
-        top: -1px;
-        right: -1px;
-        border-width: 2px 2px 0 0;
-      }
-
-      .signup-card .corner-br {
-        bottom: -1px;
-        right: -1px;
-        border-width: 0 2px 2px 0;
-      }
-
-      .signup-card .corner-bl {
-        bottom: -1px;
-        left: -1px;
-        border-width: 0 0 2px 2px;
-      }
-
-      .signup-logo {
-        display: block;
-        width: 84px;
-        height: 84px;
-        margin: 0 auto 22px;
-        object-fit: contain;
-      }
-
-      .signup-title {
-        font-family: var(--mono);
-        font-size: clamp(1.3rem, 4vw, 1.6rem);
-        font-weight: 600;
-        color: var(--red);
-        text-shadow: 0 0 8px var(--red-glow);
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        text-align: center;
-        margin-bottom: 10px;
-        min-height: 2.2rem;
-      }
-
-      .signup-title .cursor {
-        display: inline-block;
-        width: 2px;
-        height: 1.2em;
-        background: var(--red);
-        margin-left: 3px;
-        vertical-align: middle;
-        box-shadow: 0 0 8px var(--red-glow);
-        animation: blink 1s step-end infinite;
-      }
-
-      .signup-sub {
-        font-family: var(--mono);
-        font-size: 0.7rem;
-        color: rgba(255, 60, 60, 0.5);
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        text-align: center;
-        margin-bottom: 34px;
-      }
-
-      .signup-error {
-        font-family: var(--mono);
-        font-size: 0.8rem;
-        color: #ff5555;
-        letter-spacing: 1px;
-        text-align: center;
-        margin-bottom: 18px;
-        display: none;
-      }
-
-      .signup-form {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-      }
-
-      .signup-field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .signup-field label {
-        font-family: var(--mono);
-        font-size: 0.66rem;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-
-      .signup-input {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--red-dim);
-        color: var(--text);
-        font-family: var(--mono);
-        font-size: 0.9rem;
-        padding: 11px 12px;
-        outline: none;
-        transition: border-color 0.2s;
-      }
-
-      .signup-input:focus {
-        border-color: var(--red);
-        box-shadow: 0 0 0 1px var(--red-glow);
-      }
-
-      .signup-btn {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-
-      .signup-help {
-        font-family: var(--mono);
-        font-size: 0.66rem;
-        color: var(--muted);
-        letter-spacing: 1px;
-        line-height: 1.5;
-      }
-
-      .signup-links {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 22px;
-        font-family: var(--mono);
-        font-size: 0.7rem;
-        letter-spacing: 1px;
-        color: var(--muted);
-      }
-
-      .signup-links a {
-        color: var(--red);
-        text-decoration: none;
-      }
-
-      .signup-links a:hover {
-        text-decoration: underline;
-      }
-
-      #confettiCanvas {
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-        pointer-events: none;
-      }
-
-      .signup-welcome {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 20px;
-        padding: 10px 0 4px;
-      }
-
-      .welcome-badge {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 255, 136, 0.12);
-        border: 1px solid rgba(0, 255, 136, 0.5);
-        box-shadow: 0 0 24px rgba(0, 255, 136, 0.35);
-      }
-
-      .welcome-check {
-        width: 30px;
-        height: 30px;
-        color: var(--green);
-      }
-
-      .welcome-title {
-        font-family: var(--mono);
-        font-size: 1.15rem;
-        font-weight: 600;
-        letter-spacing: 1px;
-        color: var(--text);
-        text-shadow: 0 0 12px var(--red-glow);
-      }
-
-      .welcome-text {
-        font-family: var(--mono);
-        font-size: 0.78rem;
-        color: var(--muted);
-        line-height: 1.7;
-        letter-spacing: 0.5px;
-      }
-
-      .welcome-btn {
-        width: 100%;
-      }
-
-      .welcome-home {
-        width: 15px;
-        height: 15px;
-      }
-
-      .welcome-foot {
-        font-family: var(--mono);
-        font-size: 0.66rem;
-        color: var(--muted);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-      }
-
-      @media (max-width: 480px) {
-        .signup-card {
-          padding: 36px 24px 32px;
-        }
-        .signup-title {
-          letter-spacing: 2px;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/pages.css" />
   </head>
   <body>
-    <script src="/loader.js"></script>
-    <script src="/cookie-banner.js"></script>
-    <script src="/cursor.js"></script>
+    <script src="/js/loader.js"></script>
+    <script src="/js/cookie-banner.js"></script>
+    <script src="/js/cursor.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
     <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
@@ -301,7 +39,7 @@
         <span class="corner-br" aria-hidden="true"></span>
         <span class="corner-bl" aria-hidden="true"></span>
 
-        <img class="signup-logo" src="/logo.png" alt="Squared One logo" />
+        <img class="signup-logo" src="/img/logo.png" alt="Squared One logo" />
         <h1 class="signup-title" id="heading"><span class="cursor" id="cur"></span></h1>
         <p class="signup-sub">Create your account</p>
 
@@ -477,65 +215,7 @@
         requestAnimationFrame(frame);
       }
 
-      // Particle background.
-      (function () {
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let W, H;
-        function resize() {
-          W = canvas.width = window.innerWidth;
-          H = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Dot {
-          constructor() { this.reset(); }
-          reset() {
-            this.x = Math.random() * W;
-            this.y = Math.random() * H;
-            this.vx = (Math.random() - 0.5) * 0.4;
-            this.vy = (Math.random() - 0.5) * 0.4;
-            this.r = Math.random() * 1.5 + 0.5;
-          }
-          step() {
-            this.x += this.vx;
-            this.y += this.vy;
-            if (this.x < 0 || this.x > W) this.vx *= -1;
-            if (this.y < 0 || this.y > H) this.vy *= -1;
-          }
-        }
-
-        const DOTS = Array.from({ length: 55 }, () => new Dot());
-
-        function frame() {
-          ctx.fillStyle = 'rgba(5,0,0,0.22)';
-          ctx.fillRect(0, 0, W, H);
-          DOTS.forEach((d) => d.step());
-          for (let i = 0; i < DOTS.length; i++) {
-            for (let j = i + 1; j < DOTS.length; j++) {
-              const dx = DOTS[i].x - DOTS[j].x;
-              const dy = DOTS[i].y - DOTS[j].y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 110) {
-                ctx.strokeStyle = `rgba(255,0,0,${(1 - dist / 110) * 0.35})`;
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.moveTo(DOTS[i].x, DOTS[i].y);
-                ctx.lineTo(DOTS[j].x, DOTS[j].y);
-                ctx.stroke();
-              }
-            }
-            ctx.fillStyle = 'rgba(255,0,0,0.25)';
-            ctx.beginPath();
-            ctx.arc(DOTS[i].x, DOTS[i].y, DOTS[i].r, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (!reduced) requestAnimationFrame(frame);
-        }
-        frame();
-      })();
     </script>
+    <script src="/js/particles.js"></script>
   </body>
 </html>

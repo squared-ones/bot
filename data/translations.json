@@ -11,7 +11,8 @@
     "web.nav.invite": "Add to Discord",
     "web.hero.sub": "Squared One is the multitool Discord bot — moderation, rules, verification, tickets, leveling, and more, all managed from one red-hot dashboard.",
     "web.hero.cta.dashboard": "Open dashboard",
-    "web.hero.cta.features": "See features"
+    "web.hero.cta.features": "See features",
+    "web.nav.translate": "Translate"
   },
   "translations": {},
   "pending": [],

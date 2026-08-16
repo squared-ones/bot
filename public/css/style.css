@@ -106,6 +106,24 @@ body::before {
   text-transform: uppercase;
 }
 
+.home-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .home-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .home-nav .btn {
+    padding: 10px 14px;
+    font-size: 0.7rem;
+  }
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
