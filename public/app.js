@@ -19,6 +19,7 @@ const el = {
   userChip: $('#user-chip'),
   userName: $('#user-name'),
   logoutLink: $('#logout-link'),
+  detailUser: $('#detail-user'),
   serverSwitcher: $('#server-switcher'),
   serverSwitcherName: $('#server-switcher-name'),
   serverModal: $('#server-modal'),
@@ -128,6 +129,7 @@ async function loadSession() {
     const data = await res.json();
     if (data.user && data.user.username) {
       el.userName.textContent = data.user.username;
+      el.detailUser.textContent = data.user.username;
       el.userChip.hidden = false;
       el.logoutLink.hidden = false;
     }
@@ -386,58 +388,212 @@ async function loadHealth() {
   }
 }
 
-/* ---------- Navigation + drawer ---------- */
-const navItems = [...document.querySelectorAll('.nav-item')];
-const views = [...document.querySelectorAll('.view')];
-const menuToggle = $('#menu-toggle');
-const menuDrawer = $('#menu-drawer');
+/* ---------- Navigation (two-level sidebar) ---------- */
+const NAV_SECTIONS = [
+  {
+    id: 'overview',
+    title: 'Overview',
+    icon: 'icon-home',
+    groups: [
+      {
+        title: 'Dashboard',
+        items: [
+          { view: 'overview', label: 'Overview', icon: 'icon-home' },
+          { view: 'servers', label: 'Servers', icon: 'icon-home' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'moderation',
+    title: 'Moderation',
+    icon: 'icon-shield',
+    groups: [
+      {
+        title: 'Tools',
+        items: [
+          { view: 'moderation', label: 'Moderation', icon: 'icon-shield' },
+          { view: 'verification', label: 'Verification', icon: 'icon-shield' },
+          { view: 'vpn-blocklist', label: 'VPN Blocklist', icon: 'icon-shield' },
+        ],
+      },
+      {
+        title: 'Review',
+        items: [{ view: 'appeals', label: 'Appeals', icon: 'icon-bell' }],
+      },
+    ],
+  },
+  {
+    id: 'community',
+    title: 'Community',
+    icon: 'icon-users',
+    groups: [
+      {
+        title: 'Engagement',
+        items: [
+          { view: 'rules', label: 'Rules', icon: 'icon-help' },
+          { view: 'voting', label: 'Voting', icon: 'icon-bell' },
+          { view: 'leveling', label: 'Leveling', icon: 'icon-gear' },
+        ],
+      },
+      {
+        title: 'Support',
+        items: [{ view: 'tickets', label: 'Tickets', icon: 'icon-help' }],
+      },
+    ],
+  },
+  {
+    id: 'automation',
+    title: 'Automation',
+    icon: 'icon-gear',
+    groups: [
+      {
+        title: 'Automation',
+        items: [{ view: 'automation', label: 'Automation', icon: 'icon-gear' }],
+      },
+    ],
+  },
+  {
+    id: 'billing',
+    title: 'Billing',
+    icon: 'icon-chart',
+    groups: [
+      {
+        title: 'Plan',
+        items: [{ view: 'billing', label: 'Billing', icon: 'icon-chart' }],
+      },
+    ],
+  },
+  {
+    id: 'settings',
+    title: 'Settings',
+    icon: 'icon-gear',
+    groups: [
+      {
+        title: 'Account',
+        items: [{ view: 'account', label: 'Account', icon: 'icon-user' }],
+      },
+    ],
+  },
+];
 
-function openMenu() {
-  if (!menuDrawer) return;
-  menuDrawer.hidden = false;
-  void menuDrawer.offsetWidth; // force reflow so the transition runs
-  menuDrawer.classList.add('open');
-  if (menuToggle) menuToggle.setAttribute('aria-expanded', 'true');
+const railNav = $('#rail-nav');
+const railFooter = $('#rail-footer');
+const detailNav = $('#detail-nav');
+const detailTitle = $('#detail-title');
+const detailCollapse = $('#detail-collapse');
+const sideDetail = $('#side-detail');
+const navSearch = $('#nav-search');
+
+let activeSectionId = 'overview';
+let currentView = 'overview';
+
+function sectionForView(view) {
+  return NAV_SECTIONS.find((s) =>
+    s.groups.some((g) => g.items.some((i) => i.view === view))
+  );
 }
 
-function closeMenu() {
-  if (!menuDrawer) return;
-  menuDrawer.classList.remove('open');
-  if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
-  setTimeout(() => {
-    if (!menuDrawer.classList.contains('open')) menuDrawer.hidden = true;
-  }, 300);
+function railButtons() {
+  return [
+    ...railNav.querySelectorAll('.rail-btn'),
+    ...railFooter.querySelectorAll('.rail-btn'),
+  ];
 }
 
-if (menuToggle && menuDrawer) {
-  menuToggle.addEventListener('click', () => {
-    if (menuDrawer.hidden || !menuDrawer.classList.contains('open')) {
-      openMenu();
-    } else {
-      closeMenu();
-    }
-  });
-  document.querySelectorAll('[data-close-menu]').forEach((el) => {
-    el.addEventListener('click', closeMenu);
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !menuDrawer.hidden) closeMenu();
+function renderRail() {
+  const top = NAV_SECTIONS.filter((s) => s.id !== 'settings');
+  const settings = NAV_SECTIONS.find((s) => s.id === 'settings');
+  railNav.innerHTML = top
+    .map(
+      (s) =>
+        `<button class="rail-btn${s.id === activeSectionId ? ' active' : ''}"
+          type="button" data-section="${s.id}" title="${s.title}" aria-label="${s.title}">
+          <svg class="nav-svg" aria-hidden="true"><use href="#${s.icon}"/></svg>
+        </button>`
+    )
+    .join('');
+  railFooter.innerHTML = `<button class="rail-btn${
+    settings.id === activeSectionId ? ' active' : ''
+  }"
+    type="button" data-section="${settings.id}" title="${settings.title}" aria-label="${settings.title}">
+    <svg class="nav-svg" aria-hidden="true"><use href="#${settings.icon}"/></svg>
+  </button>`;
+  railButtons().forEach((btn) => {
+    btn.addEventListener('click', () => setSection(btn.dataset.section));
   });
 }
 
-navItems.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const view = btn.dataset.view;
-    navItems.forEach((n) => n.classList.toggle('active', n === btn));
-    views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
-    closeMenu();
-  });
-});
+function navItemHtml(item) {
+  return `<button class="nav-item${item.view === currentView ? ' active' : ''}" data-view="${item.view}" type="button">
+    <span class="nav-icon"><svg class="nav-svg" aria-hidden="true"><use href="#${item.icon}"/></svg></span>
+    <span class="nav-label">${item.label}</span>
+  </button>`;
+}
+
+function renderDetail() {
+  const section = NAV_SECTIONS.find((s) => s.id === activeSectionId);
+  if (!section) return;
+  detailTitle.textContent = section.title;
+  const q = (navSearch.value || '').trim().toLowerCase();
+  const html = section.groups
+    .map((group) => {
+      const items = group.items.filter(
+        (i) => !q || i.label.toLowerCase().includes(q)
+      );
+      if (!items.length) return '';
+      return `<div class="detail-group">
+        <div class="detail-group-title">${group.title}</div>
+        ${items.map(navItemHtml).join('')}
+      </div>`;
+    })
+    .join('');
+  detailNav.innerHTML = html || '<div class="empty">No matching sections.</div>';
+}
+
+function switchView(view) {
+  currentView = view;
+  document
+    .querySelectorAll('.view')
+    .forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
+  document
+    .querySelectorAll('.nav-item')
+    .forEach((n) => n.classList.toggle('active', n.dataset.view === view));
+}
+
+function setSection(sectionId, activate) {
+  activeSectionId = sectionId;
+  railButtons().forEach((btn) =>
+    btn.classList.toggle('active', btn.dataset.section === sectionId)
+  );
+  renderDetail();
+  if (activate !== false) {
+    const section = NAV_SECTIONS.find((s) => s.id === sectionId);
+    const first = section && section.groups[0] && section.groups[0].items[0];
+    if (first) switchView(first.view);
+  }
+}
 
 function activateView(view) {
-  const target = navItems.find((n) => n.dataset.view === view);
-  if (target) target.click();
+  const section = sectionForView(view);
+  if (section) setSection(section.id, false);
+  switchView(view);
 }
+
+function toggleDetailCollapsed() {
+  sideDetail.classList.toggle('collapsed');
+  detailCollapse.setAttribute(
+    'aria-expanded',
+    String(!sideDetail.classList.contains('collapsed'))
+  );
+}
+
+detailCollapse.addEventListener('click', toggleDetailCollapsed);
+navSearch.addEventListener('input', renderDetail);
+detailNav.addEventListener('click', (event) => {
+  const btn = event.target.closest('.nav-item');
+  if (btn) switchView(btn.dataset.view);
+});
 
 // Support ?view=account and ?error=message from auth redirects.
 (function () {
@@ -447,6 +603,16 @@ function activateView(view) {
   if (view) activateView(view);
   if (error) setTimeout(() => showToast(decodeURIComponent(error), 'err'), 400);
 })();
+
+renderRail();
+setSection('overview', false);
+switchView('overview');
+
+// Start collapsed on narrow screens so the two panels don't crowd the content.
+if (window.matchMedia('(max-width: 900px)').matches) {
+  sideDetail.classList.add('collapsed');
+  detailCollapse.setAttribute('aria-expanded', 'false');
+}
 
 /* ---------- Servers view ---------- */
 async function loadServers() {
