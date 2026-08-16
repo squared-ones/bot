@@ -17,9 +17,17 @@ function isValidRepoPart(value) {
 }
 
 export function resolveDataDir() {
-  if (process.env.DATA_DIR) return process.env.DATA_DIR;
-  if (fs.existsSync(path.join(HERE, 'data'))) return path.join(HERE, 'data');
-  return path.join(HERE, '..', 'data');
+  const safeRoot = path.resolve(HERE, '..', 'data');
+  const envDataDir = process.env.DATA_DIR;
+  if (envDataDir) {
+    const resolvedEnvDir = path.resolve(envDataDir);
+    if (resolvedEnvDir === safeRoot || resolvedEnvDir.startsWith(`${safeRoot}${path.sep}`)) {
+      return resolvedEnvDir;
+    }
+  }
+  const localDataDir = path.resolve(HERE, 'data');
+  if (fs.existsSync(localDataDir)) return localDataDir;
+  return safeRoot;
 }
 
 const DATA_DIR = resolveDataDir();
