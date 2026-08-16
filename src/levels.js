@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { queueDataSync, resolveDataDir } from './github-data.js';
+import { recordMetric, incrementMetric } from './achievements.js';
 
 const FILE = path.join(resolveDataDir(), 'levels.json');
 
@@ -125,6 +126,7 @@ export function addXp(guildId, userId, amount) {
   record.xp = before + Math.max(0, Math.floor(amount));
   const previousLevel = levelForXp(before);
   const level = levelForXp(record.xp);
+  recordMetric(uid, 'level', level);
   persist();
   return { xp: record.xp, level, previousLevel, leveledUp: level > previousLevel };
 }
@@ -146,6 +148,7 @@ export function addMessageXp(guildId, userId, now = Date.now()) {
     Math.floor(Math.random() * (MESSAGE_XP_MAX - MESSAGE_XP_MIN + 1));
   const target = userRecord(id, uid, true);
   target.lastMessageXpAt = now;
+  incrementMetric(uid, 'messages', 1);
   return addXp(id, uid, amount);
 }
 

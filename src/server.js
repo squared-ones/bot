@@ -119,6 +119,12 @@ import {
   revokeApiKey,
   authenticateApiKey,
 } from './apikeys.js';
+import {
+  getUserSummary,
+  incrementMetric,
+  recordStreak,
+  unlockAchievement,
+} from './achievements.js';
 
 const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -465,6 +471,7 @@ export function startServer(port = 3000) {
             '/dashboard?view=account&error=' + encodeURIComponent(result.error)
           );
         }
+        unlockAchievement(user.id, 'account-linked');
         setLocalSession(res, result.account);
         return res.redirect('/dashboard?view=account');
       }
@@ -557,6 +564,8 @@ export function startServer(port = 3000) {
         if (VOTE_CREDIT_REWARD > 0) {
           balance = grantCredits(vote.userId, VOTE_CREDIT_REWARD);
         }
+        incrementMetric(vote.userId, 'votes', 1);
+        recordStreak(vote.userId, 'vote');
         grantVoteRole(vote.userId).catch((err) => {
           console.error('[vote] failed to grant vote role:', err.message);
         });
@@ -594,6 +603,8 @@ export function startServer(port = 3000) {
         if (VOTE_CREDIT_REWARD > 0) {
           balance = grantCredits(body.id, VOTE_CREDIT_REWARD);
         }
+        incrementMetric(body.id, 'votes', 1);
+        recordStreak(body.id, 'vote');
         grantVoteRole(body.id).catch((err) => {
           console.error('[vote] failed to grant vote role:', err.message);
         });
@@ -613,6 +624,11 @@ export function startServer(port = 3000) {
 
   app.get('/api/votes', guard, (req, res) => {
     res.json(getVoteStats());
+  });
+
+  // ---------- Achievements / badges ----------
+  app.get('/api/achievements', guard, (req, res) => {
+    res.json(getUserSummary(billingIdOf(req) || ''));
   });
 
   // ---------- i18n / translations ----------
@@ -690,6 +706,7 @@ export function startServer(port = 3000) {
     try {
       const result = approveTranslation(req.body?.id);
       if (result.entry?.contributorId) {
+        incrementMetric(result.entry.contributorId, 'translations', 1);
         grantTranslationRole(result.entry.contributorId).catch((err) => {
           console.error('[i18n] failed to grant translation role:', err.message);
         });
@@ -985,6 +1002,7 @@ export function startServer(port = 3000) {
       guildIds: req.user.guildIds || [],
     });
     if (!linked.ok) return res.status(400).json({ error: linked.error });
+    unlockAchievement(billingIdOf(req), 'account-linked');
     setLocalSession(res, linked.account);
     await flushDataSync();
     res.json({ ok: true, account: linked.account });
@@ -1807,6 +1825,7 @@ export function startServer(port = 3000) {
         months,
       });
       if (!result.ok) return res.status(402).json({ error: result.error });
+      unlockAchievement(billingIdOf(req), 'pro-subscriber');
       await flushDataSync();
       res.json(result);
     } catch (error) {

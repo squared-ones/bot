@@ -8,6 +8,10 @@ const el = {
   statMembers: $('#stat-members'),
   statRules: $('#stat-rules'),
   statUptime: $('#stat-uptime'),
+  achievementsCount: $('#achievements-count'),
+  achievementsUnlocked: $('#achievements-unlocked'),
+  achievementsHighlight: $('#achievements-highlight'),
+  achievementsList: $('#achievements-list'),
   rulesList: $('#rules-list'),
   rulesCount: $('#rules-count'),
   form: $('#add-rule-form'),
@@ -490,6 +494,91 @@ async function loadRules() {
     renderRules();
   } catch (err) {
     showToast('Failed to load rules.', 'err');
+  }
+}
+
+/* ---------- Achievements / badges ---------- */
+let knownBadgeIds = null;
+
+function achievementBadge(entry) {
+  const locked = !entry.achieved;
+  return `
+    <div class="achievement-badge${locked ? ' locked' : ''}" title="${escapeHtml(
+      entry.description
+    )}">
+      <span class="achievement-badge-icon">${escapeHtml(entry.icon)}</span>
+      <span class="achievement-badge-name">${escapeHtml(entry.name)}</span>
+    </div>`;
+}
+
+function renderAchievements(data) {
+  const highlighted = data.highlighted || [];
+  const list = data.achievements || [];
+  const unlocked = data.unlocked || 0;
+  const total = data.total || list.length;
+
+  // Toast for badges unlocked since the page loaded (first load just records
+  // the baseline so existing badges don't re-announce).
+  const unlockedIds = new Set(
+    list.filter((entry) => entry.achieved).map((entry) => entry.id)
+  );
+  if (knownBadgeIds === null) {
+    knownBadgeIds = unlockedIds;
+  } else {
+    for (const entry of list) {
+      if (entry.achieved && !knownBadgeIds.has(entry.id)) {
+        showToast(`🏅 Badge unlocked: ${entry.name}`, 'ok');
+      }
+    }
+    knownBadgeIds = unlockedIds;
+  }
+
+  el.achievementsUnlocked.textContent = String(unlocked);
+  el.achievementsCount.textContent = `${unlocked}/${total} unlocked`;
+
+  el.achievementsHighlight.innerHTML = highlighted.length
+    ? highlighted.map(achievementBadge).join('')
+    : '<div class="empty">No badges yet — vote, chat, or translate to unlock your first badge.</div>';
+
+  el.achievementsList.innerHTML = list.length
+    ? list
+        .map((entry) => {
+          const locked = !entry.achieved;
+          const pct = Math.round((entry.progress || 0) * 100);
+          const rarity = '★'.repeat(entry.rarity || 0);
+          const date = entry.achievedAt
+            ? `<span class="achievement-item-date">${escapeHtml(
+                new Date(entry.achievedAt).toLocaleDateString()
+              )}</span>`
+            : '';
+          return `
+          <div class="achievement-item${locked ? ' locked' : ''}">
+            <span class="achievement-badge-icon">${escapeHtml(entry.icon)}</span>
+            <div class="achievement-item-body">
+              <div class="achievement-item-name">
+                ${escapeHtml(entry.name)}
+                <span class="achievement-item-rarity">${rarity}</span>${date}
+              </div>
+              <div class="achievement-item-desc">${escapeHtml(
+                entry.description
+              )}</div>
+              <div class="achievement-item-progress"><span style="width:${pct}%"></span></div>
+            </div>
+          </div>`;
+        })
+        .join('')
+    : '<div class="empty">No achievements available.</div>';
+}
+
+async function loadAchievements() {
+  try {
+    const res = await apiFetch('/api/achievements');
+    if (!res.ok) throw new Error('failed to load achievements');
+    renderAchievements(await res.json());
+  } catch {
+    el.achievementsCount.textContent = 'unavailable';
+    el.achievementsList.innerHTML =
+      '<div class="empty">Unable to load achievements.</div>';
   }
 }
 
@@ -2242,6 +2331,7 @@ el.reviewTranslationsList.addEventListener('click', async (event) => {
 
 loadSession();
 loadRules();
+loadAchievements();
 loadHealth();
 loadServers();
 loadVpnBlocklist();
@@ -2251,3 +2341,4 @@ loadAccount();
 loadApiKeys();
 loadReviewTranslations();
 setInterval(loadHealth, 5000);
+setInterval(loadAchievements, 30000);

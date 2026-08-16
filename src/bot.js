@@ -66,6 +66,7 @@ import {
   resetUserXp,
   resetGuildXp,
 } from './levels.js';
+import { getUserSummary } from './achievements.js';
 import {
   PLANS,
   formatCredits,
@@ -823,6 +824,15 @@ const commands = [
     .setName('leaderboard')
     .setDescription('Show the server XP leaderboard'),
   new SlashCommandBuilder()
+    .setName('badges')
+    .setDescription('Show your Squared One badges')
+    .addUserOption((o) =>
+      o
+        .setName('user')
+        .setDescription('User to look up (defaults to you)')
+        .setRequired(false)
+    ),
+  new SlashCommandBuilder()
     .setName('leveling')
     .setDescription('Configure the leveling system (moderators only)')
     .addSubcommand((s) =>
@@ -1402,6 +1412,10 @@ async function handleInteraction(interaction) {
             name: '🎮 Leveling',
             value:
               '`/rank` Show your level\n`/leaderboard` Top members\n`/leveling` Configure leveling',
+          },
+          {
+            name: '🏅 Achievements',
+            value: '`/badges` View your unlocked badges',
           },
           {
             name: '💳 Billing',
@@ -2382,6 +2396,39 @@ async function handleInteraction(interaction) {
         .setTitle('🏆 XP Leaderboard')
         .setDescription(lines.join('\n'))
         .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+      return;
+    }
+
+    if (commandName === 'badges') {
+      const user = interaction.options.getUser('user') ?? interaction.user;
+      const summary = getUserSummary(user.id);
+      const list = summary.achievements;
+
+      const embed = new EmbedBuilder()
+        .setColor(COLOR)
+        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+        .setTitle('🏅 Badges')
+        .setDescription(`**${summary.unlocked}/${summary.total}** unlocked`)
+        .setTimestamp();
+
+      if (list.length) {
+        embed.addFields(
+          list.map((entry) => ({
+            name: `${entry.achieved ? '✅' : '🔒'} ${entry.icon} ${
+              entry.name
+            } — ${'★'.repeat(entry.rarity || 0)}`,
+            value: entry.achieved
+              ? entry.description
+              : `${entry.description}\nProgress: ${Math.round(
+                  (entry.progress || 0) * 100
+                )}%`,
+          }))
+        );
+      } else {
+        embed.setDescription('No badges available.');
+      }
+
       await interaction.reply({ embeds: [embed] });
       return;
     }
