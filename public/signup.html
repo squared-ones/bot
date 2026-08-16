@@ -26,6 +26,10 @@
     </noscript>
     <link rel="stylesheet" href="/style.css" />
     <style>
+      [hidden] {
+        display: none !important;
+      }
+
       .signup-wrap {
         position: relative;
         z-index: 2;
@@ -207,6 +211,74 @@
         text-decoration: underline;
       }
 
+      #confettiCanvas {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+
+      .signup-welcome {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+        padding: 10px 0 4px;
+      }
+
+      .welcome-badge {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 255, 136, 0.12);
+        border: 1px solid rgba(0, 255, 136, 0.5);
+        box-shadow: 0 0 24px rgba(0, 255, 136, 0.35);
+      }
+
+      .welcome-check {
+        width: 30px;
+        height: 30px;
+        color: var(--green);
+      }
+
+      .welcome-title {
+        font-family: var(--mono);
+        font-size: 1.15rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: var(--text);
+        text-shadow: 0 0 12px var(--red-glow);
+      }
+
+      .welcome-text {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.7;
+        letter-spacing: 0.5px;
+      }
+
+      .welcome-btn {
+        width: 100%;
+      }
+
+      .welcome-home {
+        width: 15px;
+        height: 15px;
+      }
+
+      .welcome-foot {
+        font-family: var(--mono);
+        font-size: 0.66rem;
+        color: var(--muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
       @media (max-width: 480px) {
         .signup-card {
           padding: 36px 24px 32px;
@@ -222,6 +294,7 @@
     <script src="/cookie-banner.js"></script>
     <script src="/cursor.js"></script>
     <canvas id="bgCanvas" aria-hidden="true"></canvas>
+    <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
     <div class="signup-wrap">
       <div class="signup-card" id="card">
@@ -250,6 +323,23 @@
           <p class="signup-help">3–32 characters (letters, numbers, underscores) for your username, 8+ characters for your password. You can link Discord later from the dashboard.</p>
           <button type="submit" class="btn btn-primary signup-btn">Create account</button>
         </form>
+
+        <div class="signup-welcome" id="welcome" hidden>
+          <div class="welcome-badge">
+            <svg class="welcome-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+          <h2 class="welcome-title">Your account has been created!</h2>
+          <p class="welcome-text">Welcome! Your account has been successfully created and you're ready to get started.</p>
+          <button type="button" class="btn btn-primary welcome-btn" id="welcome-continue">
+            Continue to Dashboard
+            <svg class="welcome-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
+            </svg>
+          </button>
+          <p class="welcome-foot">You can now access all features of your account</p>
+        </div>
 
         <p class="signup-links">
           <span>Already have an account?</span>
@@ -306,13 +396,86 @@
             showError(data.error || 'Signup failed.');
             return;
           }
-          window.location.href = '/dashboard';
+          showWelcome();
         } catch {
           showError('Signup failed. Please try again.');
         } finally {
           submit.disabled = false;
         }
       });
+
+      // Reveal the welcome screen and fire confetti after a successful signup.
+      function showWelcome() {
+        document
+          .querySelectorAll('.signup-logo, .signup-title, .signup-sub, .signup-error, .signup-form, .signup-links')
+          .forEach((el) => (el.hidden = true));
+        document.getElementById('welcome').hidden = false;
+        launchConfetti();
+      }
+
+      document.getElementById('welcome-continue').addEventListener('click', () => {
+        window.location.href = '/dashboard';
+      });
+
+      // Lightweight confetti burst (canvas-confetti inspired, no dependencies).
+      function launchConfetti() {
+        const canvas = document.getElementById('confettiCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const W = canvas.width;
+        const H = canvas.height;
+        const colors = ['#ff0000', '#ffffff', '#00ff88', '#ff5555', '#ffb020'];
+        const particles = [];
+        const count = 120;
+
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 11 + 4;
+          particles.push({
+            x: W / 2,
+            y: H * 0.6,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 4,
+            w: Math.random() * 9 + 5,
+            h: Math.random() * 6 + 4,
+            color: colors[(Math.random() * colors.length) | 0],
+            rot: Math.random() * Math.PI * 2,
+            vr: (Math.random() - 0.5) * 0.4,
+            life: 1,
+            decay: Math.random() * 0.015 + 0.006,
+          });
+        }
+
+        const start = performance.now();
+        function frame(now) {
+          ctx.clearRect(0, 0, W, H);
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.12;
+            p.vx *= 0.985;
+            p.rot += p.vr;
+            p.life -= p.decay;
+            if (p.life <= 0) continue;
+            ctx.save();
+            ctx.globalAlpha = Math.max(p.life, 0);
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+          }
+          if (now - start < 4000) {
+            requestAnimationFrame(frame);
+          } else {
+            ctx.clearRect(0, 0, W, H);
+          }
+        }
+        requestAnimationFrame(frame);
+      }
 
       // Particle background.
       (function () {

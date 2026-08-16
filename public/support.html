@@ -246,6 +246,326 @@
         flex-wrap: wrap;
       }
 
+      /* Support chatbot (rule-based, not AI) */
+      .chat-toggle {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 45;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: 1px solid var(--red);
+        background: var(--red-solid);
+        color: #fff;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 0 24px rgba(255, 0, 0, 0.5);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .chat-toggle:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 34px rgba(255, 0, 0, 0.7);
+      }
+
+      .chat-toggle svg {
+        width: 26px;
+        height: 26px;
+      }
+
+      .chat-widget {
+        position: fixed;
+        right: 20px;
+        bottom: 88px;
+        z-index: 45;
+        width: min(360px, calc(100vw - 32px));
+      }
+
+      .chat-widget[hidden] {
+        display: none;
+      }
+
+      .chat-panel {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: min(560px, calc(100vh - 140px));
+        border: 1px solid var(--red);
+        background: rgba(12, 0, 0, 0.98);
+        box-shadow: 0 0 42px rgba(255, 0, 0, 0.3);
+      }
+
+      .chat-panel::before,
+      .chat-panel::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-color: var(--red);
+        border-style: solid;
+        pointer-events: none;
+      }
+
+      .chat-panel::before {
+        top: -1px;
+        left: -1px;
+        border-width: 2px 0 0 2px;
+      }
+
+      .chat-panel::after {
+        bottom: -1px;
+        right: -1px;
+        border-width: 0 2px 2px 0;
+      }
+
+      .chat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--red-dim);
+      }
+
+      .chat-head-id {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .chat-avatar {
+        width: 34px;
+        height: 34px;
+        flex: none;
+        object-fit: contain;
+      }
+
+      .chat-head-copy h3 {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: var(--text);
+      }
+
+      .chat-head-copy p {
+        font-family: var(--mono);
+        font-size: 0.62rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--green);
+      }
+
+      .chat-head-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .chat-icon-btn {
+        background: transparent;
+        color: var(--red);
+        border: 1px solid var(--red-dim);
+        padding: 6px 8px;
+        cursor: pointer;
+        font-family: var(--mono);
+        line-height: 1;
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .chat-icon-btn:hover {
+        background: var(--red);
+        color: #fff;
+        border-color: var(--red);
+        box-shadow: 0 0 12px var(--red-glow);
+      }
+
+      .chat-icon-btn svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .chat-msg {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        max-width: 85%;
+      }
+
+      .chat-msg.assistant {
+        align-self: flex-start;
+      }
+
+      .chat-msg.user {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+      }
+
+      .chat-msg-avatar {
+        width: 24px;
+        height: 24px;
+        flex: none;
+        border-radius: 50%;
+        border: 1px solid var(--red-dim);
+        object-fit: contain;
+        background: var(--red-faint);
+      }
+
+      .chat-bubble {
+        padding: 9px 12px;
+        font-family: var(--sans);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: var(--text-dim);
+        border: 1px solid var(--red-dim);
+        background: var(--panel);
+      }
+
+      .chat-msg.user .chat-bubble {
+        color: #fff;
+        background: var(--red-solid);
+        border-color: var(--red);
+        box-shadow: 0 0 14px rgba(255, 0, 0, 0.25);
+      }
+
+      .chat-bubble code {
+        font-family: var(--mono);
+        font-size: 0.85em;
+        background: var(--red-faint);
+        border: 1px solid var(--red-dim);
+        padding: 1px 5px;
+        color: var(--text);
+      }
+
+      .chat-bubble strong {
+        color: var(--text);
+      }
+
+      .chat-typing {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        padding: 12px 14px;
+      }
+
+      .chat-typing span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--red);
+        animation: chat-bounce 1s ease-in-out infinite;
+      }
+
+      .chat-typing span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+
+      .chat-typing span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
+      @keyframes chat-bounce {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        30% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      .chat-quick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 14px 0;
+      }
+
+      .chat-quick[hidden] {
+        display: none;
+      }
+
+      .chat-quick-chip {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.5px;
+        color: var(--red);
+        background: var(--red-faint);
+        border: 1px solid var(--red-dim);
+        padding: 6px 10px;
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease;
+      }
+
+      .chat-quick-chip:hover {
+        border-color: var(--red);
+        background: rgba(255, 0, 0, 0.14);
+      }
+
+      .chat-input {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--red-dim);
+      }
+
+      .chat-input input {
+        flex: 1;
+        min-width: 0;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--red-dim);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+
+      .chat-input input:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 0 1px var(--red-glow);
+      }
+
+      .chat-send {
+        width: 38px;
+        height: 38px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--red);
+        background: var(--red-solid);
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .chat-send:hover {
+        background: #ff2a2a;
+        box-shadow: 0 0 14px rgba(255, 0, 0, 0.5);
+      }
+
+      .chat-send svg {
+        width: 18px;
+        height: 18px;
+      }
+
       @media (max-width: 560px) {
         .cmd-row {
           flex-direction: column;
@@ -518,6 +838,50 @@
         </div>
       </div>
     </footer>
+
+    <button type="button" class="chat-toggle" id="chat-toggle" aria-label="Open support assistant">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+
+    <div class="chat-widget" id="chat-widget" hidden>
+      <div class="chat-panel" role="dialog" aria-labelledby="chat-title">
+        <header class="chat-head">
+          <div class="chat-head-id">
+            <img class="chat-avatar" src="/logo.png" alt="" />
+            <div class="chat-head-copy">
+              <h3 id="chat-title">Support assistant</h3>
+              <p>Rule-based · instant answers</p>
+            </div>
+          </div>
+          <div class="chat-head-actions">
+            <button type="button" class="chat-icon-btn" id="chat-replay" title="Restart conversation" aria-label="Restart conversation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+            </button>
+            <button type="button" class="chat-icon-btn" id="chat-close" title="Close" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+        <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
+        <div class="chat-quick" id="chat-quick" hidden></div>
+        <form class="chat-input" id="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" maxlength="300" placeholder="Ask about commands, setup, moderation…" aria-label="Type your message" />
+          <button type="submit" class="chat-send" aria-label="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
     <script src="/footer.js"></script>
 
     <script src="/particles.js"></script>
@@ -580,6 +944,250 @@
 
         loadStatus();
         setInterval(loadStatus, 15000);
+      })();
+    </script>
+
+    <script>
+      // Rule-based support assistant. Deterministic keyword matching only — no AI.
+      (function () {
+        'use strict';
+
+        const INTENTS = [
+          {
+            keywords: ['invite', 'add the bot', 'add bot', 'add squared', 'install', 'how do i add'],
+            answer: "Click **Add to Discord** at the top of this page, pick your server, and authorize it. The bot registers its slash commands automatically (they can take up to an hour to appear).",
+          },
+          {
+            keywords: ['rule'],
+            answer: "Run `/rules` to see the current rules, `/addrule` to add one, `/removerule` to remove one, and `/postrules` to post the list into a channel. New members are DMed the rules when they join.",
+          },
+          {
+            keywords: ['announce', 'announcement', 'post a message'],
+            answer: "Use `/announce` to post a formatted message — it supports **bold**, *italic*, `code`, links, and blockquotes.",
+          },
+          {
+            keywords: ['ban', 'kick', 'timeout', 'purge', 'moderat'],
+            answer: "Moderation: `/ban`, `/kick`, `/timeout` (30s–28 days), and `/purge` (1–100 messages). They check permissions and role hierarchy, and you can run them from the dashboard Moderation panel too.",
+          },
+          {
+            keywords: ['verif', 'captcha', 'raid'],
+            answer: "Users run `/verify` (or click a `/verification-panel`) and complete a CAPTCHA to get the Verified role. The bot can also flag brand-new accounts, default avatars, and join bursts.",
+          },
+          {
+            keywords: ['dashboard', 'login', 'sign in', 'signin', 'oauth'],
+            answer: "Sign in with Discord at `/dashboard`. Your access is scoped to servers you belong to, so you can only manage your own communities.",
+          },
+          {
+            keywords: ['slash', 'not showing', 'not appear', "don't see", 'missing', 'command not'],
+            answer: "Commands register globally on boot and can take up to an hour to propagate. Restart Discord to force a refresh, and confirm the bot is online.",
+          },
+          {
+            keywords: ['permission', 'role hierarchy', 'forbidden', '403', 'can\'t kick', 'can\'t ban'],
+            answer: "Make sure you and the bot both have the needed permission, and the bot's role is above the members it manages. Re-inviting with the default permission set fixes most issues.",
+          },
+          {
+            keywords: ['dm', 'direct message', 'new member', 'members intent'],
+            answer: "To DM new members, the bot needs the **Server Members** privileged intent (Bot → Privileged Gateway Intents in the developer portal). Members who disabled DMs are skipped silently.",
+          },
+          {
+            keywords: ['price', 'pricing', 'cost', 'plan', 'premium', 'free'],
+            answer: "See the full plan breakdown on the **Pricing** page.",
+          },
+          {
+            keywords: ['ticket'],
+            answer: "Run `/ticket` (or post a ticket button panel) to open a support desk scoped to a category and staff role you choose.",
+          },
+          {
+            keywords: ['level', 'xp', 'experience', 'rank', 'leaderboard'],
+            answer: "Leveling rewards text and voice activity with XP, level-up announcements, and a `/leaderboard`.",
+          },
+          {
+            keywords: ['hello', 'hi', 'hey', 'yo'],
+            answer: "Hey! I'm the Squared One support assistant. Ask me about setup, commands, moderation, verification, or troubleshooting.",
+          },
+          {
+            keywords: ['thank', 'thanks', 'thx'],
+            answer: "You're welcome! Anything else I can help with?",
+          },
+          {
+            keywords: ['offline', 'not responding', 'not working', 'broken', 'down'],
+            answer: "Check the status widget on this page first. Then confirm the bot has the permissions it needs and can read the channel. Re-inviting with the default permissions usually resolves it.",
+          },
+          {
+            keywords: ['command', 'commands'],
+            answer: "Main commands: `/ban`, `/kick`, `/timeout`, `/purge` (moderation); `/rules`, `/addrule`, `/removerule`, `/postrules` (rules); `/announce` (messaging); `/userinfo`, `/serverinfo`, `/avatar`, `/ping` (utility); `/verify`, `/verification-panel`, `/vote` (community).",
+          },
+        ];
+
+        const QUICK = [
+          'How do I add the bot?',
+          'How do I set up rules?',
+          'How do I verify members?',
+          'What moderation commands are there?',
+          'My slash commands are missing',
+        ];
+
+        const esc = (s) =>
+          String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        function inline(s) {
+          s = esc(s);
+          s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+          s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+          s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+          return s;
+        }
+
+        const keywordRe = (k) =>
+          new RegExp('\\b' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+
+        const COMPILED = INTENTS.map((intent) => ({
+          res: intent.keywords.map(keywordRe),
+          answer: intent.answer,
+        }));
+
+        function getAnswer(input) {
+          const q = String(input || '').toLowerCase();
+          for (const intent of COMPILED) {
+            if (intent.res.some((re) => re.test(q))) return intent.answer;
+          }
+          return "I'm a rule-based helper (not an AI), so I can only answer from my list of topics. Try asking about commands, rules, moderation, verification, the dashboard, or troubleshooting — or check the FAQ on this page.";
+        }
+
+        const toggle = document.getElementById('chat-toggle');
+        const widget = document.getElementById('chat-widget');
+        const messages = document.getElementById('chat-messages');
+        const quick = document.getElementById('chat-quick');
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('chat-input');
+        const replayBtn = document.getElementById('chat-replay');
+        const closeBtn = document.getElementById('chat-close');
+
+        let opened = false;
+
+        function scrollBottom() {
+          messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addMsg(sender, text) {
+          const row = document.createElement('div');
+          row.className = 'chat-msg ' + sender;
+          if (sender === 'assistant') {
+            const av = document.createElement('img');
+            av.className = 'chat-msg-avatar';
+            av.src = '/logo.png';
+            av.alt = '';
+            row.appendChild(av);
+          }
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-bubble';
+          bubble.innerHTML = sender === 'assistant' ? inline(text) : esc(text);
+          row.appendChild(bubble);
+          messages.appendChild(row);
+          scrollBottom();
+        }
+
+        function typing() {
+          const row = document.createElement('div');
+          row.className = 'chat-msg assistant';
+          const av = document.createElement('img');
+          av.className = 'chat-msg-avatar';
+          av.src = '/logo.png';
+          av.alt = '';
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-bubble chat-typing';
+          bubble.innerHTML = '<span></span><span></span><span></span>';
+          row.appendChild(av);
+          row.appendChild(bubble);
+          messages.appendChild(row);
+          scrollBottom();
+          return row;
+        }
+
+        function botReply(text, delay) {
+          const t = typing();
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              t.remove();
+              addMsg('assistant', text);
+              resolve();
+            }, delay || 900);
+          });
+        }
+
+        function renderQuick() {
+          quick.hidden = false;
+          quick.innerHTML = '';
+          QUICK.forEach((q) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'chat-quick-chip';
+            chip.textContent = q;
+            chip.addEventListener('click', () => send(q));
+            quick.appendChild(chip);
+          });
+        }
+
+        function greeting() {
+          quick.hidden = true;
+          botReply(
+            "Hello! I'm the Squared One support assistant. I'm rule-based (not an AI), so I answer instantly from a fixed set of help topics.",
+            700
+          )
+            .then(() =>
+              botReply(
+                'Ask me about setup, commands, rules, moderation, verification, the dashboard, or troubleshooting.',
+                500
+              )
+            )
+            .then(renderQuick);
+        }
+
+        function send(text) {
+          const q = (text || input.value).trim();
+          if (!q) return;
+          addMsg('user', q);
+          input.value = '';
+          botReply(getAnswer(q));
+        }
+
+        function openChat() {
+          widget.hidden = false;
+          if (!opened) {
+            opened = true;
+            greeting();
+          } else {
+            scrollBottom();
+          }
+        }
+
+        function closeChat() {
+          widget.hidden = true;
+        }
+
+        function resetChat() {
+          messages.innerHTML = '';
+          quick.hidden = true;
+          opened = false;
+          openChat();
+        }
+
+        toggle.addEventListener('click', () => {
+          if (widget.hidden) openChat();
+          else closeChat();
+        });
+        closeBtn.addEventListener('click', closeChat);
+        replayBtn.addEventListener('click', resetChat);
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          send();
+          input.focus();
+        });
       })();
     </script>
   </body>

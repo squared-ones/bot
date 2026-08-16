@@ -75,6 +75,14 @@
           <circle cx="11" cy="11" r="8"/>
           <path d="M21 21l-4.35-4.35"/>
         </symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24">
+          <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+        </symbol>
+        <symbol id="icon-layers" viewBox="0 0 24 24">
+          <path d="M12 2 2 7l10 5 10-5-10-5z"/>
+          <path d="m2 17 10 5 10-5"/>
+          <path d="m2 12 10 5 10-5"/>
+        </symbol>
         <symbol id="icon-chevron" viewBox="0 0 24 24">
           <path d="M6 9l6 6 6-6"/>
         </symbol>
@@ -742,6 +750,74 @@
         </div>
         <p class="server-modal-help">Choose the server you want to manage. This selection is used across moderation and verification tools.</p>
         <div id="server-picker-list" class="server-picker-list"></div>
+      </section>
+    </div>
+
+    <div id="onboarding-modal" class="onboarding-modal" hidden>
+      <div class="onboarding-backdrop" data-close-onboarding></div>
+      <section class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+        <div class="panel-head">
+          <h2 id="onboarding-title"><span class="prompt">$</span> onboarding</h2>
+          <button id="onboarding-close" class="btn-icon" type="button" data-close-onboarding>✕</button>
+        </div>
+
+        <div class="onboard-status">
+          <div class="onboard-status-head">
+            <span class="onboard-status-icon" id="onboard-status-icon" aria-hidden="true"></span>
+            <span id="onboard-status-text">Welcome aboard</span>
+          </div>
+          <div class="onboard-bar"><div class="onboard-bar-fill" id="onboard-bar-fill"></div></div>
+        </div>
+
+        <div class="onboard-step-indicators" aria-hidden="true">
+          <span class="onboard-line"></span>
+          <span class="onboard-number">1</span>
+          <span class="onboard-number">2</span>
+          <span class="onboard-number">3</span>
+        </div>
+
+        <div class="onboard-step-grid">
+          <article class="onboard-step">
+            <div class="onboard-step-icon">
+              <svg class="nav-svg" aria-hidden="true"><use href="#icon-zap"/></svg>
+            </div>
+            <h3>Add the bot</h3>
+            <p>Invite Squared One to your Discord server with one click — slash commands register automatically.</p>
+            <ul class="onboard-benefits">
+              <li><span class="onboard-dot"></span>One-click OAuth invite</li>
+              <li><span class="onboard-dot"></span>Permissions scoped to what it needs</li>
+              <li><span class="onboard-dot"></span>Commands register globally</li>
+            </ul>
+          </article>
+          <article class="onboard-step">
+            <div class="onboard-step-icon">
+              <svg class="nav-svg" aria-hidden="true"><use href="#icon-layers"/></svg>
+            </div>
+            <h3>Choose a server</h3>
+            <p>Pick the Discord server you want to manage from the switcher in the top bar.</p>
+            <ul class="onboard-benefits">
+              <li><span class="onboard-dot"></span>Server switcher remembers your choice</li>
+              <li><span class="onboard-dot"></span>Tools scope to the selected server</li>
+              <li><span class="onboard-dot"></span>Switch any time</li>
+            </ul>
+          </article>
+          <article class="onboard-step">
+            <div class="onboard-step-icon">
+              <svg class="nav-svg" aria-hidden="true"><use href="#icon-gear"/></svg>
+            </div>
+            <h3>Configure &amp; moderate</h3>
+            <p>Set up rules, verification, tickets, and moderation from the sidebar.</p>
+            <ul class="onboard-benefits">
+              <li><span class="onboard-dot"></span>Auto-post rules to a channel</li>
+              <li><span class="onboard-dot"></span>CAPTCHA verification &amp; raid detection</li>
+              <li><span class="onboard-dot"></span>Ban, kick, timeout &amp; purge</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="onboard-actions">
+          <button type="button" class="btn btn-primary" id="onboarding-start">Get started</button>
+        </div>
       </section>
     </div>
 

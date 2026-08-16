@@ -24,6 +24,11 @@ const el = {
   serverSwitcherName: $('#server-switcher-name'),
   serverModal: $('#server-modal'),
   serverModalClose: $('#server-modal-close'),
+  onboardingModal: $('#onboarding-modal'),
+  onboardingStatusText: $('#onboard-status-text'),
+  onboardingStatusIcon: $('#onboard-status-icon'),
+  onboardingBarFill: $('#onboard-bar-fill'),
+  onboardingStart: $('#onboarding-start'),
   serverPickerList: $('#server-picker-list'),
   serversList: $('#servers-list'),
   modBody: $('#mod-body'),
@@ -132,6 +137,7 @@ async function loadSession() {
       el.detailUser.textContent = data.user.username;
       el.userChip.hidden = false;
       el.logoutLink.hidden = false;
+      initOnboarding();
     }
   } catch {
     // Unauthorized redirect is handled by apiFetch.
@@ -209,6 +215,57 @@ function setBotStatus(connected) {
   el.statusText.textContent = connected ? 'ONLINE' : 'OFFLINE';
   el.statStatus.textContent = connected ? 'ONLINE' : 'OFFLINE';
   el.statStatus.style.color = connected ? 'var(--green)' : 'var(--red)';
+}
+
+// Animated number counter (motion/react CountingNumber adapted to vanilla JS).
+// Tweens from the last shown value to `target` with an easeInOut curve, keeps
+// the value stable across repeated polls, and respects reduced motion.
+// `suffix` is appended after the formatted number (e.g. a currency code).
+function animateCount(el, target, duration = 3000, suffix = '') {
+  if (!el) return;
+  target = Number(target) || 0;
+  const from = typeof el._countValue === 'number' ? el._countValue : 0;
+  const fmt = (n) => n.toLocaleString() + suffix;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el._countValue = target;
+    el.textContent = fmt(target);
+    return;
+  }
+  if (target === from) {
+    el.textContent = fmt(target);
+    return;
+  }
+  if (el._raf) cancelAnimationFrame(el._raf);
+  const start = performance.now();
+  const easeInOut = (t) =>
+    t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const value = Math.round(from + (target - from) * easeInOut(t));
+    el.textContent = fmt(value);
+    el._countValue = value;
+    if (t < 1) {
+      el._raf = requestAnimationFrame(frame);
+    } else {
+      el._countValue = target;
+      el.textContent = fmt(target);
+    }
+  }
+  el._raf = requestAnimationFrame(frame);
+}
+
+// Restart the Overview stat counters from zero using their last known targets.
+function replayCount(el) {
+  if (!el || typeof el._countValue !== 'number') return;
+  const target = el._countValue;
+  el._countValue = 0;
+  animateCount(el, target);
+}
+
+function replayOverviewCounters() {
+  replayCount(el.statServers);
+  replayCount(el.statMembers);
+  replayCount(el.statRules);
 }
 
 let availableServers = [];
@@ -308,6 +365,79 @@ document.querySelectorAll('[data-close-server-modal]').forEach((element) => {
   element.addEventListener('click', closeServerPicker);
 });
 
+/* ---------- Onboarding (first login) ---------- */
+const ONBOARDING_KEY = 'squared-one-onboarded';
+let onboardingInit = false;
+
+function closeOnboarding() {
+  if (el.onboardingModal) el.onboardingModal.hidden = true;
+}
+
+function showOnboarding() {
+  if (!el.onboardingModal) return;
+  el.onboardingModal.hidden = false;
+
+  const labels = ['Welcome aboard', 'Setting up your dashboard', "You're all set"];
+  const icon = el.onboardingStatusIcon;
+  const text = el.onboardingStatusText;
+  const bar = el.onboardingBarFill;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (icon) icon.classList.remove('done');
+  if (text) text.textContent = labels[0];
+  if (bar) bar.style.width = '0%';
+
+  if (reduced) {
+    if (bar) bar.style.width = '100%';
+    if (icon) icon.classList.add('done');
+    if (text) text.textContent = labels[2];
+  } else {
+    const start = performance.now();
+    const duration = 3000;
+    const easeInOut = (t) =>
+      t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    function tick(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = easeInOut(t);
+      if (bar) bar.style.width = (eased * 100).toFixed(1) + '%';
+      if (text) {
+        text.textContent = t < 0.5 ? labels[0] : t < 1 ? labels[1] : labels[2];
+      }
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        if (icon) icon.classList.add('done');
+        if (text) text.textContent = labels[2];
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  try {
+    localStorage.setItem(ONBOARDING_KEY, '1');
+  } catch {
+    /* storage may be unavailable */
+  }
+}
+
+function initOnboarding() {
+  if (onboardingInit || !el.onboardingModal) return;
+  onboardingInit = true;
+  if (el.onboardingStart) {
+    el.onboardingStart.addEventListener('click', closeOnboarding);
+  }
+  document.querySelectorAll('[data-close-onboarding]').forEach((element) => {
+    element.addEventListener('click', closeOnboarding);
+  });
+  let seen = false;
+  try {
+    seen = localStorage.getItem(ONBOARDING_KEY) === '1';
+  } catch {
+    /* ignore */
+  }
+  if (!seen) showOnboarding();
+}
+
 let rules = [];
 
 function renderRules() {
@@ -315,6 +445,7 @@ function renderRules() {
     el.rulesList.innerHTML =
       '<div class="empty">No rules loaded. Add one below or restart to load defaults.</div>';
     el.rulesCount.textContent = '0 entries';
+    el.statRules._countValue = 0;
     el.statRules.textContent = '0';
     return;
   }
@@ -343,7 +474,7 @@ function renderRules() {
     .join('');
 
   el.rulesCount.textContent = `${rules.length} entries`;
-  el.statRules.textContent = String(rules.length);
+  animateCount(el.statRules, rules.length);
 }
 
 async function loadRules() {
@@ -363,8 +494,8 @@ async function loadHealth() {
     if (!res.ok) throw new Error('health check failed');
     const data = await res.json();
     setBotStatus(Boolean(data.bot?.connected));
-    el.statServers.textContent = String(data.bot?.guildCount ?? 0);
-    el.statMembers.textContent = String(data.bot?.memberCount ?? 0);
+    animateCount(el.statServers, data.bot?.guildCount ?? 0);
+    animateCount(el.statMembers, data.bot?.memberCount ?? 0);
     el.statUptime.textContent = formatUptime(data.uptime ?? 0);
     el.footerTime.textContent = new Date(data.timestamp).toLocaleTimeString();
     if (data.bot?.connected) {
@@ -559,6 +690,7 @@ function switchView(view) {
   document
     .querySelectorAll('.nav-item')
     .forEach((n) => n.classList.toggle('active', n.dataset.view === view));
+  if (view === 'overview') replayOverviewCounters();
 }
 
 function setSection(sectionId, activate) {
@@ -670,10 +802,10 @@ async function loadVotes() {
     if (!res.ok) throw new Error('failed');
     const data = await res.json();
     votesLoaded = true;
-    el.voteTotal.textContent = String(data.total || 0);
-    el.voteWeighted.textContent = String(data.weightedTotal || 0);
-    el.voteTopgg.textContent = String(data.byProvider?.topgg?.votes || 0);
-    el.voteDbl.textContent = String(data.byProvider?.discordbotlist?.votes || 0);
+    animateCount(el.voteTotal, data.total || 0);
+    animateCount(el.voteWeighted, data.weightedTotal || 0);
+    animateCount(el.voteTopgg, data.byProvider?.topgg?.votes || 0);
+    animateCount(el.voteDbl, data.byProvider?.discordbotlist?.votes || 0);
     el.voteStatus.textContent = `${data.total || 0} vote${data.total === 1 ? '' : 's'}`;
     const recent = data.recent || [];
     el.voteRecent.innerHTML = recent.length
@@ -1666,7 +1798,7 @@ function renderBilling() {
   const data = billingData || {};
   const cur = data.currency || { name: 'Square', code: 'SQ' };
   el.billingCurrency.textContent = `${cur.name} (${cur.code})`;
-  el.billingBalance.textContent = `${(data.balance || 0).toLocaleString()} ${cur.code}`;
+  animateCount(el.billingBalance, data.balance || 0, 3000, ` ${cur.code}`);
   el.billingStatus.textContent = `${cur.code} credits`;
   el.billingOwner.hidden = !data.isOwner;
 
