@@ -27,13 +27,17 @@ function resolveSafeDataDir(candidate) {
 }
 
 export function resolveDataDir() {
-  const envDir = resolveSafeDataDir(process.env.DATA_DIR);
-  if (envDir) return envDir;
-
+  const safeRoot = path.resolve(HERE, '..', 'data');
+  const envDataDir = process.env.DATA_DIR;
+  if (envDataDir) {
+    const resolvedEnvDir = path.resolve(envDataDir);
+    if (resolvedEnvDir === safeRoot || resolvedEnvDir.startsWith(`${safeRoot}${path.sep}`)) {
+      return resolvedEnvDir;
+    }
+  }
   const localDataDir = path.resolve(HERE, 'data');
   if (fs.existsSync(localDataDir)) return localDataDir;
-
-  return DEFAULT_DATA_DIR;
+  return safeRoot;
 }
 
 const DATA_DIR = resolveDataDir();
