@@ -201,101 +201,57 @@ async function syncDiscordBotListStats(client) {
 const APP_URL = 'https://squared-one.onrender.com';
 const COLOR = 0xff0000;
 
-// Discord limits: each embed ≤ 6000 total chars (title + description + fields
-// + footer), ≤ 25 fields, and each field value ≤ 1024 chars. With many/long
-// rules a single embed overflows, so this returns one or more embeds.
-const EMBED_FIELD_VALUE_MAX = 1024;
-const EMBED_FIELDS_MAX = 25;
-const EMBED_TOTAL_MAX = 6000;
-const EMBED_SAFETY_MARGIN = 64;
+// Discord allows at most 10 embeds per message, so rules are posted as one
+// embed per rule, batched into messages of up to 10 embeds. This keeps every
+// embed well under Discord's 6000-character limit no matter how many rules
+// exist.
+const MAX_EMBEDS_PER_MESSAGE = 10;
 
-function buildRulesEmbeds(title, footer) {
+function buildRulesMessages(title, footer) {
   const all = getAllRules();
   const footerText = String(footer || '');
   const intro =
     'Please read and follow these rules to keep the community safe and fun.';
 
-  const baseEmbed = (fields) => {
-    const embed = new EmbedBuilder()
+  const withFooter = (embed) =>
+    footerText ? embed.setFooter({ text: footerText }) : embed;
+
+  const header = withFooter(
+    new EmbedBuilder()
       .setColor(COLOR)
-      .setFooter({ text: footerText })
-      .setTimestamp();
-    if (fields.length) embed.addFields(...fields);
-    return embed;
-  };
-
-  if (all.length === 0) {
-    return [
-      baseEmbed([{ name: 'No rules yet', value: 'No rules configured.' }])
-        .setTitle(title)
-        .setDescription(intro),
-    ];
-  }
-
-  const lines = all.map(
-    (r, i) =>
-      `**${i + 1}. ${r.title}**${r.custom ? '  `custom`' : ''}\n${r.description}`
+      .setTitle(title)
+      .setDescription(intro)
+      .setTimestamp()
   );
 
-  // Pack rules into field values that each respect the 1024-char cap.
-  const fields = [];
-  let current = '';
-  const push = (value) => {
-    if (value) fields.push({ name: '\u200b', value });
-  };
-  for (const line of lines) {
-    const candidate = current ? `${current}\n\n${line}` : line;
-    if (candidate.length <= EMBED_FIELD_VALUE_MAX) {
-      current = candidate;
-      continue;
-    }
-    push(current);
-    if (line.length > EMBED_FIELD_VALUE_MAX) {
-      // A single rule longer than the limit — split its text hard.
-      let rest = line;
-      while (rest.length > EMBED_FIELD_VALUE_MAX) {
-        push(rest.slice(0, EMBED_FIELD_VALUE_MAX));
-        rest = rest.slice(EMBED_FIELD_VALUE_MAX);
-      }
-      current = rest;
-    } else {
-      current = line;
-    }
+  if (all.length === 0) {
+    return [[header.setDescription('No rules configured yet.')]];
   }
-  push(current);
 
-  // Distribute fields across embeds, staying within Discord's per-embed limits.
-  const overhead = (withIntro) =>
-    title.length +
-    (withIntro ? intro.length : 0) +
-    footerText.length +
-    EMBED_SAFETY_MARGIN;
+  // One embed per rule, so a single embed can never exceed Discord's limit.
+  const ruleEmbeds = all.map((r, i) =>
+    withFooter(
+      new EmbedBuilder()
+        .setColor(COLOR)
+        .setTitle(`${i + 1}. ${r.title}${r.custom ? '  (custom)' : ''}`)
+        .setDescription(r.description)
+        .setTimestamp()
+    )
+  );
 
-  const embeds = [];
-  let batch = [];
-  let used = overhead(true);
-  const flush = () => {
-    if (!batch.length) return;
-    const isFirst = embeds.length === 0;
-    const embed = baseEmbed(batch);
-    embed.setTitle(isFirst ? title : `${title} (continued)`);
-    if (isFirst) embed.setDescription(intro);
-    embeds.push(embed);
-    batch = [];
-    used = overhead(false);
-  };
-
-  for (const field of fields) {
-    const size = field.name.length + field.value.length;
-    if (batch.length >= EMBED_FIELDS_MAX || used + size > EMBED_TOTAL_MAX) {
-      flush();
+  // Batch into messages of at most 10 embeds each.
+  const messages = [];
+  let batch = [header];
+  for (const embed of ruleEmbeds) {
+    if (batch.length >= MAX_EMBEDS_PER_MESSAGE) {
+      messages.push(batch);
+      batch = [];
     }
-    batch.push(field);
-    used += size;
+    batch.push(embed);
   }
-  flush();
+  if (batch.length) messages.push(batch);
 
-  return embeds;
+  return messages;
 }
 
 // ---- Error reporting + community rewards ----------------------------------
@@ -1627,9 +1583,11 @@ async function handleInteraction(interaction) {
     }
 
     if (commandName === 'rules') {
-      await interaction.reply({
-        embeds: buildRulesEmbeds('📜 Server Rules', guildName),
-      });
+      const messages = buildRulesMessages('📜 Server Rules', guildName);
+      await interaction.reply({ embeds: messages[0] });
+      for (const batch of messages.slice(1)) {
+        await interaction.followUp({ embeds: batch });
+      }
       return;
     }
 
@@ -1699,9 +1657,10 @@ async function handleInteraction(interaction) {
         });
         return;
       }
-      await channel.send({
-        embeds: buildRulesEmbeds('📜 Server Rules', guildName),
-      });
+      const messages = buildRulesMessages('📜 Server Rules', guildName);
+      for (const batch of messages) {
+        await channel.send({ embeds: batch });
+      }
       await interaction.reply({
         content: `📢 Rules posted in ${channel}.`,
         flags: MessageFlags.Ephemeral,
@@ -2733,12 +2692,13 @@ export async function startBot(token) {
     }
 
     try {
-      await member.send({
-        embeds: buildRulesEmbeds(
-          `📜 Welcome to ${member.guild.name}!`,
-          'Please read our rules'
-        ),
-      });
+      const welcomeMessages = buildRulesMessages(
+        `📜 Welcome to ${member.guild.name}!`,
+        'Please read our rules'
+      );
+      for (const batch of welcomeMessages) {
+        await member.send({ embeds: batch });
+      }
     } catch {
       // Member has DMs disabled — ignore.
     }
