@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(HERE, '..');
+const DEFAULT_DATA_DIR = path.join(APP_ROOT, 'data');
 const DEFAULT_REPOSITORY = 'squared-ones/data';
 const API_VERSION = '2022-11-28';
 
@@ -16,10 +18,22 @@ function isValidRepoPart(value) {
   );
 }
 
+function resolveSafeDataDir(candidate) {
+  if (typeof candidate !== 'string' || candidate.trim() === '') return null;
+  const resolved = path.resolve(candidate);
+  const relative = path.relative(APP_ROOT, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return resolved;
+}
+
 export function resolveDataDir() {
-  if (process.env.DATA_DIR) return process.env.DATA_DIR;
-  if (fs.existsSync(path.join(HERE, 'data'))) return path.join(HERE, 'data');
-  return path.join(HERE, '..', 'data');
+  const envDir = resolveSafeDataDir(process.env.DATA_DIR);
+  if (envDir) return envDir;
+
+  const localDataDir = path.resolve(HERE, 'data');
+  if (fs.existsSync(localDataDir)) return localDataDir;
+
+  return DEFAULT_DATA_DIR;
 }
 
 const DATA_DIR = resolveDataDir();
