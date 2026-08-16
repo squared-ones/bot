@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(HERE, '..');
+const DEFAULT_DATA_DIR = path.join(APP_ROOT, 'data');
 const DEFAULT_REPOSITORY = 'squared-ones/data';
 const API_VERSION = '2022-11-28';
 
@@ -14,6 +16,14 @@ function isValidRepoPart(value) {
     value.length <= 100 &&
     /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/.test(value)
   );
+}
+
+function resolveSafeDataDir(candidate) {
+  if (typeof candidate !== 'string' || candidate.trim() === '') return null;
+  const resolved = path.resolve(candidate);
+  const relative = path.relative(APP_ROOT, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return resolved;
 }
 
 export function resolveDataDir() {
