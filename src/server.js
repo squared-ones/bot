@@ -778,7 +778,7 @@ export function startServer(port = 3000) {
   app.get('/appeal', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'appeal.html'))
   );
-  app.get('/translate', (req, res) =>
+  app.get('/translate', checkRateLimit, (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'translate.html'))
   );
 
