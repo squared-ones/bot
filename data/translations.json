@@ -1,0 +1,19 @@
+{
+  "catalog": {
+    "reply.ping": "🏓 Pong! WebSocket: **{ws}ms** · Round-trip: **{rt}ms**",
+    "reply.language.set": "Your language is now **{locale}**.",
+    "reply.language.list": "Supported locales: {locales}. Use `/language <locale>` to switch.",
+    "reply.translate.submitted": "Thanks! Your translation was submitted for review and earns **{reward} SQ** once approved.",
+    "reply.translate.help": "Submit a human translation and earn SQ when it is approved. Translations are reviewed by a person — no machine translation.",
+    "web.nav.pricing": "Pricing",
+    "web.nav.support": "Support",
+    "web.nav.dashboard": "Open dashboard",
+    "web.nav.invite": "Add to Discord",
+    "web.hero.sub": "Squared One is the multitool Discord bot — moderation, rules, verification, tickets, leveling, and more, all managed from one red-hot dashboard.",
+    "web.hero.cta.dashboard": "Open dashboard",
+    "web.hero.cta.features": "See features"
+  },
+  "translations": {},
+  "pending": [],
+  "users": {}
+}

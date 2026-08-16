@@ -8,6 +8,13 @@ const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 // The internal currency. Balances and plan prices are denominated in this.
 export const CURRENCY = { name: 'Square', code: 'SQ' };
 
+// Credits awarded to a user for each non-duplicate vote on a bot list.
+// Set VOTE_CREDIT_REWARD=0 to disable vote rewards.
+const parsedVoteReward = Number(process.env.VOTE_CREDIT_REWARD);
+export const VOTE_CREDIT_REWARD = Number.isFinite(parsedVoteReward)
+  ? Math.max(0, Math.floor(parsedVoteReward))
+  : 50;
+
 // Free servers are limited to this many custom rules (rules are global, so the
 // limit is applied against the acting user's highest plan).
 export const FREE_CUSTOM_RULE_LIMIT = 10;

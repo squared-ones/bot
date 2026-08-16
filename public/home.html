@@ -327,15 +327,16 @@
           <span class="logo-text">SQUARED ONE</span>
         </a>
         <nav class="home-nav">
-          <a class="btn btn-secondary btn-sm" href="/pricing">Pricing</a>
-          <a class="btn btn-secondary btn-sm" href="/support">Support</a>
-          <a class="btn btn-secondary btn-sm" href="/dashboard">Open dashboard</a>
+          <a class="btn btn-secondary btn-sm" href="/pricing" data-i18n="web.nav.pricing">Pricing</a>
+          <a class="btn btn-secondary btn-sm" href="/support" data-i18n="web.nav.support">Support</a>
+          <a class="btn btn-secondary btn-sm" href="/dashboard" data-i18n="web.nav.dashboard">Open dashboard</a>
           <a
             class="btn btn-primary btn-sm"
             id="invite-btn"
             href="#"
             target="_blank"
             rel="noopener"
+            data-i18n="web.nav.invite"
             >Add to Discord</a
           >
         </nav>
@@ -349,14 +350,14 @@
           <span>Discord bot</span>
         </span>
         <h1 class="hero-title">Your server,<br />on autopilot.<span class="cursor" aria-hidden="true"></span></h1>
-        <p class="hero-sub">
+        <p class="hero-sub" data-i18n="web.hero.sub">
           Squared One is the multitool Discord bot — moderation, rules,
           verification, tickets, leveling, and more, all managed from one
           red-hot dashboard.
         </p>
         <div class="home-cta">
-          <a class="btn btn-primary" href="/dashboard">Open dashboard</a>
-          <a class="btn btn-secondary" href="#features">See features</a>
+          <a class="btn btn-primary" href="/dashboard" data-i18n="web.hero.cta.dashboard">Open dashboard</a>
+          <a class="btn btn-secondary" href="#features" data-i18n="web.hero.cta.features">See features</a>
         </div>
 
         <div class="terminal" aria-hidden="true">
@@ -508,6 +509,7 @@
       </div>
     </footer>
     <script src="/footer.js"></script>
+    <script src="/i18n.js"></script>
 
     <script>
       // Populate the invite link from the server (uses CLIENT_ID).

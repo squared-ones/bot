@@ -84,7 +84,21 @@ import {
   cancelSubscription,
   planRequiredError,
   FREE_CUSTOM_RULE_LIMIT,
+  VOTE_CREDIT_REWARD,
 } from './credits.js';
+import {
+  DISCORD_LOCALES,
+  TRANSLATION_REWARD,
+  getCatalog,
+  getStringsForLocale,
+  getUserLocale,
+  setUserLocale,
+  submitTranslation,
+  approveTranslation,
+  rejectTranslation,
+  listPendingTranslations,
+  listLocales,
+} from './translations.js';
 import {
   getAccount,
   getAccountByDiscordId,
@@ -484,9 +498,18 @@ export function startServer(port = 3000) {
     if (!vote) return res.json({ ok: true, test: true });
     try {
       const result = recordVote(vote);
+      let balance = null;
+      if (!result.duplicate && VOTE_CREDIT_REWARD > 0) {
+        balance = grantCredits(vote.userId, VOTE_CREDIT_REWARD);
+      }
       await flushDataSync();
-      console.log(`[vote] Top.gg vote recorded for ${vote.userId}${result.duplicate ? ' (duplicate)' : ''}.`);
-      res.json({ ok: true, duplicate: result.duplicate });
+      console.log(
+        `[vote] Top.gg vote recorded for ${vote.userId}${result.duplicate ? ' (duplicate)' : ''}.` +
+          (balance == null
+            ? ''
+            : ` Awarded ${VOTE_CREDIT_REWARD} ${CURRENCY.code} (balance ${balance} ${CURRENCY.code}).`)
+      );
+      res.json({ ok: true, duplicate: result.duplicate, rewarded: balance != null });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -507,9 +530,18 @@ export function startServer(port = 3000) {
         eventId: body.voteId || null,
         weight: 1,
       });
+      let balance = null;
+      if (!result.duplicate && VOTE_CREDIT_REWARD > 0) {
+        balance = grantCredits(body.id, VOTE_CREDIT_REWARD);
+      }
       await flushDataSync();
-      console.log(`[vote] Discord Bot List vote recorded for ${body.id}${result.duplicate ? ' (duplicate)' : ''}.`);
-      res.json({ ok: true, duplicate: result.duplicate });
+      console.log(
+        `[vote] Discord Bot List vote recorded for ${body.id}${result.duplicate ? ' (duplicate)' : ''}.` +
+          (balance == null
+            ? ''
+            : ` Awarded ${VOTE_CREDIT_REWARD} ${CURRENCY.code} (balance ${balance} ${CURRENCY.code}).`)
+      );
+      res.json({ ok: true, duplicate: result.duplicate, rewarded: balance != null });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -517,6 +549,88 @@ export function startServer(port = 3000) {
 
   app.get('/api/votes', guard, (req, res) => {
     res.json(getVoteStats());
+  });
+
+  // ---------- i18n / translations ----------
+  app.get('/api/i18n/locales', (req, res) => {
+    res.json({
+      locales: listLocales(),
+      discord: DISCORD_LOCALES,
+      reward: TRANSLATION_REWARD,
+    });
+  });
+
+  // All strings for a locale (English fallback). Public — used by the
+  // client-side i18n loader on any page.
+  app.get('/api/i18n/strings', (req, res) => {
+    const locale = String(req.query.locale || '').trim() || 'en';
+    res.json({ locale, strings: getStringsForLocale(locale) });
+  });
+
+  // Full catalog + pending list for the translation contribution page.
+  app.get('/api/i18n/catalog', guard, async (req, res) => {
+    const userId = billingIdOf(req);
+    res.json({
+      catalog: getCatalog(),
+      pending: listPendingTranslations(),
+      locales: listLocales(),
+      reward: TRANSLATION_REWARD,
+      locale: userId ? getUserLocale(userId) : null,
+      isOwner: userId ? await isApplicationOwner(userId) : false,
+      signedIn: Boolean(req.user),
+    });
+  });
+
+  app.post('/api/i18n/locale', guard, (req, res) => {
+    try {
+      const userId = billingIdOf(req);
+      if (!userId) return res.status(401).json({ error: 'unauthorized' });
+      res.json({ locale: setUserLocale(userId, req.body?.locale) });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/i18n/submit', guard, (req, res) => {
+    try {
+      const contributorId = billingIdOf(req);
+      if (!contributorId) return res.status(401).json({ error: 'unauthorized' });
+      const result = submitTranslation({
+        locale: req.body?.locale,
+        key: req.body?.key,
+        value: req.body?.value,
+        contributorId,
+      });
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/i18n/approve', guard, async (req, res) => {
+    if (!(await isApplicationOwner(billingIdOf(req)))) {
+      return res
+        .status(403)
+        .json({ error: 'only the application owner can approve translations' });
+    }
+    try {
+      res.json(approveTranslation(req.body?.id));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/i18n/reject', guard, async (req, res) => {
+    if (!(await isApplicationOwner(billingIdOf(req)))) {
+      return res
+        .status(403)
+        .json({ error: 'only the application owner can reject translations' });
+    }
+    try {
+      res.json(rejectTranslation(req.body?.id));
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   });
 
   // ---------- Public ----------
@@ -663,6 +777,9 @@ export function startServer(port = 3000) {
   );
   app.get('/appeal', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'appeal.html'))
+  );
+  app.get('/translate', (req, res) =>
+    res.sendFile(path.join(PUBLIC_DIR, 'translate.html'))
   );
 
   // ---------- Dashboard (protected) ----------

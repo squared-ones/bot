@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Squared One — Translate</title>
+    <meta
+      name="description"
+      content="Help translate Squared One into your language. Human-reviewed translations — earn SQ for every approved string."
+    />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .tr-main {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 48px 24px 96px;
+      }
+
+      .tr-hero {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+
+      .tr-reward {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 18px auto 0;
+        padding: 8px 14px;
+        border: 1px solid var(--green);
+        background: rgba(0, 255, 136, 0.08);
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        box-shadow: 0 0 16px rgba(0, 255, 136, 0.2);
+      }
+
+      .tr-notice {
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin: 18px 0 26px;
+        line-height: 1.7;
+      }
+
+      .tr-controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .tr-controls select,
+      .tr-controls input {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--red-dim);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        padding: 10px 12px;
+        outline: none;
+      }
+
+      .tr-controls select:focus,
+      .tr-controls input:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 0 1px var(--red-glow);
+      }
+
+      .tr-controls select {
+        min-width: 160px;
+      }
+
+      .tr-controls input {
+        flex: 1;
+        min-width: 180px;
+      }
+
+      .tr-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .tr-row {
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 14px 16px;
+      }
+
+      .tr-row-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      .tr-key {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        letter-spacing: 1px;
+        color: var(--red);
+      }
+
+      .tr-source {
+        font-family: var(--sans);
+        font-size: 0.9rem;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-bottom: 10px;
+      }
+
+      .tr-row form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .tr-row input {
+        flex: 1;
+        min-width: 0;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--red-dim);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        padding: 9px 12px;
+        outline: none;
+      }
+
+      .tr-row input:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 0 1px var(--red-glow);
+      }
+
+      .tr-empty {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        text-align: center;
+        padding: 30px 0;
+      }
+
+      .tr-pending {
+        margin-top: 40px;
+      }
+
+      .tr-h2 {
+        font-family: var(--mono);
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--red);
+        text-shadow: 0 0 10px var(--red-glow);
+        margin-bottom: 18px;
+        text-align: center;
+      }
+
+      .tr-pending-item {
+        background: var(--panel);
+        border: 1px solid var(--red-dim);
+        padding: 14px 16px;
+        margin-bottom: 10px;
+      }
+
+      .tr-pending-meta {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .tr-pending-value {
+        font-family: var(--sans);
+        font-size: 0.9rem;
+        color: var(--text);
+        margin-bottom: 10px;
+      }
+
+      .tr-pending-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .tr-status {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        padding: 12px 18px;
+        border: 1px solid var(--red);
+        background: var(--panel);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+
+      .tr-status.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-6px);
+      }
+    </style>
+  </head>
+  <body>
+    <script src="/loader.js"></script>
+    <script src="/cookie-banner.js"></script>
+    <script src="/cursor.js"></script>
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="/">
+          <img class="logo-img" src="/logo.png" alt="Squared One logo" />
+          <span class="logo-text">SQUARED ONE</span>
+        </a>
+        <nav class="home-nav">
+          <a class="btn btn-secondary btn-sm" href="/">Home</a>
+          <a class="btn btn-secondary btn-sm" href="/pricing">Pricing</a>
+          <a class="btn btn-secondary btn-sm" href="/support">Support</a>
+          <a class="btn btn-secondary btn-sm" href="/dashboard">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="tr-main">
+      <section class="tr-hero">
+        <span class="eyebrow">
+          <span class="eyebrow-label">//</span>
+          <span>Community translations</span>
+        </span>
+        <h1 class="hero-title">Speak every language<span class="cursor" aria-hidden="true"></span></h1>
+        <p class="hero-sub">
+          Help make Squared One multilingual. Every entry is written by a human
+          and reviewed by a human — no machine translation.
+        </p>
+        <div class="tr-reward" id="tr-reward">Loading reward…</div>
+      </section>
+
+      <p class="tr-notice" id="tr-notice">
+        Sign in to contribute translations.
+      </p>
+
+      <div class="tr-controls">
+        <select id="tr-locale" aria-label="Target language"></select>
+        <input id="tr-filter" type="text" placeholder="Filter strings…" autocomplete="off" />
+      </div>
+
+      <div class="tr-list" id="tr-list"></div>
+
+      <section class="tr-pending" id="tr-pending" hidden>
+        <h2 class="tr-h2">Pending review</h2>
+        <div id="tr-pending-list"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-top">
+          <a href="/" class="footer-brand" aria-label="Squared One">
+            <img class="footer-logo" src="/logo.png" alt="Squared One logo" />
+            <span class="footer-brand-name">SQUARED ONE</span>
+          </a>
+          <ul class="footer-social">
+            <li>
+              <a class="footer-social-btn" id="footer-discord" href="/support" aria-label="Discord support server">
+                <svg viewBox="0 0 127.14 96.36" aria-hidden="true"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+              </a>
+            </li>
+            <li>
+              <a class="footer-social-btn" id="footer-github" href="https://github.com/squared-ones/bot" target="_blank" rel="noopener" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="footer-bottom">
+          <nav class="footer-main-nav" aria-label="Main">
+            <ul>
+              <li><a href="/dashboard">dashboard</a></li>
+              <li><a href="/pricing">pricing</a></li>
+              <li><a href="/support">support</a></li>
+              <li><a href="/">home</a></li>
+            </ul>
+          </nav>
+          <div class="footer-legal" aria-label="Legal">
+            <ul>
+              <li><a href="/privacy">privacy</a></li>
+              <li><a href="/terms">terms</a></li>
+            </ul>
+          </div>
+          <div class="footer-copyright">
+            <div>© 2026 Squared One</div>
+            <div>Apache License 2.0</div>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="/footer.js"></script>
+    <script src="/particles.js"></script>
+    <div class="tr-status" id="tr-status" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        const $ = (sel) => document.querySelector(sel);
+        const listEl = $('#tr-list');
+        const localeEl = $('#tr-locale');
+        const filterEl = $('#tr-filter');
+        const pendingEl = $('#tr-pending');
+        const pendingListEl = $('#tr-pending-list');
+        const rewardEl = $('#tr-reward');
+        const noticeEl = $('#tr-notice');
+        const statusEl = $('#tr-status');
+
+        let state = {
+          catalog: {},
+          locales: [],
+          reward: 0,
+          isOwner: false,
+          signedIn: false,
+          locale: 'fr',
+          pending: [],
+        };
+
+        function showStatus(message) {
+          statusEl.textContent = message;
+          statusEl.classList.add('show');
+          clearTimeout(showStatus._t);
+          showStatus._t = setTimeout(() => statusEl.classList.remove('show'), 2600);
+        }
+
+        const esc = (s) =>
+          String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        async function post(url, body) {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'request failed');
+          return data;
+        }
+
+        function renderStrings() {
+          const q = filterEl.value.trim().toLowerCase();
+          const entries = Object.entries(state.catalog).filter(
+            ([key]) => !q || key.toLowerCase().includes(q)
+          );
+          if (!entries.length) {
+            listEl.innerHTML = '<div class="tr-empty">No matching strings.</div>';
+            return;
+          }
+          listEl.innerHTML = entries
+            .map(
+              ([key, source]) => `
+                <div class="tr-row">
+                  <div class="tr-row-top">
+                    <span class="tr-key">${esc(key)}</span>
+                  </div>
+                  <div class="tr-source">${esc(source)}</div>
+                  ${
+                    state.signedIn
+                      ? `<form class="tr-submit" data-key="${esc(key)}">
+                          <input type="text" maxlength="1000" placeholder="Your ${esc(state.locale)} translation…" required />
+                          <button type="submit" class="btn btn-primary btn-sm">Submit</button>
+                        </form>`
+                      : ''
+                  }
+                </div>`
+            )
+            .join('');
+
+          if (state.signedIn) {
+            listEl.querySelectorAll('.tr-submit').forEach((form) => {
+              form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const input = form.querySelector('input');
+                const value = input.value.trim();
+                if (!value) return;
+                const btn = form.querySelector('button');
+                btn.disabled = true;
+                try {
+                  await post('/api/i18n/submit', {
+                    locale: state.locale,
+                    key: form.dataset.key,
+                    value,
+                  });
+                  input.value = '';
+                  showStatus('Submitted for review — earns ' + state.reward + ' SQ when approved.');
+                  await loadCatalog();
+                } catch (error) {
+                  showStatus(error.message);
+                } finally {
+                  btn.disabled = false;
+                }
+              });
+            });
+          }
+        }
+
+        function renderPending() {
+          if (!state.isOwner || !state.pending.length) {
+            pendingEl.hidden = true;
+            return;
+          }
+          pendingEl.hidden = false;
+          pendingListEl.innerHTML = state.pending
+            .map(
+              (entry) => `
+                <div class="tr-pending-item">
+                  <div class="tr-pending-meta">${esc(entry.locale)} · ${esc(entry.key)} · ${esc(entry.contributorId || 'anonymous')}</div>
+                  <div class="tr-pending-value">${esc(entry.value)}</div>
+                  <div class="tr-pending-actions">
+                    <button type="button" class="btn btn-primary btn-sm" data-approve="${esc(entry.id)}">Approve</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-reject="${esc(entry.id)}">Reject</button>
+                  </div>
+                </div>`
+            )
+            .join('');
+
+          pendingListEl.querySelectorAll('[data-approve]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              try {
+                const data = await post('/api/i18n/approve', { id: btn.dataset.approve });
+                showStatus('Approved — ' + (data.reward || 0) + ' SQ granted to contributor.');
+                await loadCatalog();
+              } catch (error) {
+                showStatus(error.message);
+              }
+            });
+          });
+          pendingListEl.querySelectorAll('[data-reject]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              try {
+                await post('/api/i18n/reject', { id: btn.dataset.reject });
+                showStatus('Rejected.');
+                await loadCatalog();
+              } catch (error) {
+                showStatus(error.message);
+              }
+            });
+          });
+        }
+
+        function render() {
+          rewardEl.textContent = '+' + state.reward + ' SQ per approved string';
+          noticeEl.innerHTML = state.signedIn
+            ? 'No machine translation — every entry is reviewed by a human before it ships.'
+            : 'Please <a href="/login" style="color:var(--red)">sign in</a> to contribute translations.';
+          renderStrings();
+          renderPending();
+        }
+
+        async function loadCatalog() {
+          try {
+            const res = await fetch('/api/i18n/catalog');
+            if (!res.ok) throw new Error('unauthorized');
+            const data = await res.json();
+            state.catalog = data.catalog || {};
+            state.pending = data.pending || [];
+            state.reward = Number(data.reward) || 0;
+            state.isOwner = Boolean(data.isOwner);
+            state.signedIn = Boolean(data.signedIn);
+            if (data.locale) state.locale = data.locale;
+            setLocaleSelect();
+            render();
+          } catch {
+            state.signedIn = false;
+            state.isOwner = false;
+            render();
+          }
+        }
+
+        function setLocaleSelect() {
+          localeEl.innerHTML = state.locales
+            .map(
+              (l) =>
+                `<option value="${esc(l)}"${l === state.locale ? ' selected' : ''}>${esc(l)}</option>`
+            )
+            .join('');
+        }
+
+        async function loadLocales() {
+          try {
+            const res = await fetch('/api/i18n/locales');
+            const data = await res.json();
+            state.locales = data.locales || [];
+            state.reward = Number(data.reward) || state.reward;
+            setLocaleSelect();
+          } catch {
+            /* ignore */
+          }
+        }
+
+        localeEl.addEventListener('change', () => {
+          state.locale = localeEl.value;
+          renderStrings();
+        });
+        filterEl.addEventListener('input', renderStrings);
+
+        loadLocales().then(loadCatalog);
+      })();
+    </script>
+  </body>
+</html>

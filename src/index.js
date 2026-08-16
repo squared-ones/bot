@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { loadRules } from './rules.js';
 import { loadCredits } from './credits.js';
+import { loadTranslations } from './translations.js';
 import { loadAccounts } from './accounts.js';
 import { startBot } from './bot.js';
 import { startServer } from './server.js';
@@ -14,6 +15,8 @@ async function main() {
   const ruleCount = loadRules().length;
   console.log(`[rules] loaded ${ruleCount} rules.`);
   loadCredits();
+  const localeCount = Object.keys(loadTranslations().catalog).length;
+  console.log(`[i18n] loaded ${localeCount} translatable strings.`);
   const accountCount = Object.keys(loadAccounts()).length;
   console.log(`[accounts] loaded ${accountCount} account${accountCount === 1 ? '' : 's'}.`);
 

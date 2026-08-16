@@ -76,6 +76,18 @@ import {
   FREE_CUSTOM_RULE_LIMIT,
 } from './credits.js';
 import {
+  DISCORD_LOCALES,
+  TRANSLATION_REWARD,
+  getTranslation,
+  getCatalogKeys,
+  registerCatalog,
+  t,
+  getUserLocale,
+  setUserLocale,
+  listLocales,
+  submitTranslation,
+} from './translations.js';
+import {
   getSticky,
   setSticky,
   removeSticky,
@@ -130,7 +142,7 @@ async function syncDiscordBotListCommands(client) {
           Authorization: `Bot ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(commands.map((c) => c.toJSON())),
+        body: JSON.stringify(commands.map((c) => localizeCommandData(c.toJSON()))),
       }
     );
     if (!res.ok) throw new Error(`discordbotlist.com returned ${res.status}`);
@@ -207,6 +219,64 @@ function buildRulesEmbed(title, footer) {
   );
   embed.addFields({ name: '\u200b', value: lines.join('\n\n') });
   return embed;
+}
+
+// ---- i18n: command name/description localizations -------------------------
+// Derives translation keys from command JSON and injects Discord's
+// `name_localizations` / `description_localizations` fields. Keys use:
+//   cmd.<name>.name / .desc
+//   cmd.<name>.opt.<opt>.name / .desc
+//   cmd.<name>.sub.<sub>.name / .desc   (+ nested .opt.*)
+//   cmd.<name>.group.<grp>.name / .desc (+ nested .sub.* and .opt.*)
+function localizeNode(node, keyPrefix) {
+  const nameKey = `${keyPrefix}.name`;
+  const descKey = `${keyPrefix}.desc`;
+  const nameLoc = {};
+  const descLoc = {};
+  for (const locale of DISCORD_LOCALES) {
+    const name = getTranslation(locale, nameKey);
+    if (name) nameLoc[locale] = name;
+    const desc = getTranslation(locale, descKey);
+    if (desc) descLoc[locale] = desc;
+  }
+  if (Object.keys(nameLoc).length) node.name_localizations = nameLoc;
+  if (Object.keys(descLoc).length) node.description_localizations = descLoc;
+  for (const option of node.options || []) {
+    const kind =
+      option.type === 1 ? 'sub' : option.type === 2 ? 'group' : 'opt';
+    localizeNode(option, `${keyPrefix}.${kind}.${option.name}`);
+  }
+}
+
+function localizeCommandData(json) {
+  const node = {
+    ...json,
+    options: (json.options || []).map((option) => ({ ...option })),
+  };
+  localizeNode(node, `cmd.${node.name}`);
+  return node;
+}
+
+function collectCatalog(node, keyPrefix, out) {
+  out[`${keyPrefix}.name`] = node.name;
+  out[`${keyPrefix}.desc`] = node.description;
+  for (const option of node.options || []) {
+    const kind =
+      option.type === 1 ? 'sub' : option.type === 2 ? 'group' : 'opt';
+    collectCatalog(option, `${keyPrefix}.${kind}.${option.name}`, out);
+  }
+}
+
+function buildCommandCatalog(commandJson) {
+  const out = {};
+  for (const json of commandJson) {
+    collectCatalog(json, `cmd.${json.name}`, out);
+  }
+  return out;
+}
+
+function userLocale(interaction) {
+  return getUserLocale(interaction.user.id) || interaction.locale || 'en';
 }
 
 const commands = [
@@ -339,6 +409,39 @@ const commands = [
   new SlashCommandBuilder()
     .setName('vote')
     .setDescription('Vote for Squared One on bot lists'),
+  new SlashCommandBuilder()
+    .setName('language')
+    .setDescription('Choose the language for Squared One replies')
+    .addStringOption((o) =>
+      o
+        .setName('locale')
+        .setDescription('Language code (e.g. fr, de, pt-BR)')
+        .setRequired(true)
+        .setAutocomplete(true)
+    ),
+  new SlashCommandBuilder()
+    .setName('translate')
+    .setDescription('Submit a human translation and earn SQ when approved')
+    .addStringOption((o) =>
+      o
+        .setName('key')
+        .setDescription('String to translate')
+        .setRequired(true)
+        .setAutocomplete(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('locale')
+        .setDescription('Target language code (e.g. fr, de, pt-BR)')
+        .setRequired(true)
+        .setAutocomplete(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('text')
+        .setDescription('Your translation')
+        .setRequired(true)
+    ),
   new SlashCommandBuilder()
     .setName('help')
     .setDescription('Show all Squared One commands'),
@@ -967,6 +1070,30 @@ async function handleInteraction(interaction) {
 
   if (interaction.isAutocomplete()) {
     const focused = interaction.options.getFocused().toLowerCase();
+    const focusedOption = interaction.options.getFocused(true);
+    const { commandName } = interaction;
+
+    if (commandName === 'translate' || commandName === 'language') {
+      if (focusedOption.name === 'locale') {
+        const matches = listLocales()
+          .filter((locale) => locale.toLowerCase().includes(focused))
+          .slice(0, 25)
+          .map((locale) => ({ name: locale, value: locale }));
+        await interaction.respond(matches);
+        return;
+      }
+      if (commandName === 'translate' && focusedOption.name === 'key') {
+        const matches = getCatalogKeys()
+          .filter((key) => key.toLowerCase().includes(focused))
+          .slice(0, 25)
+          .map((key) => ({ name: key, value: key }));
+        await interaction.respond(matches);
+        return;
+      }
+      await interaction.respond([]);
+      return;
+    }
+
     const matches = getCustomRules()
       .filter((r) => r.title.toLowerCase().includes(focused))
       .slice(0, 25)
@@ -1558,7 +1685,10 @@ async function handleInteraction(interaction) {
       });
       const roundtrip = sent.createdTimestamp - interaction.createdTimestamp;
       await interaction.editReply({
-        content: `🏓 Pong! WebSocket: **${interaction.client.ws.ping}ms** · Round-trip: **${roundtrip}ms**`,
+        content: t(userLocale(interaction), 'reply.ping', {
+          ws: interaction.client.ws.ping,
+          rt: roundtrip,
+        }),
       });
     }
 
@@ -2080,6 +2210,52 @@ async function handleInteraction(interaction) {
       }
       return;
     }
+
+    if (commandName === 'language') {
+      const locale = interaction.options.getString('locale');
+      try {
+        const normalized = setUserLocale(interaction.user.id, locale);
+        await interaction.reply({
+          content: t(userLocale(interaction), 'reply.language.set', {
+            locale: normalized,
+          }),
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (error) {
+        await interaction.reply({
+          content: `❌ ${error.message}`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      return;
+    }
+
+    if (commandName === 'translate') {
+      const key = interaction.options.getString('key');
+      const locale = interaction.options.getString('locale');
+      const value = interaction.options.getString('text');
+      try {
+        submitTranslation({
+          locale,
+          key,
+          value,
+          contributorId: interaction.user.id,
+        });
+      } catch (error) {
+        await interaction.reply({
+          content: `❌ ${error.message}`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await interaction.reply({
+        content: t(userLocale(interaction), 'reply.translate.submitted', {
+          reward: TRANSLATION_REWARD,
+        }),
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
   } catch (err) {
     console.error('[bot] interaction error:', err);
     const payload = { content: '❌ Something went wrong.', flags: MessageFlags.Ephemeral };
@@ -2221,8 +2397,10 @@ export async function startBot(token) {
     console.log(`[bot] ${client.user.tag} is online.`);
 
     try {
+      const commandJson = commands.map((c) => c.toJSON());
+      registerCatalog(buildCommandCatalog(commandJson));
       await client.application.commands.set(
-        commands.map((c) => c.toJSON())
+        commandJson.map((json) => localizeCommandData(json))
       );
       console.log('[bot] slash commands registered globally.');
     } catch (err) {
