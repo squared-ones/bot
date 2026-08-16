@@ -14,7 +14,6 @@ const el = {
   title: $('#rule-title'),
   desc: $('#rule-desc'),
   submit: $('#add-rule-form .btn-primary'),
-  toast: $('#toast'),
   footerTime: $('#footer-time'),
   userChip: $('#user-chip'),
   userName: $('#user-name'),
@@ -201,13 +200,11 @@ function formatUptime(seconds) {
   return `${sec}s`;
 }
 
+// Thin wrapper over the shared notification system (public/notifications.js).
+// `kind` is 'ok' (success), 'err' (error), or any Notify variant.
 function showToast(message, kind = 'ok') {
-  el.toast.textContent = message;
-  el.toast.className = `toast show ${kind}`;
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    el.toast.className = 'toast';
-  }, 3200);
+  const variant = kind === 'err' ? 'error' : kind === 'ok' ? 'success' : kind;
+  window.Notify.show({ description: message, variant });
 }
 
 function setBotStatus(connected) {

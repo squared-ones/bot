@@ -1,8 +1,10 @@
 import {
   Client,
+  ApplicationCommandType,
   ChannelType,
   GatewayIntentBits,
   MessageFlags,
+  Routes,
   SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
@@ -277,6 +279,37 @@ function buildCommandCatalog(commandJson) {
 
 function userLocale(interaction) {
   return getUserLocale(interaction.user.id) || interaction.locale || 'en';
+}
+
+// Registers slash commands globally while preserving Discord's required
+// Entry Point command (PrimaryEntryPoint). A bulk `set()` drops any command
+// not included in the request, and Discord rejects requests that omit the
+// Entry Point command, so it is fetched and re-included.
+async function registerGlobalCommands(client) {
+  const applicationId = client.application?.id || process.env.CLIENT_ID;
+  const toSet = commands.map((c) => localizeCommandData(c.toJSON()));
+  registerCatalog(buildCommandCatalog(toSet));
+
+  if (applicationId) {
+    try {
+      const existing = await client.rest.get(
+        Routes.applicationCommands(applicationId)
+      );
+      for (const command of existing) {
+        if (command.type === ApplicationCommandType.PrimaryEntryPoint) {
+          toSet.push(command);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[bot] could not preserve entry point command:',
+        error.message
+      );
+    }
+  }
+
+  await client.application.commands.set(toSet);
+  console.log('[bot] slash commands registered globally.');
 }
 
 const commands = [
@@ -2397,12 +2430,7 @@ export async function startBot(token) {
     console.log(`[bot] ${client.user.tag} is online.`);
 
     try {
-      const commandJson = commands.map((c) => c.toJSON());
-      registerCatalog(buildCommandCatalog(commandJson));
-      await client.application.commands.set(
-        commandJson.map((json) => localizeCommandData(json))
-      );
-      console.log('[bot] slash commands registered globally.');
+      await registerGlobalCommands(client);
     } catch (err) {
       console.error('[bot] failed to register commands:', err.message);
     }

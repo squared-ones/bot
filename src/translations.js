@@ -34,6 +34,7 @@ const SEED_CATALOG = {
   'web.nav.pricing': 'Pricing',
   'web.nav.support': 'Support',
   'web.nav.dashboard': 'Open dashboard',
+  'web.nav.translate': 'Translate',
   'web.nav.invite': 'Add to Discord',
   'web.hero.sub':
     'Squared One is the multitool Discord bot — moderation, rules, verification, tickets, leveling, and more, all managed from one red-hot dashboard.',
