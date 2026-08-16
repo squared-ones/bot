@@ -7,6 +7,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPOSITORY = 'squared-ones/data';
 const API_VERSION = '2022-11-28';
 
+function isValidRepoPart(value) {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 100 &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/.test(value)
+  );
+}
+
 export function resolveDataDir() {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
   if (fs.existsSync(path.join(HERE, 'data'))) return path.join(HERE, 'data');
@@ -18,10 +27,12 @@ const DATA_DIR = resolveDataDir();
 function githubSettings() {
   const repository = process.env.GITHUB_DATA_REPO || DEFAULT_REPOSITORY;
   const match = repository.match(/^([^/]+)\/([^/]+)$/);
+  const owner = match?.[1] || null;
+  const repo = match?.[2] || null;
   return {
     token: process.env.GITHUB_TOKEN || '',
-    owner: match?.[1] || null,
-    repo: match?.[2] || null,
+    owner: isValidRepoPart(owner) ? owner : null,
+    repo: isValidRepoPart(repo) ? repo : null,
     branch: process.env.GITHUB_DATA_BRANCH || 'main',
   };
 }
