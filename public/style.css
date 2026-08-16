@@ -218,6 +218,7 @@ body::before {
   align-items: center;
   gap: 10px;
   width: auto;
+  flex: none;
   padding: 8px 14px;
 }
 
@@ -236,6 +237,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: none;
 }
 
 .icon-sprite {
@@ -243,35 +245,6 @@ body::before {
   width: 0;
   height: 0;
   overflow: hidden;
-}
-
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  width: 240px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  padding: 24px 16px;
-  background: rgba(10, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-right: 1px solid var(--red-dim);
-}
-
-.sidebar-logo {
-  padding: 0 8px;
-}
-
-.sidebar-logo .logo-img {
-  width: 26px;
-  height: 26px;
-}
-
-.sidebar-logo .logo-text {
-  font-size: 0.85rem;
 }
 
 .server-switcher {
@@ -328,6 +301,8 @@ body::before {
   background: rgba(10, 0, 0, 0.72);
   overflow-x: auto;
   scrollbar-width: none;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .menu-bar::-webkit-scrollbar {
@@ -410,18 +385,6 @@ body::before {
   max-width: 200px;
   opacity: 1;
   padding-right: 16px;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 0 8px;
-}
-
-.sidebar-footer .status-pill {
-  justify-content: center;
 }
 
 .app-main {
