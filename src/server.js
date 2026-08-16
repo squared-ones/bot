@@ -16,6 +16,8 @@ import {
   assignRole,
   isMemberVerified,
   isApplicationOwner,
+  grantTranslationRole,
+  grantVoteRole,
 } from './bot.js';
 import {
   SESSION_TTL,
@@ -551,8 +553,13 @@ export function startServer(port = 3000) {
     try {
       const result = recordVote(vote);
       let balance = null;
-      if (!result.duplicate && VOTE_CREDIT_REWARD > 0) {
-        balance = grantCredits(vote.userId, VOTE_CREDIT_REWARD);
+      if (!result.duplicate) {
+        if (VOTE_CREDIT_REWARD > 0) {
+          balance = grantCredits(vote.userId, VOTE_CREDIT_REWARD);
+        }
+        grantVoteRole(vote.userId).catch((err) => {
+          console.error('[vote] failed to grant vote role:', err.message);
+        });
       }
       await flushDataSync();
       console.log(
@@ -583,8 +590,13 @@ export function startServer(port = 3000) {
         weight: 1,
       });
       let balance = null;
-      if (!result.duplicate && VOTE_CREDIT_REWARD > 0) {
-        balance = grantCredits(body.id, VOTE_CREDIT_REWARD);
+      if (!result.duplicate) {
+        if (VOTE_CREDIT_REWARD > 0) {
+          balance = grantCredits(body.id, VOTE_CREDIT_REWARD);
+        }
+        grantVoteRole(body.id).catch((err) => {
+          console.error('[vote] failed to grant vote role:', err.message);
+        });
       }
       await flushDataSync();
       console.log(
@@ -676,7 +688,13 @@ export function startServer(port = 3000) {
         .json({ error: 'only the application owner can approve translations' });
     }
     try {
-      res.json(approveTranslation(req.body?.id));
+      const result = approveTranslation(req.body?.id);
+      if (result.entry?.contributorId) {
+        grantTranslationRole(result.entry.contributorId).catch((err) => {
+          console.error('[i18n] failed to grant translation role:', err.message);
+        });
+      }
+      res.json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

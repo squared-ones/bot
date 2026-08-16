@@ -12,22 +12,25 @@ const DEFAULT_RULES = [
     id: 'default-1',
     title: '📜 Community Rules & Guidelines',
     description:
-    'Welcome to our Discord community. By joining this server, you agree to follow all rules outlined below. These rules are in place to ensure that everyone can enjoy a safe, welcoming, respectful, and enjoyable environment. Failure to comply with these rules may result in moderation actions, including warnings, mutes, kicks, temporary bans, permanent bans, or any other action deemed appropriate by the moderation team.' +
-    'The moderation team reserves the right to interpret these rules and make decisions in situations not explicitly covered below. Attempting to exploit loopholes or technicalities within these rules will not exempt members from moderation.',
+      'Welcome to our Discord community. By joining this server, you agree to follow all rules outlined below. ' +
+      'These rules are in place to ensure that everyone can enjoy a safe, welcoming, respectful, and enjoyable environment. ' +
+      'Failure to comply with these rules may result in moderation actions, including warnings, mutes, kicks, temporary bans, ' +
+      'permanent bans, or any other action deemed appropriate by the moderation team.\n\n' +
+      'The moderation team reserves the right to interpret these rules and make decisions in situations not explicitly covered below. ' +
+      'Attempting to exploit loopholes or technicalities within these rules will not exempt members from moderation.',
   },
   {
     id: 'default-2',
     title: '1. Respect All Members',
     description:
-      'Every member deserves to be treated with respect regardless of their age, nationality, race, ethnicity, religion, gender, sexual orientation, identity, opinions, or experience.' +
-      'Members must:' +
-      'Remain polite and respectful.' +
-    '- Accept differing opinions.' +
-    '- Engage in civil discussions.' + 
-    '- Avoid unnecessary arguments.' +
-    '- Treat newcomers with kindness.' +
-    '- Respect moderators and staff members.',
-
+      'Every member deserves to be treated with respect regardless of their age, nationality, race, ethnicity, religion, gender, sexual orientation, identity, opinions, or experience.\n\n' +
+      'Members must:\n' +
+      '- Remain polite and respectful.\n' +
+      '- Accept differing opinions.\n' +
+      '- Engage in civil discussions.\n' +
+      '- Avoid unnecessary arguments.\n' +
+      '- Treat newcomers with kindness.\n' +
+      '- Respect moderators and staff members.',
   },
   {
     id: 'default-3',

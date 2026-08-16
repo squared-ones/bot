@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   Client,
   ApplicationCommandType,
@@ -219,9 +220,159 @@ function buildRulesEmbed(title, footer) {
     (r, i) =>
       `**${i + 1}. ${r.title}**${r.custom ? '  `custom`' : ''}\n${r.description}`
   );
-  embed.addFields({ name: '\u200b', value: lines.join('\n\n') });
+
+  // Discord caps each embed field value at 1024 characters, so pack rules into
+  // as many fields as needed (each field still respects the limit).
+  const MAX_VALUE = 1024;
+  const fields = [];
+  let current = '';
+  const push = (value) => {
+    if (value) fields.push({ name: '\u200b', value });
+  };
+  for (const line of lines) {
+    const candidate = current ? `${current}\n\n${line}` : line;
+    if (candidate.length <= MAX_VALUE) {
+      current = candidate;
+      continue;
+    }
+    push(current);
+    if (line.length > MAX_VALUE) {
+      // A single rule longer than the limit — split its text hard.
+      let rest = line;
+      while (rest.length > MAX_VALUE) {
+        push(rest.slice(0, MAX_VALUE));
+        rest = rest.slice(MAX_VALUE);
+      }
+      current = rest;
+    } else {
+      current = line;
+    }
+  }
+  push(current);
+  embed.addFields(...fields);
   return embed;
 }
+
+// ---- Error reporting + community rewards ----------------------------------
+// Discord channel that receives an embed whenever the bot hits an error.
+const ERROR_LOG_CHANNEL_ID =
+  process.env.ERROR_LOG_CHANNEL_ID || '1538424909682835569';
+// Role granted when a contributor's translation is approved.
+const TRANSLATION_ROLE_ID =
+  process.env.TRANSLATION_ROLE_ID || '1538425335383859290';
+// Role granted (temporarily) when a user votes on a bot list.
+const VOTE_ROLE_ID = process.env.VOTE_ROLE_ID || '1538425940311277619';
+// How long the voter role lasts. Defaults to 12 hours (the vote cooldown).
+const parsedVoteRoleDuration = Number(process.env.VOTE_ROLE_DURATION_MS);
+const VOTE_ROLE_DURATION_MS = Number.isFinite(parsedVoteRoleDuration)
+  ? Math.max(0, parsedVoteRoleDuration)
+  : 12 * 60 * 60 * 1000;
+
+function clipErrorText(err) {
+  const text = String(err?.stack || err?.message || err || 'unknown error');
+  return text.length > 3800 ? `${text.slice(0, 3800)}…` : text;
+}
+
+// Generates a short, human-readable error ID (e.g. ERR-1A2B3C4D) so staff can
+// cross-reference what a user reports with the log channel entry.
+function newErrorId() {
+  return `ERR-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+}
+
+// Sends an error report to the configured logging channel. Returns the error
+// ID (passed in or freshly generated) so callers can show it to the user.
+// Never throws.
+async function reportError(err, context = 'bot error', errorId = newErrorId()) {
+  const client = botState.client;
+  if (!client || !client.isReady()) return errorId;
+  try {
+    const channel = await client.channels
+      .fetch(ERROR_LOG_CHANNEL_ID)
+      .catch(() => null);
+    if (!channel || !channel.isTextBased()) return errorId;
+    await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(COLOR)
+          .setTitle(`⚠️ Bot error \`${errorId}\``)
+          .setDescription(
+            `**Context:** ${String(context || 'unknown').slice(0, 200)}\n` +
+              `\`\`\`\n${clipErrorText(err)}\n\`\`\``
+          )
+          .setTimestamp(),
+      ],
+    });
+  } catch {
+    // Ignore reporting failures so the reporter never throws.
+  }
+  return errorId;
+}
+
+// Finds the guild containing `roleId` (role IDs are globally unique), or null.
+async function findGuildWithRole(roleId) {
+  const client = botState.client;
+  if (!client || !client.isReady()) return null;
+  for (const guild of client.guilds.cache.values()) {
+    if (guild.roles.cache.has(roleId)) return guild;
+  }
+  return null;
+}
+
+async function grantRoleByRoleId(userId, roleId, reason) {
+  const guild = await findGuildWithRole(roleId);
+  if (!guild) return false;
+  try {
+    const member = await guild.members.fetch(String(userId));
+    if (!member.roles.cache.has(roleId)) {
+      await member.roles.add(roleId, reason);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function removeRoleByRoleId(userId, roleId, reason) {
+  const guild = await findGuildWithRole(roleId);
+  if (!guild) return;
+  try {
+    const member = await guild.members.fetch(String(userId)).catch(() => null);
+    if (member?.roles.cache.has(roleId)) {
+      await member.roles.remove(roleId, reason);
+    }
+  } catch {
+    // Ignore — the member may have left or the role may be unmanaged.
+  }
+}
+
+// Grants a role and schedules its removal after `durationMs` (0 = permanent).
+export async function grantTemporaryRole(userId, roleId, durationMs, reason) {
+  const granted = await grantRoleByRoleId(userId, roleId, reason);
+  if (!granted || !durationMs) return granted;
+  const timer = setTimeout(() => {
+    removeRoleByRoleId(userId, roleId, 'Temporary reward expired').catch(
+      () => {}
+    );
+  }, durationMs);
+  timer.unref?.();
+  return true;
+}
+
+// Community rewards: translation approval + voting.
+export async function grantTranslationRole(userId) {
+  return grantRoleByRoleId(userId, TRANSLATION_ROLE_ID, 'Translation approved');
+}
+
+export async function grantVoteRole(userId) {
+  return grantTemporaryRole(
+    userId,
+    VOTE_ROLE_ID,
+    VOTE_ROLE_DURATION_MS,
+    'Voted for Squared One'
+  );
+}
+
+export { reportError };
 
 // ---- i18n: command name/description localizations -------------------------
 // Derives translation keys from command JSON and injects Discord's
@@ -2290,8 +2441,13 @@ async function handleInteraction(interaction) {
       return;
     }
   } catch (err) {
-    console.error('[bot] interaction error:', err);
-    const payload = { content: '❌ Something went wrong.', flags: MessageFlags.Ephemeral };
+    const errorId = newErrorId();
+    console.error(`[bot] interaction error (${errorId}):`, err);
+    reportError(err, 'interaction', errorId).catch(() => {});
+    const payload = {
+      content: `❌ Something went wrong. Reference: \`${errorId}\``,
+      flags: MessageFlags.Ephemeral,
+    };
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(payload);
     } else {
@@ -2422,6 +2578,20 @@ export async function startBot(token) {
     ],
   });
   botState.client = client;
+
+  client.on('error', (err) => {
+    console.error('[bot] client error:', err);
+    reportError(err, 'discord client').catch(() => {});
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('[bot] uncaught exception:', err);
+    reportError(err, 'uncaught exception').catch(() => {});
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('[bot] unhandled rejection:', reason);
+    reportError(reason, 'unhandled rejection').catch(() => {});
+  });
 
   client.once('clientReady', async () => {
     botState.username = client.user.tag;
