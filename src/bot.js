@@ -200,20 +200,35 @@ async function syncDiscordBotListStats(client) {
 const APP_URL = 'https://squared-one.onrender.com';
 const COLOR = 0xff0000;
 
-function buildRulesEmbed(title, footer) {
+// Discord limits: each embed ≤ 6000 total chars (title + description + fields
+// + footer), ≤ 25 fields, and each field value ≤ 1024 chars. With many/long
+// rules a single embed overflows, so this returns one or more embeds.
+const EMBED_FIELD_VALUE_MAX = 1024;
+const EMBED_FIELDS_MAX = 25;
+const EMBED_TOTAL_MAX = 6000;
+const EMBED_SAFETY_MARGIN = 64;
+
+function buildRulesEmbeds(title, footer) {
   const all = getAllRules();
-  const embed = new EmbedBuilder()
-    .setColor(COLOR)
-    .setTitle(title)
-    .setDescription(
-      'Please read and follow these rules to keep the community safe and fun.'
-    )
-    .setFooter({ text: footer })
-    .setTimestamp();
+  const footerText = String(footer || '');
+  const intro =
+    'Please read and follow these rules to keep the community safe and fun.';
+
+  const baseEmbed = (fields) => {
+    const embed = new EmbedBuilder()
+      .setColor(COLOR)
+      .setFooter({ text: footerText })
+      .setTimestamp();
+    if (fields.length) embed.addFields(...fields);
+    return embed;
+  };
 
   if (all.length === 0) {
-    embed.addFields({ name: 'No rules yet', value: 'No rules configured.' });
-    return embed;
+    return [
+      baseEmbed([{ name: 'No rules yet', value: 'No rules configured.' }])
+        .setTitle(title)
+        .setDescription(intro),
+    ];
   }
 
   const lines = all.map(
@@ -221,9 +236,7 @@ function buildRulesEmbed(title, footer) {
       `**${i + 1}. ${r.title}**${r.custom ? '  `custom`' : ''}\n${r.description}`
   );
 
-  // Discord caps each embed field value at 1024 characters, so pack rules into
-  // as many fields as needed (each field still respects the limit).
-  const MAX_VALUE = 1024;
+  // Pack rules into field values that each respect the 1024-char cap.
   const fields = [];
   let current = '';
   const push = (value) => {
@@ -231,17 +244,17 @@ function buildRulesEmbed(title, footer) {
   };
   for (const line of lines) {
     const candidate = current ? `${current}\n\n${line}` : line;
-    if (candidate.length <= MAX_VALUE) {
+    if (candidate.length <= EMBED_FIELD_VALUE_MAX) {
       current = candidate;
       continue;
     }
     push(current);
-    if (line.length > MAX_VALUE) {
+    if (line.length > EMBED_FIELD_VALUE_MAX) {
       // A single rule longer than the limit — split its text hard.
       let rest = line;
-      while (rest.length > MAX_VALUE) {
-        push(rest.slice(0, MAX_VALUE));
-        rest = rest.slice(MAX_VALUE);
+      while (rest.length > EMBED_FIELD_VALUE_MAX) {
+        push(rest.slice(0, EMBED_FIELD_VALUE_MAX));
+        rest = rest.slice(EMBED_FIELD_VALUE_MAX);
       }
       current = rest;
     } else {
@@ -249,8 +262,39 @@ function buildRulesEmbed(title, footer) {
     }
   }
   push(current);
-  embed.addFields(...fields);
-  return embed;
+
+  // Distribute fields across embeds, staying within Discord's per-embed limits.
+  const overhead = (withIntro) =>
+    title.length +
+    (withIntro ? intro.length : 0) +
+    footerText.length +
+    EMBED_SAFETY_MARGIN;
+
+  const embeds = [];
+  let batch = [];
+  let used = overhead(true);
+  const flush = () => {
+    if (!batch.length) return;
+    const isFirst = embeds.length === 0;
+    const embed = baseEmbed(batch);
+    embed.setTitle(isFirst ? title : `${title} (continued)`);
+    if (isFirst) embed.setDescription(intro);
+    embeds.push(embed);
+    batch = [];
+    used = overhead(false);
+  };
+
+  for (const field of fields) {
+    const size = field.name.length + field.value.length;
+    if (batch.length >= EMBED_FIELDS_MAX || used + size > EMBED_TOTAL_MAX) {
+      flush();
+    }
+    batch.push(field);
+    used += size;
+  }
+  flush();
+
+  return embeds;
 }
 
 // ---- Error reporting + community rewards ----------------------------------
@@ -1240,6 +1284,32 @@ async function awardVoiceXp(client) {
   }
 }
 
+// Reports an interaction error to the log channel and, when possible, tells
+// the user what happened along with a reference code. Never throws, so a
+// failed reply can't cascade into an unhandled rejection.
+async function replyInteractionError(interaction, err) {
+  const errorId = newErrorId();
+  console.error(`[bot] interaction error (${errorId}):`, err);
+  reportError(err, 'interaction', errorId).catch(() => {});
+  try {
+    if (interaction.isAutocomplete()) {
+      if (!interaction.responded) await interaction.respond([]);
+      return;
+    }
+    const payload = {
+      content: `❌ Something went wrong. Reference: \`${errorId}\``,
+      flags: MessageFlags.Ephemeral,
+    };
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp(payload);
+    } else {
+      await interaction.reply(payload);
+    }
+  } catch {
+    // The interaction may have already timed out — nothing more we can do.
+  }
+}
+
 async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     if (interaction.customId === 'verification:open') {
@@ -1544,7 +1614,7 @@ async function handleInteraction(interaction) {
 
     if (commandName === 'rules') {
       await interaction.reply({
-        embeds: [buildRulesEmbed('📜 Server Rules', guildName)],
+        embeds: buildRulesEmbeds('📜 Server Rules', guildName),
       });
       return;
     }
@@ -1616,7 +1686,7 @@ async function handleInteraction(interaction) {
         return;
       }
       await channel.send({
-        embeds: [buildRulesEmbed('📜 Server Rules', guildName)],
+        embeds: buildRulesEmbeds('📜 Server Rules', guildName),
       });
       await interaction.reply({
         content: `📢 Rules posted in ${channel}.`,
@@ -2441,18 +2511,7 @@ async function handleInteraction(interaction) {
       return;
     }
   } catch (err) {
-    const errorId = newErrorId();
-    console.error(`[bot] interaction error (${errorId}):`, err);
-    reportError(err, 'interaction', errorId).catch(() => {});
-    const payload = {
-      content: `❌ Something went wrong. Reference: \`${errorId}\``,
-      flags: MessageFlags.Ephemeral,
-    };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(payload);
-    } else {
-      await interaction.reply(payload);
-    }
+    await replyInteractionError(interaction, err);
   }
 }
 
@@ -2628,12 +2687,10 @@ export async function startBot(token) {
 
     try {
       await member.send({
-        embeds: [
-          buildRulesEmbed(
-            `📜 Welcome to ${member.guild.name}!`,
-            'Please read our rules'
-          ),
-        ],
+        embeds: buildRulesEmbeds(
+          `📜 Welcome to ${member.guild.name}!`,
+          'Please read our rules'
+        ),
       });
     } catch {
       // Member has DMs disabled — ignore.
@@ -2662,7 +2719,11 @@ export async function startBot(token) {
 
   client.on('guildCreate', () => updateStats(client));
   client.on('guildDelete', () => updateStats(client));
-  client.on('interactionCreate', handleInteraction);
+  client.on('interactionCreate', (interaction) => {
+    handleInteraction(interaction).catch((err) =>
+      replyInteractionError(interaction, err)
+    );
+  });
 
   client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
