@@ -632,10 +632,10 @@
           <div class="plan-picker-result">
             <div class="plan-picker-result-copy">
               <span class="plan-picker-plan" id="pp-plan">Pro</span>
-              <span class="plan-picker-note" id="pp-note">Best value as you grow</span>
+              <span class="plan-picker-note" id="pp-note">12 SQ per server · Best value as you grow</span>
             </div>
             <div class="plan-picker-price">
-              <strong id="pp-price">500 SQ</strong>
+              <strong id="pp-price">96 SQ</strong>
               <span class="plan-picker-per" id="pp-per">/month</span>
             </div>
           </div>
@@ -702,15 +702,16 @@
     <script src="/particles.js"></script>
 
     <script>
-      // Server-based plan picker. Maps the slider to Squared One's existing
-      // Free / Pro / Enterprise plans and their SQ pricing.
+      // Server-based plan picker with per-server graduated pricing.
+      // Total = rate × servers; the slider picks the tier by server count.
       (function () {
         'use strict';
 
         const tiers = [
-          { name: 'Free', maxServers: 3, price: 0, note: 'Free for small communities' },
-          { name: 'Pro', maxServers: 20, price: 500, note: 'Best value as you grow' },
-          { name: 'Enterprise', maxServers: Infinity, price: null, note: 'Custom contract' },
+          { name: 'Free', maxServers: 3, rate: 0, note: 'Free for small communities' },
+          { name: 'Pro', maxServers: 20, rate: 12, note: 'Best value as you grow' },
+          { name: 'Business', maxServers: 50, rate: 10, note: 'Volume rate per server' },
+          { name: 'Enterprise', maxServers: 200, rate: null, note: 'Custom contract' },
         ];
 
         const slider = document.getElementById('pp-slider');
@@ -734,26 +735,28 @@
           countEl.textContent = servers;
           unitEl.textContent = servers === 1 ? 'server' : 'servers';
           planEl.textContent = tier.name;
-          noteEl.textContent = tier.note;
 
-          if (tier.price === null) {
+          if (tier.rate === null) {
+            noteEl.textContent = tier.note;
             priceEl.textContent = 'Contact us';
             perEl.textContent = '';
-          } else if (tier.price === 0) {
+          } else if (tier.rate === 0) {
+            noteEl.textContent = tier.note;
             priceEl.textContent = '0 SQ';
             perEl.textContent = 'forever';
           } else {
-            priceEl.textContent = tier.price + ' SQ';
+            noteEl.textContent = tier.rate + ' SQ per server · ' + tier.note;
+            priceEl.textContent = tier.rate * servers + ' SQ';
             perEl.textContent = '/month';
           }
 
           ctaEl.textContent =
             tier.name === 'Free'
               ? 'Get started free'
-              : tier.name === 'Pro'
-                ? 'Subscribe with credits'
-                : 'Contact sales';
-          ctaEl.href = tier.price === null ? '/support' : '/dashboard';
+              : tier.name === 'Enterprise'
+                ? 'Contact sales'
+                : 'Subscribe with credits';
+          ctaEl.href = tier.name === 'Enterprise' ? '/support' : '/dashboard';
 
           const min = Number(slider.min);
           const max = Number(slider.max);
