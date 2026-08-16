@@ -75,6 +75,13 @@ import {
   planRequiredError,
   FREE_CUSTOM_RULE_LIMIT,
 } from './credits.js';
+import {
+  getSticky,
+  setSticky,
+  removeSticky,
+  listStickies,
+  updateStickyMessageId,
+} from './stickies.js';
 
 export const botState = {
   client: null,
@@ -587,6 +594,48 @@ const commands = [
   new SlashCommandBuilder()
     .setName('plan')
     .setDescription("Show this server's current plan"),
+  new SlashCommandBuilder()
+    .setName('sticky')
+    .setDescription('Manage sticky messages in this server')
+    .addSubcommand((s) =>
+      s
+        .setName('set')
+        .setDescription('Set a sticky message for a channel')
+        .addChannelOption((o) =>
+          o
+            .setName('channel')
+            .setDescription('Channel for the sticky')
+            .setRequired(true)
+        )
+        .addStringOption((o) =>
+          o
+            .setName('message')
+            .setDescription('Sticky message text')
+            .setRequired(true)
+        )
+        .addIntegerOption((o) =>
+          o
+            .setName('interval')
+            .setDescription('Repost every N messages (default 1)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(50)
+        )
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('remove')
+        .setDescription('Remove a channel sticky message')
+        .addChannelOption((o) =>
+          o
+            .setName('channel')
+            .setDescription('Channel (defaults to this one)')
+            .setRequired(false)
+        )
+    )
+    .addSubcommand((s) =>
+      s.setName('list').setDescription('List sticky messages in this server')
+    ),
 ];
 
 function isModerator(interaction) {
@@ -601,6 +650,39 @@ function requirePaid(interaction, featureLabel) {
     return null;
   }
   return `💳 ${planRequiredError(featureLabel)}`;
+}
+
+const stickyState = new Map(); // `${guildId}:${channelId}` -> { count, reposting }
+
+async function handleStickyRepost(message) {
+  const sticky = getSticky(message.guild.id, message.channel.id);
+  if (!sticky?.content) return;
+  const key = `${message.guild.id}:${message.channel.id}`;
+  const state = stickyState.get(key) || { count: 0, reposting: false };
+  state.count += 1;
+  const interval = Math.max(1, sticky.interval || 1);
+  if (state.count < interval || state.reposting) {
+    stickyState.set(key, state);
+    return;
+  }
+  state.count = 0;
+  state.reposting = true;
+  stickyState.set(key, state);
+  try {
+    if (sticky.messageId) {
+      try {
+        const old = await message.channel.messages.fetch(sticky.messageId);
+        if (old) await old.delete();
+      } catch {
+        // The previous sticky was already deleted.
+      }
+    }
+    const posted = await message.channel.send(sticky.content);
+    updateStickyMessageId(message.guild.id, message.channel.id, posted.id);
+  } finally {
+    const current = stickyState.get(key);
+    if (current) current.reposting = false;
+  }
 }
 
 
@@ -913,7 +995,7 @@ async function handleInteraction(interaction) {
           {
             name: '📣 Messaging',
             value:
-              '`/announce` Post an announcement',
+              '`/announce` Post an announcement\n`/sticky` Manage sticky messages',
           },
           {
             name: '🛡️ Moderation',
@@ -1047,6 +1129,103 @@ async function handleInteraction(interaction) {
       }
       await interaction.reply({
         content: `✅ Subscribed **${interaction.guild.name}** to ${PLANS[result.plan].name} for ${months} month${months === 1 ? '' : 's'} (${formatCredits(result.cost)}). Expires <t:${Math.floor(result.expiresAt / 1000)}:R>. Remaining balance: ${formatCredits(result.balance)}.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (commandName === 'sticky') {
+      if (!interaction.guild) {
+        await interaction.reply({
+          content: '❌ Run this command in a server.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to manage sticky messages.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const sub = interaction.options.getSubcommand();
+      const guildId = interaction.guild.id;
+      if (sub === 'set') {
+        const channel = interaction.options.getChannel('channel');
+        if (!channel?.isTextBased()) {
+          await interaction.reply({
+            content: '❌ Please provide a text channel.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const content = interaction.options.getString('message').slice(0, 2000);
+        const interval = interaction.options.getInteger('interval') || 1;
+        const existing = getSticky(guildId, channel.id);
+        if (existing?.messageId) {
+          try {
+            const old = await channel.messages.fetch(existing.messageId);
+            await old.delete();
+          } catch {
+            // The previous sticky was already deleted.
+          }
+        }
+        const posted = await channel.send(content);
+        setSticky(guildId, channel.id, {
+          content,
+          messageId: posted.id,
+          interval,
+        });
+        stickyState.delete(`${guildId}:${channel.id}`);
+        await interaction.reply({
+          content: `✅ Sticky message set in ${channel} (reposts every ${interval} message${interval === 1 ? '' : 's'}).`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (sub === 'remove') {
+        const channel =
+          interaction.options.getChannel('channel') ?? interaction.channel;
+        const existing = getSticky(guildId, channel.id);
+        if (!existing) {
+          await interaction.reply({
+            content: '❌ There is no sticky message in that channel.',
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        if (existing.messageId) {
+          try {
+            const old = await channel.messages.fetch(existing.messageId);
+            await old.delete();
+          } catch {
+            // The sticky was already deleted.
+          }
+        }
+        removeSticky(guildId, channel.id);
+        stickyState.delete(`${guildId}:${channel.id}`);
+        await interaction.reply({
+          content: `✅ Sticky message removed from ${channel}.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const stickies = listStickies(guildId);
+      if (!stickies.length) {
+        await interaction.reply({
+          content: '📭 No sticky messages configured.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const lines = stickies.map((s) => {
+        const ch = interaction.guild.channels.cache.get(s.channelId);
+        return `• ${ch?.toString() || s.channelId} — every ${s.interval} message${s.interval === 1 ? '' : 's'}`;
+      });
+      await interaction.reply({
+        content: `📌 Sticky messages:\n${lines.join('\n')}`,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -2118,6 +2297,9 @@ export async function startBot(token) {
         .catch(() => null);
       if (member) await announceLevelUp(message.guild, member, result);
     }
+    handleStickyRepost(message).catch((err) => {
+      console.error('[sticky] repost failed:', err.message);
+    });
   });
 
   await client.login(token);

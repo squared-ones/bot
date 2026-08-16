@@ -13,6 +13,8 @@ dashboard to manage it all.
   `/postrules`, with Discord markdown formatting and consistent embeds.
 - **Announcements** — `/announce` posts markdown-formatted messages to any
   channel.
+- **Sticky messages** — `/sticky` keeps a message pinned to the bottom of any
+  channel, reposting it after a configurable number of messages.
 - **Verification** — a self-hosted CAPTCHA gate that grants a "Verified" role
   after passing, plus anti-alt/anti-raid detections (account age, default
   avatar, and join bursts).
@@ -35,6 +37,9 @@ dashboard to manage it all.
   configuration for every feature.
 - **Discord OAuth login** — sign in with Discord; access is scoped to servers
   you actually belong to.
+- **Accounts** — create a username/password account at `/signup`, sign in with
+  it, and link (or unlink) your Discord account from the dashboard's Account
+  page.
 - **Private GitHub data storage** — runtime files in `data/` are loaded from and
   committed to the private `squared-ones/data` repository.
 - **`/health` endpoint** — JSON health/status check.
@@ -89,20 +94,29 @@ On boot the console prints an invite link (if `CLIENT_ID` is set) — open it to
 add the bot to your server. The homepage is at <http://localhost:3000> and the
 dashboard at <http://localhost:3000/dashboard>.
 
-### Discord OAuth login
+### Accounts & login
 
-Setting `CLIENT_SECRET` enables login. Configure your Discord application:
+Squared One supports two ways to sign in:
+
+- **Username & password** — create an account at `/signup` (username + password,
+  stored as a salted scrypt hash in `data/users.json`) and sign in from
+  `/login`. Link your Discord account from the dashboard's **Account** page to
+  manage your servers, then unlink it any time.
+- **Discord OAuth** — sign in with Discord by setting `CLIENT_ID` and
+  `CLIENT_SECRET`, then configuring the Redirect URL below.
+
+To enable Discord OAuth:
 
 1. Go to **OAuth2** in the [developer portal](https://discord.com/developers/applications).
 2. Add this **Redirect** URL exactly:
    `https://squared-one.onrender.com/auth/discord/callback`.
 3. Copy the **Client Secret** into `CLIENT_SECRET`.
 
-With OAuth enabled the dashboard redirects unauthenticated visitors to
-`/login`, and `/api/channels` are restricted to servers the
-logged-in user is a member of — so nobody can post to channels in servers they
-don't belong to. If `CLIENT_SECRET` is not set, the dashboard runs unprotected
-(handy for local dev).
+When any auth method is enabled the dashboard redirects unauthenticated
+visitors to `/login`, and server-scoped APIs are restricted to servers the
+logged-in user is a member of. Local accounts are enabled by default; set
+`DISABLE_LOCAL_AUTH=true` to turn them off. If both Discord OAuth and local
+accounts are disabled, the dashboard runs unprotected (handy for local dev).
 
 ### Verification
 
@@ -214,6 +228,7 @@ failure and falls back to the local data directory.
 | `/credits`     | everyone    | Check a credit balance (owner can grant)     |
 | `/subscribe`   | moderators  | Subscribe the server to Pro using credits    |
 | `/plan`        | everyone    | Show the server's current plan               |
+| `/sticky`      | moderators  | Set/remove/list sticky messages              |
 
 > "Moderators" means anyone with the **Manage Server** permission.
 > Slash commands are registered globally on boot (may take up to an hour to
@@ -233,7 +248,17 @@ failure and falls back to the local data directory.
 | GET    | `/api/invite`           | Bot invite URL (public)                            |
 | GET    | `/api/meta`             | Invite + support/repo links for the support page   |
 | GET    | `/api/servers`          | Servers the bot is in — name + icon (public)       |
-| GET    | `/login`                | Discord OAuth login page                           |
+| GET    | `/login`                | Login page (Discord OAuth + username/password)     |
+| GET    | `/signup`               | Username/password signup page                      |
+| GET    | `/api/auth/methods`     | Which auth methods are enabled                     |
+| POST   | `/api/auth/signup`      | Create a local account `{ username, password }`    |
+| POST   | `/api/auth/login`       | Sign in with username/password                     |
+| GET    | `/auth/discord/link`    | Link Discord to the signed-in local account        |
+| GET    | `/api/account`          | Account profile for the signed-in user             |
+| POST   | `/api/account/username` | Change the local account username                  |
+| POST   | `/api/account/password` | Change the local account password                  |
+| POST   | `/api/account/setup`    | Add username/password to a Discord session         |
+| POST   | `/api/account/unlink`   | Unlink Discord from the local account              |
 | GET    | `/auth/discord/login`   | Redirects to Discord OAuth                         |
 | GET    | `/auth/discord/callback`| OAuth callback                                     |
 | GET    | `/logout`               | Clears the session                                 |
@@ -262,9 +287,10 @@ failure and falls back to the local data directory.
 | POST   | `/api/billing/cancel`   | Cancel a server's subscription                     |
 | POST   | `/api/billing/grant`    | Grant credits (application owner)                  |
 
-> All `/api/*` routes and `/dashboard` require a valid session when
-> `CLIENT_SECRET` is set. The homepage, `/privacy`, `/terms`, `/health`,
-> `/api/invite`, `/login`, and the OAuth routes are public.
+> All `/api/*` routes and `/dashboard` require a valid session when any auth
+> method (Discord OAuth or local accounts) is enabled. The homepage,
+> `/privacy`, `/terms`, `/health`, `/api/invite`, `/login`, `/signup`, and the
+> OAuth routes are public.
 
 ## Building
 
@@ -301,8 +327,10 @@ src/
   bot.js      # Discord client, slash commands, join DM
   rules.js    # rule store (defaults + JSON persistence)
   credits.js  # internal currency + per-server subscription store
+  stickies.js # per-channel sticky message store
   moderation.js # shared moderation helpers (permissions, ban/kick/timeout/purge)
   auth.js     # Discord OAuth + signed session cookie
+  accounts.js # local username/password accounts + Discord linking
   captcha.js  # self-hosted SVG captcha
   network-detection.js # self-hosted VPN/proxy/Tor CIDR detection
   verification.js # per-server config store + anti-alt / anti-raid detection
@@ -313,7 +341,8 @@ scripts/
 public/
   home.html      # public homepage
   dashboard.html # dashboard markup
-  login.html     # Discord OAuth login page
+  login.html     # login page (Discord OAuth + username/password)
+  signup.html    # username/password signup page
   privacy.html   # privacy policy
   terms.html     # terms of service
   support.html   # support / help-center page
@@ -327,8 +356,10 @@ dist/
   data/       # runtime rules store
   package.json
 data/
+  users.json        # local accounts (salted scrypt password hashes, synced)
   rules.json        # custom rules (created at runtime)
   credits.json      # user balances + per-server subscriptions (synced to GitHub)
+  stickies.json     # per-channel sticky messages (synced to GitHub)
   verification.json # per-server verification settings (synced to GitHub)
   vpn-blocklist.json # manually flagged exact IPs (synced to GitHub)
   votes.json        # vote events and reminder state (synced to GitHub)

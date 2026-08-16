@@ -83,6 +83,9 @@
           <button class="nav-item" data-view="billing" type="button">
             <span class="nav-glyph">💳</span> Billing
           </button>
+          <button class="nav-item" data-view="account" type="button">
+            <span class="nav-glyph">👤</span> Account
+          </button>
         </nav>
 
         <div class="sidebar-footer">
@@ -569,6 +572,79 @@
                 <h2><span class="prompt">$</span> billing <span class="accent">--servers</span></h2>
               </div>
               <div id="billing-guilds" class="billing-guilds"></div>
+            </section>
+          </section>
+
+          <!-- Account -->
+          <section class="view" id="view-account">
+            <h2 class="view-title">Account</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> account <span class="accent">--profile</span></h2>
+                <span id="account-status" class="count-chip">…</span>
+              </div>
+              <div class="account-summary">
+                <span class="stat-label">Signed in as</span>
+                <div class="account-identity-row">
+                  <span id="account-identity" class="stat-value">--</span>
+                  <span id="account-auth-tag" class="tag"></span>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel" id="account-local-panel" hidden>
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> account <span class="accent">--credentials</span></h2>
+              </div>
+
+              <form id="account-username-form" class="rule-form" autocomplete="off">
+                <label class="field">
+                  <span class="field-label">Username</span>
+                  <input id="account-username" type="text" maxlength="32" required />
+                </label>
+                <button type="submit" class="btn btn-secondary" id="account-username-save">Update username</button>
+              </form>
+
+              <form id="account-password-form" class="rule-form" autocomplete="off">
+                <label class="field">
+                  <span class="field-label">Current password</span>
+                  <input id="account-current-password" type="password" autocomplete="current-password" required />
+                </label>
+                <label class="field">
+                  <span class="field-label">New password</span>
+                  <input id="account-new-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required />
+                </label>
+                <button type="submit" class="btn btn-secondary" id="account-password-save">Change password</button>
+              </form>
+            </section>
+
+            <section class="panel" id="account-discord-panel" hidden>
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> account <span class="accent">--discord</span></h2>
+                <span id="account-discord-status" class="count-chip">…</span>
+              </div>
+              <p id="account-discord-copy" class="verification-help"></p>
+              <div id="account-discord-actions" class="account-actions"></div>
+
+              <form id="account-setup-form" class="rule-form" autocomplete="off" hidden>
+                <p class="verification-help">Add a username and password so you can sign in even without Discord.</p>
+                <label class="field">
+                  <span class="field-label">Username</span>
+                  <input id="account-setup-username" type="text" maxlength="32" required />
+                </label>
+                <label class="field">
+                  <span class="field-label">Password</span>
+                  <input id="account-setup-password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required />
+                </label>
+                <button type="submit" class="btn btn-primary" id="account-setup-save">Create credentials</button>
+              </form>
             </section>
           </section>
         </main>

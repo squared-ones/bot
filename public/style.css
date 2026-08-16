@@ -1791,3 +1791,27 @@ main {
   display: flex;
   gap: 8px;
 }
+
+/* ---------- Account ---------- */
+.account-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-identity-row .stat-value {
+  font-size: 1.6rem;
+}
+
+.account-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

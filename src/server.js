@@ -85,6 +85,18 @@ import {
   planRequiredError,
   FREE_CUSTOM_RULE_LIMIT,
 } from './credits.js';
+import {
+  getAccount,
+  getAccountByDiscordId,
+  createAccount,
+  verifyLogin,
+  changeUsername,
+  changePassword,
+  linkDiscord,
+  unlinkDiscord,
+  isValidUsername,
+  isValidPassword,
+} from './accounts.js';
 
 const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -117,10 +129,30 @@ const DASHBOARD_FILE = path.join(PUBLIC_DIR, 'dashboard.html');
 export function startServer(port = 3000) {
   const clientId = process.env.CLIENT_ID;
   const clientSecret = process.env.CLIENT_SECRET;
-  const sessionSecret = process.env.SESSION_SECRET || clientSecret;
-  const authEnabled = Boolean(clientId && clientSecret);
+  const discordAuthEnabled = Boolean(clientId && clientSecret);
+  const localAuthEnabled = process.env.DISABLE_LOCAL_AUTH !== 'true';
+  const authEnabled = discordAuthEnabled || localAuthEnabled;
+  let sessionSecret = process.env.SESSION_SECRET || clientSecret;
+  if (!sessionSecret) {
+    // Local-only auth without a configured secret: use an ephemeral one so
+    // sessions work for this process lifetime (cookies reset on restart).
+    sessionSecret = crypto.randomBytes(32).toString('hex');
+    console.warn(
+      '[web] SESSION_SECRET not set — using an ephemeral secret; sessions reset on restart.'
+    );
+  }
 
   const redirectUri = `${APP_URL}/auth/discord/callback`;
+
+  // The id used for credits/plan/owner checks: the linked Discord id when one
+  // exists, otherwise a local account's own id.
+  function billingIdOf(req) {
+    if (!req.user) return null;
+    if (req.user.authType === 'local') {
+      return req.user.id || req.user.accountId || null;
+    }
+    return req.user.id;
+  }
 
   const app = express();
   app.set('trust proxy', process.env.TRUST_PROXY === 'true');
@@ -198,21 +230,101 @@ export function startServer(port = 3000) {
     return result;
   }
 
-  // ---------- OAuth ----------
+  // ---------- Authentication ----------
+  app.get('/api/auth/methods', (req, res) => {
+    res.json({ discord: discordAuthEnabled, local: localAuthEnabled });
+  });
+
   app.get('/login', (req, res) => {
     if (req.user) return res.redirect('/dashboard');
     if (!authEnabled) {
       return res
         .status(503)
         .send(
-          'Discord OAuth is not configured. Set CLIENT_ID and CLIENT_SECRET (and optionally SESSION_SECRET) in .env, then restart.'
+          'Authentication is disabled. Set CLIENT_ID and CLIENT_SECRET for Discord OAuth, or leave local accounts enabled, then restart.'
         );
     }
     res.sendFile(path.join(PUBLIC_DIR, 'login.html'));
   });
 
+  app.get('/signup', (req, res) => {
+    if (req.user) return res.redirect('/dashboard');
+    if (!authEnabled || !localAuthEnabled) return res.redirect('/login');
+    res.sendFile(path.join(PUBLIC_DIR, 'signup.html'));
+  });
+
+  // Issues a session cookie for a local username/password account.
+  function setLocalSession(res, account) {
+    const now = Math.floor(Date.now() / 1000);
+    setSessionCookie(
+      res,
+      {
+        authType: 'local',
+        accountId: account.id,
+        id: account.discordId || null,
+        username: account.username,
+        avatar: account.avatar || null,
+        guildIds: account.guildIds || [],
+        exp: now + SESSION_TTL,
+      },
+      sessionSecret
+    );
+  }
+
+  app.post('/api/auth/signup', (req, res) => {
+    if (!localAuthEnabled) {
+      return res.status(403).json({ error: 'Local account signup is disabled.' });
+    }
+    const limit = checkRateLimit(`signup:ip:${getClientIp(req)}`, {
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limit.ok) {
+      res.set('Retry-After', String(limit.retryAfterSeconds));
+      return res.status(429).json({
+        error: `Too many signup attempts. Please wait ${limit.retryAfterSeconds} seconds.`,
+      });
+    }
+
+    const { username, password } = req.body ?? {};
+    const result = createAccount(username, password);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+
+    setLocalSession(res, result.account);
+    res.status(201).json({ ok: true, user: result.account });
+  });
+
+  app.post('/api/auth/login', (req, res) => {
+    if (!localAuthEnabled) {
+      return res.status(403).json({ error: 'Local account sign-in is disabled.' });
+    }
+    const limit = checkRateLimit(`login:ip:${getClientIp(req)}`, {
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limit.ok) {
+      res.set('Retry-After', String(limit.retryAfterSeconds));
+      return res.status(429).json({
+        error: `Too many sign-in attempts. Please wait ${limit.retryAfterSeconds} seconds.`,
+      });
+    }
+
+    const { username, password } = req.body ?? {};
+    const account = verifyLogin(username, password);
+    if (!account) {
+      return res.status(401).json({ error: 'Invalid username or password.' });
+    }
+
+    setLocalSession(res, account);
+    res.json({ ok: true, user: account });
+  });
+
   app.get('/auth/discord/login', (req, res) => {
-    if (!authEnabled) return res.redirect('/login');
+    if (!discordAuthEnabled) {
+      return res.redirect(
+        '/login?error=' + encodeURIComponent('Discord OAuth is not configured.')
+      );
+    }
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -224,8 +336,31 @@ export function startServer(port = 3000) {
     res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
   });
 
+  // Link Discord to the signed-in local account.
+  app.get('/auth/discord/link', (req, res) => {
+    if (!discordAuthEnabled) {
+      return res.redirect(
+        '/login?error=' + encodeURIComponent('Discord OAuth is not configured.')
+      );
+    }
+    if (!req.user || req.user.authType !== 'local' || !req.user.accountId) {
+      return res.redirect(
+        '/login?error=' +
+          encodeURIComponent('Sign in to your account before linking Discord.')
+      );
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'identify guilds',
+      state: 'link',
+    });
+    res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
+  });
+
   app.get('/auth/discord/callback', async (req, res) => {
-    if (!authEnabled) return res.redirect('/login');
+    if (!discordAuthEnabled) return res.redirect('/login');
     const { code, error } = req.query;
     if (error) return res.redirect('/login?error=' + encodeURIComponent(error));
     if (!code) return res.redirect('/login?error=missing_code');
@@ -240,15 +375,40 @@ export function startServer(port = 3000) {
         fetchDiscordUser(tokens.access_token),
         fetchDiscordGuilds(tokens.access_token),
       ]);
-
+      const guildIds = (guilds || []).map((g) => g.id).slice(0, 200);
       const now = Math.floor(Date.now() / 1000);
+
+      // Linking flow: attach this Discord identity to the signed-in local account.
+      if (String(req.query.state) === 'link') {
+        if (!req.user || req.user.authType !== 'local' || !req.user.accountId) {
+          return res.redirect(
+            '/login?error=' +
+              encodeURIComponent('Sign in to your account before linking Discord.')
+          );
+        }
+        const result = linkDiscord(req.user.accountId, {
+          discordId: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          guildIds,
+        });
+        if (!result.ok) {
+          return res.redirect(
+            '/dashboard?view=account&error=' + encodeURIComponent(result.error)
+          );
+        }
+        setLocalSession(res, result.account);
+        return res.redirect('/dashboard?view=account');
+      }
+
       setSessionCookie(
         res,
         {
+          authType: 'discord',
           id: user.id,
           username: user.username,
           avatar: user.avatar,
-          guildIds: (guilds || []).map((g) => g.id).slice(0, 200),
+          guildIds,
           exp: now + SESSION_TTL,
         },
         sessionSecret
@@ -510,17 +670,127 @@ export function startServer(port = 3000) {
 
   app.get('/api/session', guard, (req, res) => {
     if (!req.user) {
-      // OAuth not configured — the dashboard runs unprotected.
+      // Auth disabled — the dashboard runs unprotected.
       return res.json({ user: null });
     }
     res.json({
       user: {
+        authType: req.user.authType || 'discord',
         id: req.user.id,
+        accountId: req.user.accountId || null,
         username: req.user.username,
         avatar: req.user.avatar,
         guildCount: (req.user.guildIds || []).length,
       },
     });
+  });
+
+  // ---------- Account management ----------
+  app.get('/api/account', guard, (req, res) => {
+    if (!req.user) return res.json({ account: null });
+
+    if (req.user.authType === 'local' && req.user.accountId) {
+      const account = getAccount(req.user.accountId);
+      if (!account) return res.status(401).json({ error: 'account not found' });
+      return res.json({
+        account: {
+          authType: 'local',
+          id: account.discordId || null,
+          accountId: account.id,
+          username: account.username,
+          discordUsername: account.discordUsername || null,
+          avatar: account.avatar || null,
+          discordLinked: Boolean(account.discordId),
+          createdAt: account.createdAt || null,
+        },
+      });
+    }
+
+    const linked = getAccountByDiscordId(req.user.id);
+    res.json({
+      account: {
+        authType: 'discord',
+        id: req.user.id,
+        accountId: linked ? linked.id : null,
+        username: req.user.username,
+        discordUsername: req.user.username,
+        avatar: req.user.avatar || null,
+        discordLinked: true,
+        localLinked: Boolean(linked),
+        createdAt: linked ? linked.createdAt : null,
+      },
+    });
+  });
+
+  // Returns the signed-in local account, or responds with an error and null.
+  function requireLocalAccount(req, res) {
+    if (!req.user) {
+      res.status(401).json({ error: 'sign in first' });
+      return null;
+    }
+    if (req.user.authType !== 'local' || !req.user.accountId) {
+      res.status(403).json({ error: 'this requires a username/password account' });
+      return null;
+    }
+    const account = getAccount(req.user.accountId);
+    if (!account) {
+      res.status(401).json({ error: 'account not found' });
+      return null;
+    }
+    return account;
+  }
+
+  app.post('/api/account/username', guard, (req, res) => {
+    const account = requireLocalAccount(req, res);
+    if (!account) return;
+    const { username } = req.body ?? {};
+    const result = changeUsername(account.id, username);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    setLocalSession(res, result.account);
+    res.json({ ok: true, account: result.account });
+  });
+
+  app.post('/api/account/password', guard, (req, res) => {
+    const account = requireLocalAccount(req, res);
+    if (!account) return;
+    const { currentPassword, newPassword } = req.body ?? {};
+    const result = changePassword(account.id, currentPassword, newPassword);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json({ ok: true });
+  });
+
+  app.post('/api/account/unlink', guard, (req, res) => {
+    const account = requireLocalAccount(req, res);
+    if (!account) return;
+    const result = unlinkDiscord(account.id);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    setLocalSession(res, result.account);
+    res.json({ ok: true, account: result.account });
+  });
+
+  // Create a username/password for a Discord-signed-in session.
+  app.post('/api/account/setup', guard, async (req, res) => {
+    if (!req.user || req.user.authType !== 'discord' || !req.user.id) {
+      return res.status(403).json({ error: 'this requires a Discord session' });
+    }
+    const { username, password } = req.body ?? {};
+    if (getAccountByDiscordId(req.user.id)) {
+      return res
+        .status(409)
+        .json({ error: 'This Discord account already has a local account linked.' });
+    }
+    const result = createAccount(username, password);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    const linked = linkDiscord(result.account.id, {
+      discordId: req.user.id,
+      username: req.user.username,
+      avatar: req.user.avatar,
+      guildIds: req.user.guildIds || [],
+    });
+    if (!linked.ok) return res.status(400).json({ error: linked.error });
+    setLocalSession(res, linked.account);
+    await flushDataSync();
+    res.json({ ok: true, account: linked.account });
   });
 
   // ---------- Rules API (protected) ----------
@@ -542,7 +812,7 @@ export function startServer(port = 3000) {
     }
     if (
       req.user &&
-      getUserPlan(req.user.id) === 'free' &&
+      getUserPlan(billingIdOf(req)) === 'free' &&
       getCustomRules().length >= FREE_CUSTOM_RULE_LIMIT
     ) {
       return res.status(402).json({
@@ -818,7 +1088,7 @@ export function startServer(port = 3000) {
       res.status(503).json({ error: 'bot is not connected' });
       return false;
     }
-    if (!(await isApplicationOwner(req.user.id))) {
+    if (!(await isApplicationOwner(billingIdOf(req)))) {
       res.status(403).json({ error: 'only the Discord application owner can manage the VPN blocklist' });
       return false;
     }
@@ -1280,7 +1550,7 @@ export function startServer(port = 3000) {
 
   // ---------- Billing (internal credits + subscriptions) ----------
   app.get('/api/billing', guard, async (req, res) => {
-    const userId = req.user?.id || null;
+    const userId = billingIdOf(req);
     const guilds = req.user ? await listManageableGuilds(req) : [];
     let isOwner = false;
     if (userId) isOwner = await isApplicationOwner(userId);
@@ -1314,7 +1584,7 @@ export function startServer(port = 3000) {
     }
     try {
       const result = subscribeGuild({
-        userId: req.user.id,
+        userId: billingIdOf(req),
         guildId: String(guildId || ''),
         plan,
         months,
@@ -1342,7 +1612,7 @@ export function startServer(port = 3000) {
 
   app.post('/api/billing/grant', guard, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'sign in to grant' });
-    if (!(await isApplicationOwner(req.user.id))) {
+    if (!(await isApplicationOwner(billingIdOf(req)))) {
       return res
         .status(403)
         .json({ error: 'only the application owner can grant credits' });
@@ -1370,14 +1640,14 @@ export function startServer(port = 3000) {
 
   app.listen(port, () => {
     console.log(`[web] dashboard listening on http://localhost:${port}`);
-    if (authEnabled) {
-      console.log(
-        `[web] Discord OAuth enabled — redirect URI: ${redirectUri}`
-      );
-    } else {
-      console.warn(
-        '[web] Discord OAuth not configured (set CLIENT_SECRET) — dashboard is UNPROTECTED.'
-      );
+    if (discordAuthEnabled) {
+      console.log(`[web] Discord OAuth enabled — redirect URI: ${redirectUri}`);
+    }
+    if (localAuthEnabled) {
+      console.log('[web] Local accounts (username/password) enabled.');
+    }
+    if (!authEnabled) {
+      console.warn('[web] No auth methods configured — dashboard is UNPROTECTED.');
     }
   });
 

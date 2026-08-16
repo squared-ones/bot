@@ -93,6 +93,22 @@ const el = {
   billingGrantUser: $('#billing-grant-user'),
   billingGrantAmount: $('#billing-grant-amount'),
   billingGuilds: $('#billing-guilds'),
+  accountStatus: $('#account-status'),
+  accountIdentity: $('#account-identity'),
+  accountAuthTag: $('#account-auth-tag'),
+  accountLocalPanel: $('#account-local-panel'),
+  accountDiscordPanel: $('#account-discord-panel'),
+  accountDiscordStatus: $('#account-discord-status'),
+  accountDiscordCopy: $('#account-discord-copy'),
+  accountDiscordActions: $('#account-discord-actions'),
+  accountUsername: $('#account-username'),
+  accountUsernameForm: $('#account-username-form'),
+  accountPasswordForm: $('#account-password-form'),
+  accountCurrentPassword: $('#account-current-password'),
+  accountNewPassword: $('#account-new-password'),
+  accountSetupForm: $('#account-setup-form'),
+  accountSetupUsername: $('#account-setup-username'),
+  accountSetupPassword: $('#account-setup-password'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -381,6 +397,20 @@ navItems.forEach((btn) => {
     views.forEach((v) => v.classList.toggle('active', v.id === `view-${view}`));
   });
 });
+
+function activateView(view) {
+  const target = navItems.find((n) => n.dataset.view === view);
+  if (target) target.click();
+}
+
+// Support ?view=account and ?error=message from auth redirects.
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get('view');
+  const error = params.get('error');
+  if (view) activateView(view);
+  if (error) setTimeout(() => showToast(decodeURIComponent(error), 'err'), 400);
+})();
 
 /* ---------- Servers view ---------- */
 async function loadServers() {
@@ -1552,6 +1582,156 @@ el.billingGrantForm.addEventListener('submit', async (event) => {
   }
 });
 
+/* ---------- Account ---------- */
+function renderAccount(account) {
+  if (!account) return;
+  const isLocal = account.authType === 'local';
+  el.accountIdentity.textContent =
+    account.username || account.discordUsername || account.id || '—';
+  el.accountAuthTag.textContent = isLocal ? 'USERNAME + PASSWORD' : 'DISCORD';
+  el.accountAuthTag.className = 'tag ' + (isLocal ? '' : 'custom');
+
+  if (isLocal) {
+    el.accountStatus.textContent = account.discordLinked
+      ? 'discord linked'
+      : 'local only';
+    el.accountLocalPanel.hidden = false;
+    el.accountUsername.value = account.username || '';
+    el.accountDiscordPanel.hidden = false;
+    el.accountSetupForm.hidden = true;
+
+    if (account.discordLinked) {
+      el.accountDiscordStatus.textContent = 'linked';
+      el.accountDiscordCopy.textContent = account.discordUsername
+        ? `Linked to Discord as ${account.discordUsername} (${account.id}).`
+        : `Linked to Discord account ${account.id}.`;
+      el.accountDiscordActions.innerHTML =
+        '<button type="button" class="btn btn-secondary" id="account-unlink">Unlink Discord account</button>';
+    } else {
+      el.accountDiscordStatus.textContent = 'not linked';
+      el.accountDiscordCopy.textContent =
+        'Link your Discord account to manage your servers and use Discord-only features.';
+      el.accountDiscordActions.innerHTML =
+        '<a class="btn btn-primary" href="/auth/discord/link">Link Discord account</a>';
+    }
+  } else {
+    el.accountStatus.textContent = 'discord session';
+    el.accountLocalPanel.hidden = true;
+    el.accountDiscordPanel.hidden = false;
+    el.accountDiscordStatus.textContent = 'linked';
+    el.accountDiscordCopy.textContent = `Signed in as Discord user ${account.username}.`;
+    el.accountDiscordActions.innerHTML = '';
+    el.accountSetupForm.hidden = Boolean(account.localLinked);
+  }
+}
+
+async function loadAccount() {
+  try {
+    const res = await apiFetch('/api/account');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to load account');
+    renderAccount(data.account);
+  } catch (err) {
+    el.accountStatus.textContent = 'unavailable';
+    el.accountDiscordCopy.textContent = err.message || 'Unable to load account.';
+  }
+}
+
+el.accountUsernameForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const username = el.accountUsername.value.trim();
+  if (!username) return;
+  const btn = event.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/account/username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to update username');
+    showToast('Username updated.');
+    await loadAccount();
+    await loadSession();
+  } catch (error) {
+    showToast(error.message || 'Failed to update username.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el.accountPasswordForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const currentPassword = el.accountCurrentPassword.value;
+  const newPassword = el.accountNewPassword.value;
+  if (!currentPassword || !newPassword) return;
+  const btn = event.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/account/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to change password');
+    el.accountCurrentPassword.value = '';
+    el.accountNewPassword.value = '';
+    showToast('Password changed.');
+  } catch (error) {
+    showToast(error.message || 'Failed to change password.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el.accountSetupForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const username = el.accountSetupUsername.value.trim();
+  const password = el.accountSetupPassword.value;
+  if (!username || !password) return;
+  const btn = event.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/account/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to create credentials');
+    showToast('Credentials created — you can now sign in with username and password.');
+    await loadAccount();
+    await loadSession();
+  } catch (error) {
+    showToast(error.message || 'Failed to create credentials.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el.accountDiscordActions.addEventListener('click', async (event) => {
+  const unlink = event.target.closest('#account-unlink');
+  if (!unlink) return;
+  if (!confirm('Unlink your Discord account?')) return;
+  unlink.disabled = true;
+  try {
+    const res = await apiFetch('/api/account/unlink', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to unlink');
+    showToast('Discord account unlinked.');
+    await loadAccount();
+    await loadSession();
+  } catch (error) {
+    showToast(error.message || 'Failed to unlink.', 'err');
+    unlink.disabled = false;
+  }
+});
+
 /* ---------- Particle background ---------- */
 function initBackground() {
   const canvas = document.getElementById('bgCanvas');
@@ -1627,4 +1807,5 @@ loadServers();
 loadVpnBlocklist();
 loadVotes();
 loadBilling();
+loadAccount();
 setInterval(loadHealth, 5000);
