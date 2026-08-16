@@ -86,6 +86,9 @@
         <symbol id="icon-chevron" viewBox="0 0 24 24">
           <path d="M6 9l6 6 6-6"/>
         </symbol>
+        <symbol id="icon-key" viewBox="0 0 24 24">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </symbol>
       </svg>
 
       <div class="app-shell">
@@ -688,6 +691,48 @@
                 </label>
                 <button type="submit" class="btn btn-primary" id="account-setup-save" data-i18n="web.dash.account.create-credentials">Create credentials</button>
               </form>
+            </section>
+          </section>
+
+          <!-- API keys -->
+          <section class="view" id="view-apikeys">
+            <h2 class="view-title" data-i18n="web.dash.nav.apikeys">API keys</h2>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> apikeys <span class="accent">--create</span></h2>
+              </div>
+              <p class="verification-help" data-i18n="web.dash.apikeys.help">
+                Create a key so another bot or app can talk to Squared One's
+                API with your permissions. Keys have full control — treat them
+                like a password. The full key is shown only once.
+              </p>
+              <form id="apikey-form" class="rule-form" autocomplete="off">
+                <label class="field field-grow">
+                  <span class="field-label" data-i18n="web.dash.apikeys.name">Key name</span>
+                  <input id="apikey-name" type="text" maxlength="64" placeholder="My bot" data-i18n-placeholder="web.dash.apikeys.name-placeholder" required />
+                </label>
+                <button type="submit" class="btn btn-primary" data-i18n="web.dash.apikeys.create">Create key</button>
+              </form>
+
+              <div id="apikey-reveal" class="apikey-reveal" hidden>
+                <p data-i18n="web.dash.apikeys.reveal-note">Copy this key now — it will not be shown again.</p>
+                <div class="apikey-value-row">
+                  <code id="apikey-value"></code>
+                  <button type="button" class="btn btn-secondary btn-sm" id="apikey-copy" data-i18n="web.dash.apikeys.copy">Copy</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> apikeys <span class="accent">--list</span></h2>
+              </div>
+              <div id="apikey-list" class="apikey-list"></div>
             </section>
           </section>
         </main>

@@ -132,6 +132,68 @@ body::before {
   z-index: 60;
 }
 
+/* ---------- API keys ---------- */
+.apikey-reveal {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--red-dim);
+  background: var(--red-faint);
+}
+
+.apikey-reveal p {
+  margin: 0 0 10px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.apikey-value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.apikey-value-row code {
+  font-family: var(--mono);
+  color: var(--red);
+  word-break: break-all;
+  flex: 1;
+  min-width: 200px;
+}
+
+.apikey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--red-dim);
+}
+
+.apikey-row:last-child {
+  border-bottom: none;
+}
+
+.apikey-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.apikey-name {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.apikey-meta {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;

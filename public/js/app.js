@@ -114,6 +114,12 @@ const el = {
   accountSetupForm: $('#account-setup-form'),
   accountSetupUsername: $('#account-setup-username'),
   accountSetupPassword: $('#account-setup-password'),
+  apikeyForm: $('#apikey-form'),
+  apikeyName: $('#apikey-name'),
+  apikeyReveal: $('#apikey-reveal'),
+  apikeyValue: $('#apikey-value'),
+  apikeyCopy: $('#apikey-copy'),
+  apikeyList: $('#apikey-list'),
 };
 
 // Fetch wrapper that bounces to the login page when the session expires.
@@ -600,6 +606,10 @@ const NAV_SECTIONS = [
       {
         title: 'Account',
         items: [{ view: 'account', label: 'Account', icon: 'icon-user' }],
+      },
+      {
+        title: 'Developer',
+        items: [{ view: 'apikeys', label: 'API keys', icon: 'icon-key' }],
       },
     ],
   },
@@ -2071,6 +2081,94 @@ el.accountDiscordActions.addEventListener('click', async (event) => {
   }
 });
 
+// ---------- API keys ----------
+async function loadApiKeys() {
+  try {
+    const res = await apiFetch('/api/apikeys');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to load keys');
+    const keys = data.keys || [];
+    el.apikeyList.innerHTML = keys.length
+      ? keys
+          .map(
+            (k) => `
+        <div class="apikey-row">
+          <div class="apikey-info">
+            <span class="apikey-name">${escapeHtml(k.name)}</span>
+            <span class="apikey-meta">${escapeHtml(
+              k.prefix
+            )}… · created ${escapeHtml(
+              new Date(k.createdAt).toLocaleDateString()
+            )}</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm apikey-revoke" data-id="${escapeHtml(
+            k.id
+          )}">Revoke</button>
+        </div>`
+          )
+          .join('')
+      : '<div class="empty">No API keys yet.</div>';
+  } catch {
+    el.apikeyList.innerHTML = '<div class="empty">Could not load API keys.</div>';
+  }
+}
+
+el.apikeyForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = el.apikeyName.value.trim();
+  if (!name) return;
+  const btn = event.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/apikeys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to create key');
+    el.apikeyName.value = '';
+    el.apikeyValue.textContent = data.key;
+    el.apikeyReveal.hidden = false;
+    showToast('API key created.');
+    await loadApiKeys();
+  } catch (error) {
+    showToast(error.message || 'Failed to create API key.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el.apikeyCopy.addEventListener('click', async () => {
+  const key = el.apikeyValue.textContent;
+  if (!key) return;
+  try {
+    await navigator.clipboard.writeText(key);
+    showToast('Copied to clipboard.');
+  } catch {
+    showToast('Copy failed — select the key and copy it manually.', 'err');
+  }
+});
+
+el.apikeyList.addEventListener('click', async (event) => {
+  const btn = event.target.closest('.apikey-revoke');
+  if (!btn) return;
+  if (!confirm('Revoke this API key? Any app using it will lose access.')) return;
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/apikeys/${btn.dataset.id}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to revoke key');
+    showToast('API key revoked.');
+    await loadApiKeys();
+  } catch (error) {
+    showToast(error.message || 'Failed to revoke key.', 'err');
+    btn.disabled = false;
+  }
+});
+
 loadSession();
 loadRules();
 loadHealth();
@@ -2079,4 +2177,5 @@ loadVpnBlocklist();
 loadVotes();
 loadBilling();
 loadAccount();
+loadApiKeys();
 setInterval(loadHealth, 5000);

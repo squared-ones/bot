@@ -111,6 +111,12 @@ import {
   isValidUsername,
   isValidPassword,
 } from './accounts.js';
+import {
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+  authenticateApiKey,
+} from './apikeys.js';
 
 const APP_URL = 'https://squared-one.onrender.com';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -168,6 +174,18 @@ export function startServer(port = 3000) {
     return req.user.id;
   }
 
+  // Identity snapshot stored against a new API key so the key can later
+  // impersonate the session it was created from.
+  function apiKeyIdentity(req) {
+    return {
+      ownerId: billingIdOf(req),
+      authType: req.user.authType || 'discord',
+      accountId: req.user.accountId || null,
+      username: req.user.username || null,
+      guildIds: req.user.guildIds || [],
+    };
+  }
+
   const app = express();
   app.set('trust proxy', process.env.TRUST_PROXY === 'true');
   app.use(
@@ -179,9 +197,35 @@ export function startServer(port = 3000) {
   );
   app.use(sessionMiddleware(sessionSecret));
 
+  // Resolves an Authorization: Bearer <key> header into the key owner's
+  // identity snapshot (mirrors a session payload). The guard below decides
+  // whether an API key can satisfy a route.
+  app.use((req, res, next) => {
+    const header = req.headers.authorization || '';
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    if (match) req.apiKeyUser = authenticateApiKey(match[1].trim());
+    next();
+  });
+
   // Auth guard — a no-op when OAuth isn't configured, so the dashboard
-  // still works out of the box until CLIENT_SECRET is set.
+  // still works out of the box until CLIENT_SECRET is set. Accepts either a
+  // session or (for JSON API routes only) a valid API key.
   const guard = (req, res, next) => {
+    if (!authEnabled) return next();
+    if (req.user) return next();
+    if (req.apiKeyUser && req.path.startsWith('/api/')) {
+      req.user = req.apiKeyUser;
+      return next();
+    }
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    return res.redirect('/login');
+  };
+
+  // Session-only guard — used for API-key management so a key can't mint or
+  // revoke other keys. A valid Bearer key is deliberately not enough here.
+  const sessionGuard = (req, res, next) => {
     if (!authEnabled) return next();
     if (!req.user) {
       if (req.path.startsWith('/api/')) {
@@ -908,6 +952,26 @@ export function startServer(port = 3000) {
     setLocalSession(res, linked.account);
     await flushDataSync();
     res.json({ ok: true, account: linked.account });
+  });
+
+  // ---------- API keys (developer access) ----------
+  // Management is session-only so a leaked key can't mint more keys. The keys
+  // themselves can authenticate the operational /api/* routes via the guard.
+  app.get('/api/apikeys', sessionGuard, (req, res) => {
+    res.json({ keys: listApiKeys(billingIdOf(req)) });
+  });
+
+  app.post('/api/apikeys', sessionGuard, (req, res) => {
+    const name = String((req.body ?? {}).name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const { key, record } = createApiKey({ name, identity: apiKeyIdentity(req) });
+    res.status(201).json({ key, record });
+  });
+
+  app.delete('/api/apikeys/:id', sessionGuard, (req, res) => {
+    const ok = revokeApiKey(billingIdOf(req), req.params.id);
+    if (!ok) return res.status(404).json({ error: 'key not found' });
+    res.json({ ok: true });
   });
 
   // ---------- Rules API (protected) ----------

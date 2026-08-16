@@ -143,6 +143,15 @@ const SEED_CATALOG = {
   'web.dash.account.create-credentials': 'Create credentials',
   'web.dash.modal.server-help':
     'Choose the server you want to manage. This selection is used across moderation and verification tools.',
+  'web.dash.nav.apikeys': 'API keys',
+  'web.dash.group.developer': 'Developer',
+  'web.dash.apikeys.help':
+    "Create a key so another bot or app can talk to Squared One's API with your permissions. Keys have full control — treat them like a password. The full key is shown only once.",
+  'web.dash.apikeys.name': 'Key name',
+  'web.dash.apikeys.name-placeholder': 'My bot',
+  'web.dash.apikeys.create': 'Create key',
+  'web.dash.apikeys.reveal-note': 'Copy this key now — it will not be shown again.',
+  'web.dash.apikeys.copy': 'Copy',
 };
 
 let store = null;
