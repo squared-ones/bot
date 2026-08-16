@@ -101,9 +101,18 @@ export async function isApplicationOwner(userId) {
 // Sends the bot's slash-command list to discordbotlist.com so it shows on the
 // bot page (https://docs.discordbotlist.com/commands-list). No-op unless
 // DBL_API_TOKEN is configured.
+function getValidatedDiscordBotId(rawBotId) {
+  if (typeof rawBotId !== 'string') return null;
+  const botId = rawBotId.trim();
+  // Discord snowflake IDs are numeric; constrain length to expected bounds.
+  if (!/^\d{17,20}$/.test(botId)) return null;
+  return botId;
+}
+
 async function syncDiscordBotListCommands(client) {
   const token = process.env.DBL_API_TOKEN;
-  const botId = client.application?.id || process.env.CLIENT_ID;
+  const rawBotId = client.application?.id || process.env.CLIENT_ID;
+  const botId = getValidatedDiscordBotId(rawBotId);
   if (!token || !botId) return;
   try {
     const res = await fetch(
@@ -129,7 +138,8 @@ async function syncDiscordBotListCommands(client) {
 // is configured.
 async function syncDiscordBotListStats(client) {
   const token = process.env.DBL_API_TOKEN;
-  const botId = client.application?.id || process.env.CLIENT_ID;
+  const rawBotId = client.application?.id || process.env.CLIENT_ID;
+  const botId = getValidatedDiscordBotId(rawBotId);
   if (!token || !botId) return;
   try {
     const guilds = client.guilds.cache.size;
