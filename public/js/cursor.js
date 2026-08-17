@@ -48,6 +48,13 @@
   var rotation = new Spring(0, { stiffness: 300, damping: 60, mass: 1, restDelta: 0.001 });
   var scale = new Spring(1, { stiffness: 500, damping: 35, mass: 1, restDelta: 0.001 });
 
+  // The arrow's tip within the SVG (display px from the element's top-left).
+  // The element is anchored so this point — not the box center — sits on the
+  // cursor position, so the arrow tip points exactly where the pointer is.
+  var TIP_X = 12.7;
+  var TIP_Y = 2.5;
+  el.style.transformOrigin = TIP_X + 'px ' + TIP_Y + 'px';
+
   var lastX = 0;
   var lastY = 0;
   var lastTime = performance.now();
@@ -150,8 +157,12 @@
 
     el.style.transform =
       'translate3d(' + cursorX.value + 'px,' + cursorY.value + 'px,0) ' +
-      'rotate(' + rotation.value + 'deg) scale(' + scale.value + ') ' +
-      'translate(-50%, -50%)';
+      'translate(' +
+      -TIP_X +
+      'px,' +
+      -TIP_Y +
+      'px) ' +
+      'rotate(' + rotation.value + 'deg) scale(' + scale.value + ')';
 
     var settled =
       cursorX.value === cursorX.target &&
