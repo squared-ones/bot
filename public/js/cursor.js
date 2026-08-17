@@ -47,13 +47,6 @@
   var cursorY = new Spring(0, { stiffness: 400, damping: 45, mass: 1, restDelta: 0.001 });
   var rotation = new Spring(0, { stiffness: 300, damping: 60, mass: 1, restDelta: 0.001 });
   var scale = new Spring(1, { stiffness: 500, damping: 35, mass: 1, restDelta: 0.001 });
-  // Squash applied on click; bounces back with a slight overshoot.
-  var clickScale = new Spring(1, {
-    stiffness: 600,
-    damping: 24,
-    mass: 1,
-    restDelta: 0.001,
-  });
 
   var lastX = 0;
   var lastY = 0;
@@ -64,6 +57,9 @@
   var accRotation = 0;
   var idleTimer = null;
   var pending = false;
+  // Trail particles are throttled so they don't pile up on every mousemove.
+  var TRAIL_INTERVAL_MS = 45;
+  var lastTrailTime = 0;
 
   function onMouseMove(e) {
     if (pending) return;
@@ -83,6 +79,12 @@
 
       var speed = Math.hypot(vx, vy);
       if (speed > 0.1) {
+        // Leave a fading dot behind the animated cursor while it moves.
+        var trailNow = performance.now();
+        if (trailNow - lastTrailTime > TRAIL_INTERVAL_MS) {
+          lastTrailTime = trailNow;
+          spawnTrailParticle(cursorX.value, cursorY.value);
+        }
         var currentAngle = Math.atan2(vy, vx) * (180 / Math.PI) + 90;
         var diff = currentAngle - prevAngle;
         if (diff > 180) diff -= 360;
@@ -103,59 +105,25 @@
 
   window.addEventListener('mousemove', onMouseMove);
 
-  // Spawns a burst of neon particles that fly outward from the click point.
-  // Each particle gets its own direction/distance/size/duration via CSS
-  // variables and is removed once its animation ends.
-  var PARTICLE_COUNT = 18;
-
-  function spawnClickBurst(x, y) {
-    for (var i = 0; i < PARTICLE_COUNT; i++) {
-      var p = document.createElement('div');
-      p.className = 'cursor-click-particle';
-
-      var angle = Math.random() * Math.PI * 2;
-      var dist = 24 + Math.random() * 48;
-      var dx = Math.cos(angle) * dist;
-      var dy = Math.sin(angle) * dist;
-      var size = 2 + Math.random() * 3.5;
-      var dur = (0.35 + Math.random() * 0.3).toFixed(2);
-      // A few particles burn hotter (near-white) for a bright core.
-      p.style.background =
-        Math.random() < 0.3 ? '#ffd7d7' : '#ff0000';
-      p.style.width = size.toFixed(1) + 'px';
-      p.style.height = size.toFixed(1) + 'px';
-      p.style.left = x + 'px';
-      p.style.top = y + 'px';
-      p.style.setProperty('--dx', dx.toFixed(1) + 'px');
-      p.style.setProperty('--dy', dy.toFixed(1) + 'px');
-      p.style.animationDuration = dur + 's';
-      document.body.appendChild(p);
-
-      (function (node, duration) {
-        setTimeout(function () {
-          if (node.parentNode) node.parentNode.removeChild(node);
-        }, (parseFloat(duration) + 0.05) * 1000);
-      })(p, dur);
-    }
+  // Spawns a small fading dot at the animated cursor's position to leave a
+  // trail while it moves. Each particle is removed once its animation ends.
+  function spawnTrailParticle(x, y) {
+    var p = document.createElement('div');
+    p.className = 'cursor-trail-particle';
+    var size = 1.5 + Math.random() * 2;
+    var dur = (0.35 + Math.random() * 0.25).toFixed(2);
+    p.style.width = size.toFixed(1) + 'px';
+    p.style.height = size.toFixed(1) + 'px';
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.animationDuration = dur + 's';
+    document.body.appendChild(p);
+    (function (node, duration) {
+      setTimeout(function () {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }, (parseFloat(duration) + 0.05) * 1000);
+    })(p, dur);
   }
-
-  function onMouseDown(e) {
-    if (e.button !== 0) return; // primary button only
-    clickScale.set(0.82);
-    // Burst from the animated cursor's current position (which trails the
-    // pointer), not the raw click coordinates.
-    spawnClickBurst(cursorX.value, cursorY.value);
-    kick();
-  }
-
-  function onMouseUp(e) {
-    if (e.button !== 0) return;
-    clickScale.set(1);
-    kick();
-  }
-
-  window.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mouseup', onMouseUp);
 
   var running = false;
   var lastFrame = performance.now();
@@ -179,21 +147,17 @@
     cursorY.update(dt);
     rotation.update(dt);
     scale.update(dt);
-    clickScale.update(dt);
 
     el.style.transform =
       'translate3d(' + cursorX.value + 'px,' + cursorY.value + 'px,0) ' +
-      'rotate(' + rotation.value + 'deg) scale(' +
-      (scale.value * clickScale.value) +
-      ') ' +
+      'rotate(' + rotation.value + 'deg) scale(' + scale.value + ') ' +
       'translate(-50%, -50%)';
 
     var settled =
       cursorX.value === cursorX.target &&
       cursorY.value === cursorY.target &&
       rotation.value === rotation.target &&
-      scale.value === scale.target &&
-      clickScale.value === clickScale.target;
+      scale.value === scale.target;
 
     if (settled) {
       running = false;

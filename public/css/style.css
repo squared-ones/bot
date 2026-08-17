@@ -2833,10 +2833,8 @@ main {
   display: block;
 }
 
-/* Neon particle burst spawned at the click point when the custom cursor is
- * active. Each particle flies outward along its own --dx/--dy vector and
- * fades out. */
-.cursor-click-particle {
+/* Small fading dot left behind the animated cursor while it moves. */
+.cursor-trail-particle {
   position: fixed;
   top: 0;
   left: 0;
@@ -2844,20 +2842,19 @@ main {
   height: 3px;
   border-radius: 50%;
   background: #ff0000;
-  box-shadow: 0 0 6px rgba(255, 0, 0, 0.9), 0 0 12px rgba(255, 0, 0, 0.5);
+  box-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
   pointer-events: none;
-  z-index: 9998;
-  animation: cursor-particle-burst 0.5s ease-out forwards;
+  z-index: 9997;
+  animation: cursor-trail-particle 0.5s ease-out forwards;
 }
 
-@keyframes cursor-particle-burst {
+@keyframes cursor-trail-particle {
   from {
     transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
+    opacity: 0.8;
   }
   to {
-    transform: translate(calc(-50% + var(--dx, 40px)), calc(-50% + var(--dy, 40px)))
-      scale(0.15);
+    transform: translate(-50%, -50%) scale(0.1);
     opacity: 0;
   }
 }
