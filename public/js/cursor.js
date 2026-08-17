@@ -47,6 +47,13 @@
   var cursorY = new Spring(0, { stiffness: 400, damping: 45, mass: 1, restDelta: 0.001 });
   var rotation = new Spring(0, { stiffness: 300, damping: 60, mass: 1, restDelta: 0.001 });
   var scale = new Spring(1, { stiffness: 500, damping: 35, mass: 1, restDelta: 0.001 });
+  // Squash applied on click; bounces back with a slight overshoot.
+  var clickScale = new Spring(1, {
+    stiffness: 600,
+    damping: 24,
+    mass: 1,
+    restDelta: 0.001,
+  });
 
   // The arrow's tip within the SVG (display px from the element's top-left).
   // The element is anchored so this point — not the box center — sits on the
@@ -132,6 +139,56 @@
     })(p, dur);
   }
 
+  // Spawns a burst of neon particles that fly outward from the animated
+  // cursor's position (which trails the pointer), not the raw click coords.
+  var PARTICLE_COUNT = 18;
+
+  function spawnClickBurst(x, y) {
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      var p = document.createElement('div');
+      p.className = 'cursor-click-particle';
+
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 24 + Math.random() * 48;
+      var dx = Math.cos(angle) * dist;
+      var dy = Math.sin(angle) * dist;
+      var size = 2 + Math.random() * 3.5;
+      var dur = (0.35 + Math.random() * 0.3).toFixed(2);
+      // A few particles burn hotter (near-white) for a bright core.
+      p.style.background = Math.random() < 0.3 ? '#ffd7d7' : '#ff0000';
+      p.style.width = size.toFixed(1) + 'px';
+      p.style.height = size.toFixed(1) + 'px';
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      p.style.setProperty('--dx', dx.toFixed(1) + 'px');
+      p.style.setProperty('--dy', dy.toFixed(1) + 'px');
+      p.style.animationDuration = dur + 's';
+      document.body.appendChild(p);
+
+      (function (node, duration) {
+        setTimeout(function () {
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }, (parseFloat(duration) + 0.05) * 1000);
+      })(p, dur);
+    }
+  }
+
+  function onMouseDown(e) {
+    if (e.button !== 0) return; // primary button only
+    clickScale.set(0.82);
+    spawnClickBurst(cursorX.value, cursorY.value);
+    kick();
+  }
+
+  function onMouseUp(e) {
+    if (e.button !== 0) return;
+    clickScale.set(1);
+    kick();
+  }
+
+  window.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', onMouseUp);
+
   var running = false;
   var lastFrame = performance.now();
 
@@ -154,6 +211,7 @@
     cursorY.update(dt);
     rotation.update(dt);
     scale.update(dt);
+    clickScale.update(dt);
 
     el.style.transform =
       'translate3d(' + cursorX.value + 'px,' + cursorY.value + 'px,0) ' +
@@ -162,13 +220,16 @@
       'px,' +
       -TIP_Y +
       'px) ' +
-      'rotate(' + rotation.value + 'deg) scale(' + scale.value + ')';
+      'rotate(' + rotation.value + 'deg) scale(' +
+      (scale.value * clickScale.value) +
+      ')';
 
     var settled =
       cursorX.value === cursorX.target &&
       cursorY.value === cursorY.target &&
       rotation.value === rotation.target &&
-      scale.value === scale.target;
+      scale.value === scale.target &&
+      clickScale.value === clickScale.target;
 
     if (settled) {
       running = false;

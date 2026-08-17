@@ -2833,6 +2833,34 @@ main {
   display: block;
 }
 
+/* Neon particle burst spawned at the animated cursor's position on click.
+ * Each particle flies outward along its own --dx/--dy vector and fades out. */
+.cursor-click-particle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ff0000;
+  box-shadow: 0 0 6px rgba(255, 0, 0, 0.9), 0 0 12px rgba(255, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 9998;
+  animation: cursor-particle-burst 0.5s ease-out forwards;
+}
+
+@keyframes cursor-particle-burst {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--dx, 40px)), calc(-50% + var(--dy, 40px)))
+      scale(0.15);
+    opacity: 0;
+  }
+}
+
 /* Small fading dot left behind the animated cursor while it moves. */
 .cursor-trail-particle {
   position: fixed;
