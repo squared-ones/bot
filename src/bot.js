@@ -2671,7 +2671,21 @@ async function sendDueVoteReminders(client) {
   }
 }
 
-export async function startBot(token) {
+// Starts the Discord client. Options:
+//   shardId / shardCount  — run as a specific shard of a sharded bot
+//                           (default: single unsharded connection)
+//   registerCommands      — register global slash commands. Only one shard
+//                           should do this (the server's shard 0); workers
+//                           pass false. Defaults to true for shard 0.
+export async function startBot(token, options = {}) {
+  const shardId = Number.isInteger(options.shardId) ? options.shardId : 0;
+  const shardCount = Number.isInteger(options.shardCount)
+    ? options.shardCount
+    : 1;
+  const registerCommands =
+    options.registerCommands !== undefined
+      ? options.registerCommands
+      : shardId === 0;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -2679,6 +2693,8 @@ export async function startBot(token) {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.GuildVoiceStates,
     ],
+    shardId,
+    shardCount,
   });
   botState.client = client;
 
@@ -2700,20 +2716,24 @@ export async function startBot(token) {
     botState.username = client.user.tag;
     botState.startedAt = new Date();
     updateStats(client);
-    console.log(`[bot] ${client.user.tag} is online.`);
+    console.log(`[bot] shard ${shardId}/${shardCount} ${client.user.tag} is online.`);
 
-    try {
-      await registerGlobalCommands(client);
-    } catch (err) {
-      console.error('[bot] failed to register commands:', err.message);
+    if (registerCommands) {
+      try {
+        await registerGlobalCommands(client);
+      } catch (err) {
+        console.error('[bot] failed to register commands:', err.message);
+      }
     }
 
-    await syncDiscordBotListCommands(client);
-    await syncDiscordBotListStats(client);
+    if (shardId === 0) {
+      await syncDiscordBotListCommands(client);
+      await syncDiscordBotListStats(client);
 
-    if (process.env.CLIENT_ID) {
-      const invite = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
-      console.log(`[bot] invite: ${invite}`);
+      if (process.env.CLIENT_ID) {
+        const invite = `https://discord.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=8&scope=bot%20applications.commands`;
+        console.log(`[bot] invite: ${invite}`);
+      }
     }
   });
 

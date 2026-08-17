@@ -120,6 +120,20 @@ import {
   authenticateApiKey,
 } from './apikeys.js';
 import {
+  createWorker,
+  listWorkers,
+  revokeWorker,
+  authenticateWorker,
+  claimShard,
+  heartbeat,
+  markStaleWorkersOffline,
+  getWorkerDataFiles,
+  mergeWorkerData,
+  getNetworkStats,
+  getShardCount,
+  getServerShardIds,
+} from './sharding.js';
+import {
   getUserSummary,
   incrementMetric,
   recordStreak,
@@ -219,7 +233,12 @@ export function startServer(port = 3000) {
 
     const header = req.headers.authorization || '';
     const match = header.match(/^Bearer\s+(.+)$/i);
-    if (match) req.apiKeyUser = authenticateApiKey(match[1].trim());
+    if (match) {
+      req.apiKeyUser = authenticateApiKey(match[1].trim());
+      // Worker tokens are distinct from API keys (wkr_ prefix) and are
+      // resolved into the worker record instead.
+      req.worker = authenticateWorker(match[1].trim());
+    }
     next();
   });
 
@@ -875,7 +894,7 @@ export function startServer(port = 3000) {
   app.get('/appeal', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'appeal.html'))
   );
-  app.get('/translate', checkRateLimit, (req, res) =>
+  app.get('/translate', (req, res) =>
     res.sendFile(path.join(PUBLIC_DIR, 'translate.html'))
   );
 
@@ -1026,6 +1045,70 @@ export function startServer(port = 3000) {
     const ok = revokeApiKey(billingIdOf(req), req.params.id);
     if (!ok) return res.status(404).json({ error: 'key not found' });
     res.json({ ok: true });
+  });
+
+  // ---------- Workers (community shard network) ----------
+  // A worker is a token that lets someone run one of the bot's Discord
+  // shards from their own machine. Running it earns the owner credits.
+  // Management is session-only (like API keys); the worker runtime routes
+  // authenticate with the worker token itself.
+
+  // Requires a valid worker token from the Authorization header.
+  const workerAuth = (req, res, next) => {
+    if (!req.worker) {
+      return res.status(401).json({ error: 'invalid worker token' });
+    }
+    next();
+  };
+
+  app.get('/api/workers', sessionGuard, (req, res) => {
+    res.json({
+      workers: listWorkers(billingIdOf(req)),
+      network: getNetworkStats(),
+      shardCount: getShardCount(),
+      serverShards: getServerShardIds(),
+    });
+  });
+
+  app.post('/api/workers', sessionGuard, (req, res) => {
+    const name = String((req.body ?? {}).name || '').trim();
+    const ownerId = billingIdOf(req);
+    if (!ownerId) return res.status(401).json({ error: 'sign in to create a worker' });
+    const { token, worker } = createWorker({ ownerId, name });
+    res.status(201).json({ key: token, worker });
+  });
+
+  app.delete('/api/workers/:id', sessionGuard, (req, res) => {
+    const ok = revokeWorker(billingIdOf(req), req.params.id);
+    if (!ok) return res.status(404).json({ error: 'worker not found' });
+    res.json({ ok: true });
+  });
+
+  // Worker claims a shard and receives its assignment + the bot token so it
+  // can connect to Discord as the same application under its shard.
+  app.post('/api/worker/claim', workerAuth, (req, res) => {
+    const result = claimShard(req.worker);
+    if (!result.ok) return res.status(409).json({ error: result.error });
+    res.json(result);
+  });
+
+  // Worker reports its stats; the server records uptime and grants credits.
+  app.post('/api/worker/heartbeat', workerAuth, (req, res) => {
+    const { guilds, members, latency, version } = req.body ?? {};
+    const result = heartbeat(req.worker, { guilds, members, latency, version });
+    res.json(result);
+  });
+
+  // Worker pulls the data snapshot it needs to run the full bot logic.
+  app.get('/api/worker/data', workerAuth, (req, res) => {
+    res.json({ files: getWorkerDataFiles() });
+  });
+
+  // Worker pushes its guild-scoped data back; the server merges per-guild.
+  app.post('/api/worker/data', workerAuth, async (req, res) => {
+    const updated = mergeWorkerData(req.worker, (req.body ?? {}).files);
+    await flushDataSync();
+    res.json({ ok: true, updated });
   });
 
   // ---------- Rules API (protected) ----------
@@ -1907,6 +1990,16 @@ export function startServer(port = 3000) {
     }
     res.status(404).sendFile(path.join(PUBLIC_DIR, '404.html'));
   });
+
+  // Periodically marks workers offline when they stop heartbeating.
+  const workerTicker = setInterval(() => {
+    try {
+      markStaleWorkersOffline();
+    } catch (error) {
+      console.error('[web] worker status sweep failed:', error.message);
+    }
+  }, 30_000);
+  workerTicker.unref?.();
 
   app.listen(port, () => {
     console.log(`[web] dashboard listening on http://localhost:${port}`);

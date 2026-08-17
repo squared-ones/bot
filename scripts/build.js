@@ -69,6 +69,41 @@ async function main() {
     define: { 'import.meta.url': '__importMetaUrl' },
   });
 
+  console.log('[build] bundling worker app (worker/index.js)…');
+  await mkdir(path.join(dist, 'worker'), { recursive: true });
+  await build({
+    entryPoints: [path.join(root, 'worker', 'index.js')],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node18',
+    packages: 'external',
+    outfile: path.join(dist, 'worker', 'index.js'),
+    minify: false,
+    banner: {
+      js: 'const __importMetaUrl = require("url").pathToFileURL(__filename).href;',
+    },
+    define: { 'import.meta.url': '__importMetaUrl' },
+  });
+  await cp(path.join(root, 'worker', 'README.md'), path.join(dist, 'worker', 'README.md'));
+  await cp(path.join(root, 'worker', '.env.example'), path.join(dist, 'worker', '.env.example'));
+  const workerPkg = {
+    name: 'squared-one-worker',
+    version: pkg.version,
+    description: 'Squared One worker app — run a Discord shard and earn SQ credits.',
+    main: 'index.js',
+    scripts: { start: 'node index.js' },
+    engines: pkg.engines,
+    dependencies: {
+      'discord.js': pkg.dependencies['discord.js'],
+      dotenv: pkg.dependencies.dotenv,
+    },
+  };
+  await writeFile(
+    path.join(dist, 'worker', 'package.json'),
+    JSON.stringify(workerPkg, null, 2) + '\n'
+  );
+
   console.log('[build] copying static assets…');
   await cp(path.join(root, 'public'), path.join(dist, 'public'), {
     recursive: true,

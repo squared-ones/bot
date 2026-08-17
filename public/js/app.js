@@ -126,6 +126,16 @@ const el = {
   apikeyValue: $('#apikey-value'),
   apikeyCopy: $('#apikey-copy'),
   apikeyList: $('#apikey-list'),
+  workerForm: $('#worker-form'),
+  workerName: $('#worker-name'),
+  workerReveal: $('#worker-reveal'),
+  workerValue: $('#worker-value'),
+  workerCopy: $('#worker-copy'),
+  workerList: $('#worker-list'),
+  workersStatus: $('#workers-status'),
+  workerShardCount: $('#worker-shard-count'),
+  workerOnlineCount: $('#worker-online-count'),
+  workerCreditRate: $('#worker-credit-rate'),
   reviewOwnerNote: $('#review-owner-note'),
   reviewTranslationsList: $('#review-translations-list'),
 };
@@ -704,6 +714,7 @@ const NAV_SECTIONS = [
         title: 'Developer',
         items: [
           { view: 'apikeys', label: 'API keys', icon: 'icon-key' },
+          { view: 'workers', label: 'Workers', icon: 'icon-zap' },
           { view: 'review-translations', label: 'Review translations', icon: 'icon-bell' },
         ],
       },
@@ -2292,6 +2303,113 @@ el.apikeyList.addEventListener('click', async (event) => {
   }
 });
 
+// ---------- Workers (community shard network) ----------
+let workersLoaded = false;
+
+function formatWorkerUptime(ms) {
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
+async function loadWorkers() {
+  try {
+    const res = await apiFetch('/api/workers');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to load workers');
+    workersLoaded = true;
+
+    const network = data.network || {};
+    el.workerShardCount.textContent = `${network.serverShards?.length ?? 1}/${network.shardCount ?? 1}`;
+    el.workerOnlineCount.textContent = `${network.onlineWorkers ?? 0}/${network.workerCount ?? 0}`;
+    el.workerCreditRate.textContent = `${network.creditRate ?? 5} SQ/hr`;
+
+    const workers = data.workers || [];
+    el.workersStatus.textContent = `${workers.length} worker${workers.length === 1 ? '' : 's'}`;
+    el.workerList.innerHTML = workers.length
+      ? workers
+          .map(
+            (w) => `
+        <div class="apikey-row">
+          <div class="apikey-info">
+            <span class="apikey-name">${escapeHtml(w.name)}</span>
+            <span class="apikey-meta">shard ${escapeHtml(
+              w.shardId ?? '—'
+            )} · ${escapeHtml(w.status)} · ${escapeHtml(
+              w.guilds ?? 0
+            )} guilds · uptime ${escapeHtml(
+              formatWorkerUptime(w.uptimeMs || 0)
+            )} · earned ${escapeHtml((w.totalEarned || 0).toLocaleString())} SQ</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm worker-revoke" data-id="${escapeHtml(
+            w.id
+          )}">Revoke</button>
+        </div>`
+          )
+          .join('')
+      : '<div class="empty">No workers yet — create one to start earning credits.</div>';
+  } catch {
+    el.workersStatus.textContent = 'unavailable';
+  }
+}
+
+el.workerForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = el.workerName.value.trim();
+  if (!name) return;
+  const btn = event.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/workers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to create worker');
+    el.workerName.value = '';
+    el.workerValue.textContent = data.key;
+    el.workerReveal.hidden = false;
+    showToast('Worker created.');
+    await loadWorkers();
+  } catch (error) {
+    showToast(error.message || 'Failed to create worker.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el.workerCopy.addEventListener('click', async () => {
+  const key = el.workerValue.textContent;
+  if (!key) return;
+  try {
+    await navigator.clipboard.writeText(key);
+    showToast('Copied to clipboard.');
+  } catch {
+    showToast('Copy failed — select the token and copy it manually.', 'err');
+  }
+});
+
+el.workerList.addEventListener('click', async (event) => {
+  const btn = event.target.closest('.worker-revoke');
+  if (!btn) return;
+  if (!confirm('Revoke this worker? It will stop earning credits immediately.')) return;
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/workers/${btn.dataset.id}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'failed to revoke worker');
+    showToast('Worker revoked.');
+    await loadWorkers();
+  } catch (error) {
+    showToast(error.message || 'Failed to revoke worker.', 'err');
+    btn.disabled = false;
+  }
+});
+
 // ---------- Review translations ----------
 async function loadReviewTranslations() {
   try {
@@ -2368,6 +2486,7 @@ loadVotes();
 loadBilling();
 loadAccount();
 loadApiKeys();
+loadWorkers();
 loadReviewTranslations();
 setInterval(loadHealth, 5000);
 setInterval(loadAchievements, 30000);

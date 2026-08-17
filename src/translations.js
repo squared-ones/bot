@@ -158,6 +158,19 @@ const SEED_CATALOG = {
   'web.dash.nav.review-translations': 'Review translations',
   'web.dash.review.owner-only':
     'Only the application owner can approve or reject translations.',
+  'web.dash.nav.workers': 'Workers',
+  'web.dash.workers.network-shards': 'Network shards',
+  'web.dash.workers.online': 'Online workers',
+  'web.dash.workers.credit-rate': 'Credit rate',
+  'web.dash.workers.help':
+    'Create a worker token to run one of the bot\'s Discord shards from your own machine. Every hour of uptime earns you credits. The full token is shown only once.',
+  'web.dash.workers.name': 'Worker name',
+  'web.dash.workers.name-placeholder': 'My PC',
+  'web.dash.workers.create': 'Create worker',
+  'web.dash.workers.reveal-note': 'Copy this token now — it will not be shown again.',
+  'web.dash.workers.copy': 'Copy',
+  'web.dash.workers.run-help':
+    'Download the worker app, add your token, and run it. See the worker README for full instructions.',
 };
 
 let store = null;

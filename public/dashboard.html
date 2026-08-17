@@ -764,6 +764,79 @@
             </section>
           </section>
 
+          <!-- Workers (community shard network) -->
+          <section class="view" id="view-workers">
+            <h2 class="view-title" data-i18n="web.dash.nav.workers">Workers</h2>
+
+            <section class="stats">
+              <div class="stat-card">
+                <span class="stat-label" data-i18n="web.dash.workers.network-shards">Network shards</span>
+                <span id="worker-shard-count" class="stat-value">--</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label" data-i18n="web.dash.workers.online">Online workers</span>
+                <span id="worker-online-count" class="stat-value">--</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label" data-i18n="web.dash.workers.credit-rate">Credit rate</span>
+                <span id="worker-credit-rate" class="stat-value">--</span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> workers <span class="accent">--create</span></h2>
+              </div>
+              <p class="verification-help" data-i18n="web.dash.workers.help">
+                Create a worker token to run one of the bot's Discord shards
+                from your own machine. Every hour of uptime earns you credits.
+                The full token is shown only once.
+              </p>
+              <form id="worker-form" class="rule-form" autocomplete="off">
+                <label class="field field-grow">
+                  <span class="field-label" data-i18n="web.dash.workers.name">Worker name</span>
+                  <input id="worker-name" type="text" maxlength="64" placeholder="My PC" data-i18n-placeholder="web.dash.workers.name-placeholder" required />
+                </label>
+                <button type="submit" class="btn btn-primary" data-i18n="web.dash.workers.create">Create worker</button>
+              </form>
+
+              <div id="worker-reveal" class="apikey-reveal" hidden>
+                <p data-i18n="web.dash.workers.reveal-note">Copy this token now — it will not be shown again.</p>
+                <div class="apikey-value-row">
+                  <code id="worker-value"></code>
+                  <button type="button" class="btn btn-secondary btn-sm" id="worker-copy" data-i18n="web.dash.workers.copy">Copy</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> workers <span class="accent">--run</span></h2>
+              </div>
+              <p class="verification-help" data-i18n="web.dash.workers.run-help">
+                Download the worker app, add your token, and run it. See the
+                worker README for full instructions.
+              </p>
+              <div class="worker-run-row"><code>git clone https://github.com/squared-ones/bot.git</code></div>
+              <div class="worker-run-row"><code>cd bot/worker && npm install</code></div>
+              <div class="worker-run-row"><code>WORKER_TOKEN=your-token node index.js</code></div>
+            </section>
+
+            <section class="panel">
+              <span class="corner-br" aria-hidden="true"></span>
+              <span class="corner-bl" aria-hidden="true"></span>
+              <div class="panel-head">
+                <h2><span class="prompt">$</span> workers <span class="accent">--list</span></h2>
+                <span id="workers-status" class="count-chip">…</span>
+              </div>
+              <div id="worker-list" class="apikey-list"></div>
+            </section>
+          </section>
+
           <!-- Review translations -->
           <section class="view" id="view-review-translations">
             <h2 class="view-title" data-i18n="web.dash.nav.review-translations">Review translations</h2>
