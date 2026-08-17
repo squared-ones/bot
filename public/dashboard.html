@@ -202,7 +202,7 @@
               </div>
               <div class="terminal-body">
                 <p><span class="t-prompt">$</span> squared-one --help</p>
-                <p class="t-dim">moderation — /ban · /kick · /timeout · /purge</p>
+                <p class="t-dim">moderation — /ban · /kick · /timeout · /purge · /dm</p>
                 <p class="t-dim">rules — /rules · /addrule · /removerule · /postrules</p>
                 <p class="t-dim">messaging — /announce</p>
                 <p class="t-dim">utility — /userinfo · /serverinfo · /avatar · /ping</p>
@@ -446,6 +446,14 @@
                         <input id="mod-amount" type="number" min="1" max="100" value="25" />
                       </label>
                       <button class="btn btn-secondary" id="mod-purge" type="button" disabled data-i18n="web.dash.mod.purge">Purge</button>
+                    </div>
+
+                    <div class="mod-message-row">
+                      <label class="field field-grow">
+                        <span class="field-label" data-i18n="web.dash.mod.message">Message</span>
+                        <textarea id="mod-message-text" rows="2" maxlength="2000" placeholder="Message to send to the selected member…" data-i18n-placeholder="web.dash.mod.message-placeholder"></textarea>
+                      </label>
+                      <button class="btn btn-secondary" id="mod-message" type="button" disabled data-i18n="web.dash.mod.send">Send DM</button>
                     </div>
                   </div>
                 </div>

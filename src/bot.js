@@ -515,6 +515,18 @@ const commands = [
         .setRequired(false)
     ),
   new SlashCommandBuilder()
+    .setName('dm')
+    .setDescription('Send a direct message to a user (moderators only)')
+    .addUserOption((o) =>
+      o.setName('user').setDescription('User to message').setRequired(true)
+    )
+    .addStringOption((o) =>
+      o
+        .setName('message')
+        .setDescription('Message to send (max 2000 characters)')
+        .setRequired(true)
+    ),
+  new SlashCommandBuilder()
     .setName('ban')
     .setDescription('Ban a member (Ban Members permission)')
     .addUserOption((o) =>
@@ -1342,7 +1354,7 @@ async function handleInteraction(interaction) {
           {
             name: '📣 Messaging',
             value:
-              '`/announce` Post an announcement\n`/sticky` Manage sticky messages',
+              '`/announce` Post an announcement\n`/dm` Send a DM to a user\n`/sticky` Manage sticky messages',
           },
           {
             name: '🛡️ Moderation',
@@ -1692,6 +1704,32 @@ async function handleInteraction(interaction) {
         content: `📢 Announcement posted in ${channel}.`,
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+
+    if (commandName === 'dm') {
+      if (!isModerator(interaction)) {
+        await interaction.reply({
+          content:
+            '⛔ You need the **Manage Server** permission to message users.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      const user = interaction.options.getUser('user');
+      const message = interaction.options.getString('message');
+      try {
+        await user.send(message);
+        await interaction.reply({
+          content: `📬 Sent a DM to **${user.tag}**.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch {
+        await interaction.reply({
+          content: `❌ Could not DM **${user.tag}** — they may have DMs closed or be blocking the bot.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
       return;
     }
 

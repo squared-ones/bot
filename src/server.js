@@ -1103,7 +1103,13 @@ export function startServer(port = 3000) {
       let permissions = null;
       if (!req.user) {
         // OAuth disabled (dev mode) — grant full access.
-        permissions = { ban: true, kick: true, timeout: true, purge: true };
+        permissions = {
+          ban: true,
+          kick: true,
+          timeout: true,
+          purge: true,
+          message: true,
+        };
       } else {
         const member = await getMember(guild, userId);
         if (!member) continue;
@@ -1113,6 +1119,7 @@ export function startServer(port = 3000) {
           kick: owner || member.permissions.has(ACTION_PERMISSIONS.kick),
           timeout: owner || member.permissions.has(ACTION_PERMISSIONS.timeout),
           purge: owner || member.permissions.has(ACTION_PERMISSIONS.purge),
+          message: owner || member.permissions.has(ACTION_PERMISSIONS.message),
         };
       }
 
@@ -1120,7 +1127,8 @@ export function startServer(port = 3000) {
         !permissions.ban &&
         !permissions.kick &&
         !permissions.timeout &&
-        !permissions.purge
+        !permissions.purge &&
+        !permissions.message
       ) {
         continue;
       }
@@ -1214,9 +1222,9 @@ export function startServer(port = 3000) {
       return res.status(503).json({ error: 'bot is not connected' });
     }
     if (!ACTION_PERMISSIONS[action]) {
-      return res
-        .status(400)
-        .json({ error: 'invalid action (ban, kick, timeout, or purge)' });
+      return res.status(400).json({
+        error: 'invalid action (ban, kick, timeout, purge, or message)',
+      });
     }
 
     const guild = client.guilds.cache.get(String(guildId || ''));
@@ -1263,6 +1271,32 @@ export function startServer(port = 3000) {
         }
         const deleted = await purgeMessages(channel, amount, null);
         return res.json({ ok: true, deleted });
+      }
+
+      if (action === 'message') {
+        if (typeof userId !== 'string' || !userId) {
+          return res.status(400).json({ error: 'userId is required' });
+        }
+        const message = String(req.body.message || '').trim();
+        if (!message) {
+          return res.status(400).json({ error: 'message is required' });
+        }
+        if (message.length > 2000) {
+          return res
+            .status(400)
+            .json({ error: 'message can be at most 2000 characters' });
+        }
+        const user = await client.users.fetch(String(userId)).catch(() => null);
+        if (!user) return res.status(400).json({ error: 'user not found' });
+        try {
+          await user.send(message);
+          return res.json({ ok: true });
+        } catch {
+          return res.status(400).json({
+            error:
+              'could not DM that user — they may have DMs closed or be blocking the bot',
+          });
+        }
       }
 
       if (typeof userId !== 'string' || !userId) {

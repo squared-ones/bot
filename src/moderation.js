@@ -1,11 +1,14 @@
 import { PermissionFlagsBits } from 'discord.js';
 
-// Maps a moderation action to the Discord permission it requires.
+// Maps a moderation action to the Discord permission it requires. DMing a
+// member isn't a Discord permission, so it reuses the Manage Server gate that
+// other moderator-only tools (e.g. /announce) rely on.
 export const ACTION_PERMISSIONS = {
   ban: PermissionFlagsBits.BanMembers,
   kick: PermissionFlagsBits.KickMembers,
   timeout: PermissionFlagsBits.ModerateMembers,
   purge: PermissionFlagsBits.ManageMessages,
+  message: PermissionFlagsBits.ManageGuild,
 };
 
 export const ACTION_LABELS = {
@@ -13,6 +16,7 @@ export const ACTION_LABELS = {
   kick: 'Kick Members',
   timeout: 'Moderate Members',
   purge: 'Manage Messages',
+  message: 'Manage Server',
 };
 
 // Parses a duration like "30s", "10m", "1h", "2d" (bare numbers = minutes).

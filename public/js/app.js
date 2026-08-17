@@ -48,6 +48,8 @@ const el = {
   modKick: $('#mod-kick'),
   modTimeout: $('#mod-timeout'),
   modPurge: $('#mod-purge'),
+  modMessageText: $('#mod-message-text'),
+  modMessage: $('#mod-message'),
   verificationForm: $('#verification-form'),
   verificationStatus: $('#verification-status'),
   verificationRole: $('#verification-role'),
@@ -1218,6 +1220,8 @@ function updateModActions() {
   el.modKick.disabled = !p.kick || !modSelectedUser;
   el.modTimeout.disabled = !p.timeout || !modSelectedUser;
   el.modPurge.disabled = !p.purge || !el.modChannel.value;
+  el.modMessage.disabled =
+    !p.message || !modSelectedUser || !el.modMessageText.value.trim();
 }
 
 function populateModChannels(guildId) {
@@ -1321,6 +1325,7 @@ async function runModAction(action, body) {
     kick: el.modKick,
     timeout: el.modTimeout,
     purge: el.modPurge,
+    message: el.modMessage,
   }[action];
   if (btn) btn.disabled = true;
   try {
@@ -1336,6 +1341,12 @@ async function runModAction(action, body) {
       showToast(
         `Purged ${data.deleted} message${data.deleted === 1 ? '' : 's'}.`
       );
+    } else if (action === 'message') {
+      el.modMessageText.value = '';
+      showToast(`📬 DM sent to ${modSelectedUser.name}.`);
+      modSelectedUser = null;
+      updateModSelected();
+      searchModMembers(el.modUserSearch.value.trim());
     } else {
       showToast(
         `${action[0].toUpperCase() + action.slice(1)} succeeded${
@@ -1435,6 +1446,24 @@ el.modPurge.addEventListener('click', () => {
     action: 'purge',
     channelId,
     amount,
+  });
+});
+
+el.modMessageText.addEventListener('input', updateModActions);
+
+el.modMessage.addEventListener('click', () => {
+  if (!modSelectedUser) return;
+  const message = el.modMessageText.value.trim();
+  if (!message) {
+    showToast('Enter a message first.', 'err');
+    return;
+  }
+  if (!confirm(`Send a DM to ${modSelectedUser.name}?`)) return;
+  runModAction('message', {
+    guildId: selectedGuildId,
+    action: 'message',
+    userId: modSelectedUser.id,
+    message,
   });
 });
 
