@@ -142,7 +142,9 @@
   function onMouseDown(e) {
     if (e.button !== 0) return; // primary button only
     clickScale.set(0.82);
-    spawnClickBurst(e.clientX, e.clientY);
+    // Burst from the animated cursor's current position (which trails the
+    // pointer), not the raw click coordinates.
+    spawnClickBurst(cursorX.value, cursorY.value);
     kick();
   }
 
