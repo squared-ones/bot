@@ -174,6 +174,22 @@ const SEED_CATALOG = {
   'web.dash.workers.windows': 'Windows',
   'web.dash.workers.linux': 'Linux',
   'web.dash.workers.macos': 'macOS',
+  'web.dash.nav.discordbotclient': 'DiscordBotClient',
+  'web.dash.group.client': 'Client',
+  'web.dash.botclient.about':
+    'DiscordBotClient is a desktop client that signs into Discord with a bot token and uses it like a regular account — view and manage guilds and channels, read and send messages, with Vencord built in.',
+  'web.dash.botclient.features':
+    'Sharding · guild & channel management · messages (send, history, embeds, components, reactions, polls) · voice · nitro · direct messages · Vencord built in.',
+  'web.dash.botclient.tos':
+    'Heads up: third-party clients are discouraged and against the Discord Terms of Service. Use at your own risk.',
+  'web.dash.botclient.download-help':
+    'Download the latest release for your platform from the official GitHub repository.',
+  'web.dash.botclient.github': 'View on GitHub',
+  'web.dash.botclient.windows': 'Windows',
+  'web.dash.botclient.linux': 'Linux',
+  'web.dash.botclient.macos': 'macOS',
+  'web.dash.botclient.setup-help':
+    "Log in with your bot token on first launch. Enable the MessageContent intent (other intents are optional) — enable all intents if you want the member list and statuses.",
 };
 
 let store = null;

@@ -34,6 +34,11 @@ The app connects to the server, claims a shard, and starts earning credits
 immediately. Leave it running to keep earning. It keeps its data in a `data/`
 folder next to the executable.
 
+**Only run one instance per worker token.** The app locks itself (`.worker.lock`
+next to the executable) so a second instance refuses to start — two instances
+with the same token would both connect to the same shard and Discord would
+reject their replies.
+
 ## Running from source (developers)
 
 ```bash

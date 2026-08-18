@@ -702,6 +702,17 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    id: 'discordbotclient',
+    title: 'DiscordBotClient',
+    icon: 'icon-layers',
+    groups: [
+      {
+        title: 'Client',
+        items: [{ view: 'discordbotclient', label: 'DiscordBotClient', icon: 'icon-layers' }],
+      },
+    ],
+  },
+  {
     id: 'settings',
     title: 'Settings',
     icon: 'icon-gear',

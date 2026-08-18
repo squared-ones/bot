@@ -4,3 +4,4 @@ data/
 dist/
 npm-debug.log*
 .DS_Store
+.worker.lock

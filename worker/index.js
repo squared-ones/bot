@@ -39,6 +39,55 @@ if (fs.existsSync(path.join(APP_DIR, '.env'))) {
   );
 }
 
+// Single-instance lock: running the same worker twice makes two Discord
+// connections with the same token and shard, so both receive the same
+// interactions and Discord rejects the second reply (error 40060). The lock
+// file lives next to the app and records the PID; a stale lock (after a
+// crash) is taken over automatically.
+const LOCK_FILE = path.join(APP_DIR, '.worker.lock');
+
+function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
+
+function acquireLock() {
+  try {
+    const existing = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
+    if (existing && isProcessAlive(existing.pid)) {
+      console.error(
+        `[worker] another instance is already running (PID ${existing.pid}). ` +
+          'Only one instance may run per worker token — close the other window first.'
+      );
+      return false;
+    }
+  } catch {
+    // No lock or unreadable lock — safe to take over.
+  }
+  try {
+    fs.writeFileSync(
+      LOCK_FILE,
+      `${JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() })}\n`
+    );
+  } catch {
+    // Lock file not writable (e.g. read-only folder) — don't block startup.
+  }
+  return true;
+}
+
+function releaseLock() {
+  try {
+    fs.unlinkSync(LOCK_FILE);
+  } catch {
+    // Nothing to clean up.
+  }
+}
+
 const WORKER_URL = (process.env.WORKER_URL || 'https://squared-one.onrender.com').replace(/\/+$/, '');
 const WORKER_TOKEN = process.env.WORKER_TOKEN || '';
 const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -219,6 +268,10 @@ async function main() {
     process.exit(1);
   }
 
+  if (!acquireLock()) {
+    process.exit(1);
+  }
+
   const shutdown = async (signal) => {
     if (stopping) return;
     stopping = true;
@@ -233,6 +286,7 @@ async function main() {
     } catch {
       // The server will mark us offline via the timeout anyway.
     }
+    releaseLock();
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
@@ -257,5 +311,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(`[worker] fatal: ${error.message}`);
+  releaseLock();
   process.exit(1);
 });
