@@ -24,8 +24,11 @@ credits for every hour of uptime.
 5. Run the app:
    - **Windows**: double-click `squared-one-worker.exe`, or run it from a
      terminal to see its logs.
-   - **Linux/macOS**: `./squared-one-worker` from a terminal (you may need
+   - **Linux**: `./squared-one-worker` from a terminal (you may need
      `chmod +x squared-one-worker` first).
+   - **macOS**: right-click → *Open* the first time (the app is ad-hoc
+     signed, not notarized, so the system asks before launching it), then
+     run it from a terminal to see its logs.
 
 The app connects to the server, claims a shard, and starts earning credits
 immediately. Leave it running to keep earning. It keeps its data in a `data/`

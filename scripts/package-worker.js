@@ -12,8 +12,14 @@
 //
 // The packaged app keeps its `.env` and `data/` folder next to the
 // executable (see worker/index.js and src/github-data.js).
+//
+// Options:
+//   --targets <os1,os2,…>   only build these platforms (windows|linux|macos)
+//   --codesign              ad-hoc sign macOS binaries with codesign (run on
+//                           a macOS machine — required for the executables to
+//                           launch; Linux can't produce valid signatures)
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -98,7 +104,49 @@ async function bundle() {
   return path.join(buildDir, 'worker.js');
 }
 
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const out = { targets: null, codesign: false };
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--codesign') {
+      out.codesign = true;
+    } else if (arg === '--targets') {
+      out.targets = (args[++i] || '').split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (arg.startsWith('--targets=')) {
+      out.targets = arg.slice('--targets='.length).split(',').map((s) => s.trim()).filter(Boolean);
+    } else {
+      throw new Error(`unknown argument: ${arg}`);
+    }
+  }
+  return out;
+}
+
+// Ad-hoc sign macOS binaries so the kernel accepts them. Only meaningful on
+// a macOS machine — `codesign` doesn't exist elsewhere, which is fine for
+// linux/windows-only builds.
+function codesignMacos(targets) {
+  if (!targets.some((t) => t.os === 'macos')) return;
+  try {
+    for (const t of targets.filter((x) => x.os === 'macos')) {
+      execFileSync('codesign', ['--sign', '-', path.join(binDir, binaryName(t))], { stdio: 'ignore' });
+      console.log(`[worker-pkg]   ad-hoc signed ${binaryName(t)}`);
+    }
+  } catch (error) {
+    console.warn('[worker-pkg] codesign unavailable — macOS binaries left unsigned:', error.message);
+  }
+}
+
 async function main() {
+  const opts = parseArgs();
+  let targets = TARGETS;
+  if (opts.targets) {
+    const wanted = new Set(opts.targets);
+    targets = TARGETS.filter((t) => wanted.has(t.os));
+    const missing = [...wanted].filter((os) => !TARGETS.some((t) => t.os === os));
+    if (missing.length) throw new Error(`unknown platform(s): ${missing.join(', ')} (expected windows|linux|macos)`);
+  }
+
   const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   const version = pkg.version || '1.0.0';
 
@@ -112,16 +160,18 @@ async function main() {
   await cp(path.join(root, 'worker', '.env.example'), path.join(binDir, '.env.example'));
 
   console.log('[worker-pkg] compiling executables with pkg (first run downloads Node runtimes)…');
-  for (const t of TARGETS) {
+  for (const t of targets) {
     const out = path.join(binDir, binaryName(t));
     console.log(`[worker-pkg]   ${t.target} → ${binaryName(t)}`);
     run('node', [pkgBin(), '--targets', t.target, '--compress', 'GZip', '--output', out, bundlePath], root);
   }
 
+  if (opts.codesign) codesignMacos(targets);
+
   console.log('[worker-pkg] creating archives…');
   const docFiles = ['README.md', '.env.example'].map((f) => path.join(binDir, f));
   const pkgDir = path.join(binDir, '.package');
-  for (const t of TARGETS) {
+  for (const t of targets) {
     await rm(pkgDir, { recursive: true, force: true });
     await mkdir(pkgDir, { recursive: true });
     // Stage the per-target binary under its friendly name, next to the docs,
