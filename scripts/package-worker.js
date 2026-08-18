@@ -164,7 +164,24 @@ async function main() {
   for (const t of targets) {
     const out = path.join(binDir, binaryName(t));
     console.log(`[worker-pkg]   ${t.target} → ${binaryName(t)}`);
-    run('node', [pkgBin(), '--targets', t.target, '--compress', 'GZip', '--output', out, bundlePath], root);
+    // Cross-compiled bytecode is rejected by the target platforms ("V8
+    // rejected the bytecode cache") — the worker is open source, so ship
+    // plain JS instead: --public keeps the entry file's source, --no-bytecode
+    // skips bytecode generation entirely.
+    run(
+      'node',
+      [
+        pkgBin(),
+        '--targets', t.target,
+        '--compress', 'GZip',
+        '--public',
+        '--public-packages', '*',
+        '--no-bytecode',
+        '--output', out,
+        bundlePath,
+      ],
+      root
+    );
   }
 
   if (opts.codesign) codesignMacos(targets);

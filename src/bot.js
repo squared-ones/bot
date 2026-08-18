@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import {
   Client,
+  ActivityType,
   ApplicationCommandType,
   ChannelType,
   GatewayIntentBits,
@@ -2774,6 +2775,18 @@ export async function startBot(token, options = {}) {
     botState.username = client.user.tag;
     botState.startedAt = new Date();
     updateStats(client);
+    // Show which shard this process runs, e.g. "Shard 1 | Red Shapes".
+    // Re-set on every (re)connect so it stays correct when the shard count
+    // changes and the server bot reconnects.
+    client.user.setPresence({
+      activities: [
+        {
+          name: `Shard ${shardId} | ${client.user.username}`,
+          type: ActivityType.Playing,
+        },
+      ],
+      status: 'online',
+    });
     console.log(`[bot] shard ${shardId}/${shardCount} ${client.user.tag} is online.`);
 
     if (registerCommands) {
