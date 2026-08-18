@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "build": "node scripts/build.js",
+    "package:worker": "node scripts/package-worker.js",
     "start:dist": "node dist/index.js"
   },
   "engines": {
@@ -19,6 +20,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@yao-pkg/pkg": "^6.22.0",
     "esbuild": "^0.28.2",
     "javascript-obfuscator": "^5.5.0"
   },

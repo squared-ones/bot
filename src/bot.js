@@ -98,6 +98,7 @@ import {
   listStickies,
   updateStickyMessageId,
 } from './stickies.js';
+import { getShardCount } from './sharding.js';
 
 export const botState = {
   client: null,
@@ -2671,9 +2672,71 @@ async function sendDueVoteReminders(client) {
   }
 }
 
+// ---- Server shard lifecycle -------------------------------------------
+// The server always runs shard 0, and the total shard count is dynamic: it is
+// 1 + the number of online workers. When a worker joins or leaves, the count
+// changes and every shard (server + workers) must reconnect with the new
+// count, because Discord requires all shards to agree on the total.
+let serverToken = null;
+let serverClient = null;
+let serverShardCount = 1;
+let serverTimers = [];
+let restartTimer = null;
+let processHandlersRegistered = false;
+
+function registerProcessHandlers() {
+  if (processHandlersRegistered) return;
+  processHandlersRegistered = true;
+  process.on('uncaughtException', (err) => {
+    console.error('[bot] uncaught exception:', err);
+    reportError(err, 'uncaught exception').catch(() => {});
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('[bot] unhandled rejection:', reason);
+    reportError(reason, 'unhandled rejection').catch(() => {});
+  });
+}
+
+function clearServerTimers() {
+  for (const timer of serverTimers) clearInterval(timer);
+  serverTimers = [];
+}
+
+// The shard count the server bot is currently connected with.
+export function getServerShardCount() {
+  return serverShardCount;
+}
+
+// Schedules the server bot to reconnect with the new shard count after a
+// worker joins or leaves. Debounced so bursts of joins/leaves coalesce into a
+// single reconnect.
+export function restartBotForShardChange() {
+  if (!serverToken || restartTimer) return;
+  restartTimer = setTimeout(async () => {
+    restartTimer = null;
+    const next = getShardCount();
+    if (next === serverShardCount) return;
+    console.log(
+      `[bot] shard count changed ${serverShardCount} → ${next}; reconnecting…`
+    );
+    try {
+      if (serverClient) await serverClient.destroy();
+    } catch (error) {
+      console.error('[bot] failed to destroy client:', error.message);
+    }
+    serverClient = null;
+    clearServerTimers();
+    startBot(serverToken).catch((err) => {
+      console.error('[bot] reconnect failed:', err.message);
+    });
+  }, 1500);
+  restartTimer.unref?.();
+}
+
 // Starts the Discord client. Options:
-//   shardId / shardCount  — run as a specific shard of a sharded bot
-//                           (default: single unsharded connection)
+//   shardId / shardCount  — run as a specific shard of a sharded bot. Defaults
+//                           to shard 0 with the current network shard count
+//                           (1 + online workers).
 //   registerCommands      — register global slash commands. Only one shard
 //                           should do this (the server's shard 0); workers
 //                           pass false. Defaults to true for shard 0.
@@ -2681,7 +2744,7 @@ export async function startBot(token, options = {}) {
   const shardId = Number.isInteger(options.shardId) ? options.shardId : 0;
   const shardCount = Number.isInteger(options.shardCount)
     ? options.shardCount
-    : 1;
+    : getShardCount();
   const registerCommands =
     options.registerCommands !== undefined
       ? options.registerCommands
@@ -2697,19 +2760,14 @@ export async function startBot(token, options = {}) {
     shardCount,
   });
   botState.client = client;
+  serverToken = token;
+  serverClient = client;
+  serverShardCount = shardCount;
+  registerProcessHandlers();
 
   client.on('error', (err) => {
     console.error('[bot] client error:', err);
     reportError(err, 'discord client').catch(() => {});
-  });
-
-  process.on('uncaughtException', (err) => {
-    console.error('[bot] uncaught exception:', err);
-    reportError(err, 'uncaught exception').catch(() => {});
-  });
-  process.on('unhandledRejection', (reason) => {
-    console.error('[bot] unhandled rejection:', reason);
-    reportError(reason, 'unhandled rejection').catch(() => {});
   });
 
   client.once('clientReady', async () => {
@@ -2811,6 +2869,7 @@ export async function startBot(token, options = {}) {
     });
   }, 10 * 60 * 1000);
   reminderTimer.unref?.();
+  serverTimers.push(reminderTimer);
 
   const voiceXpTimer = setInterval(() => {
     awardVoiceXp(client).catch((error) => {
@@ -2818,10 +2877,12 @@ export async function startBot(token, options = {}) {
     });
   }, 60 * 1000);
   voiceXpTimer.unref?.();
+  serverTimers.push(voiceXpTimer);
 
   const statsTimer = setInterval(() => {
     syncDiscordBotListStats(client);
   }, 30 * 60 * 1000);
   statsTimer.unref?.();
+  serverTimers.push(statsTimer);
   return client;
 }

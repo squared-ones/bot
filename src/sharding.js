@@ -14,9 +14,7 @@ export const WORKER_CREDIT_RATE = Number.isFinite(parsedCreditRate)
   ? Math.max(0, Math.floor(parsedCreditRate))
   : 5;
 
-// How often workers are expected to heartbeat, and how long without a
-// heartbeat before a worker is considered offline.
-const HEARTBEAT_INTERVAL_MS = 30_000;
+// How long without a heartbeat before a worker is considered offline.
 const OFFLINE_TIMEOUT_MS = 90_000;
 
 // Data files that are keyed by guild and can therefore be merged safely
@@ -77,16 +75,23 @@ export function loadSharding() {
   return store;
 }
 
-// Total shard count for the whole bot. Every shard (server + workers) must
-// agree on this. Defaults to 1 (one shard run by the server); set SHARD_COUNT
-// higher to distribute shards to community workers.
-export function getShardCount() {
-  const parsed = Number(process.env.SHARD_COUNT);
-  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
+function onlineWorkers() {
+  return Object.values(getStore().workers).filter(
+    (worker) => worker.status === 'online'
+  );
 }
 
-// Shard IDs run by the main server itself (comma-separated SERVER_SHARDS env,
-// default "0"). Workers claim the remaining shard IDs.
+// Total shard count for the whole bot. The server always runs shard 0; each
+// online worker adds one more shard. So with no workers the bot runs a single
+// unsharded connection, and the count grows (and shrinks) with the network.
+export function getShardCount() {
+  return 1 + onlineWorkers().length;
+}
+
+// Shard IDs run by the main server itself. The server always owns shard 0;
+// workers are compacted into shards 1..N. SERVER_SHARDS is honored so an owner
+// can pin additional local shards, but the server process itself only runs
+// shard 0 (run more processes to host more local shards).
 export function getServerShardIds() {
   const raw = String(process.env.SERVER_SHARDS || '0');
   const ids = raw
@@ -174,47 +179,31 @@ export function authenticateWorker(token) {
   return record || null;
 }
 
-// Assigns the lowest free shard ID to a worker (stable across reconnects:
-// a worker keeps its shard once claimed). Returns the shard ID or null when
-// the network is full.
-function assignShard(worker) {
-  if (
-    worker.shardId != null &&
-    worker.shardId >= 0 &&
-    worker.shardId < getShardCount()
-  ) {
-    return worker.shardId;
-  }
-  const shardCount = getShardCount();
-  const serverShards = new Set(getServerShardIds());
-  const taken = new Set(
-    Object.values(getStore().workers)
-      .filter((w) => w.id !== worker.id && w.shardId != null)
-      .map((w) => w.shardId)
+// Compactly assigns shards 1..N to the online workers (the server owns shard
+// 0). Workers are ordered by creation time so a worker keeps its slot while
+// it stays online; when workers join or leave the remaining ones shift down.
+function reassignShards() {
+  const online = onlineWorkers().sort((a, b) =>
+    String(a.createdAt).localeCompare(String(b.createdAt))
   );
-  for (let id = 0; id < shardCount; id++) {
-    if (serverShards.has(id) || taken.has(id)) continue;
-    worker.shardId = id;
-    return id;
-  }
-  return null;
+  online.forEach((worker, index) => {
+    worker.shardId = index + 1;
+  });
+  return online.length;
 }
 
 // Claims a shard for a worker and marks it online. Returns the assignment or
 // an error string.
 export function claimShard(worker) {
-  const shardId = assignShard(worker);
-  if (shardId == null) {
-    return { ok: false, error: 'no shards available' };
-  }
   const now = Date.now();
   worker.status = 'online';
   worker.lastHeartbeat = now;
+  const onlineCount = reassignShards();
   saveStore();
   return {
     ok: true,
-    shardId,
-    shardCount: getShardCount(),
+    shardId: worker.shardId,
+    shardCount: 1 + onlineCount,
     // The server issues the bot token to workers so they can connect as the
     // same application under a different shard.
     botToken: process.env.DISCORD_TOKEN || '',
@@ -243,21 +232,35 @@ export function heartbeat(worker, stats = {}) {
   if (stats.version) worker.version = String(stats.version).slice(0, 32);
 
   const earned = awardWorkerCredits(worker);
+  const onlineCount = reassignShards();
   saveStore();
   return {
     ok: true,
     shardId: worker.shardId,
-    shardCount: getShardCount(),
+    shardCount: 1 + onlineCount,
     creditsEarned: earned,
     totalEarned: worker.totalEarned || 0,
   };
+}
+
+// Marks a specific worker offline (used on graceful release). Returns the new
+// shard count so the server can reconnect if it changed.
+export function releaseWorker(worker) {
+  if (worker.status === 'online') {
+    worker.status = 'offline';
+    reassignShards();
+    saveStore();
+  }
+  return getShardCount();
 }
 
 // Grants credits for any uptime accrued since the last grant. Returns the
 // number of credits granted (0 when nothing new accrued).
 function awardWorkerCredits(worker) {
   if (WORKER_CREDIT_RATE <= 0 || !worker.ownerId) return 0;
-  const accrued = (worker.uptimeMs || 0) - (worker.totalEarned || 0) * (3_600_000 / WORKER_CREDIT_RATE);
+  const accrued =
+    (worker.uptimeMs || 0) -
+    (worker.totalEarned || 0) * (3_600_000 / WORKER_CREDIT_RATE);
   if (accrued < 3_600_000 / WORKER_CREDIT_RATE) return 0;
   const credits = Math.floor((accrued * WORKER_CREDIT_RATE) / 3_600_000);
   if (credits <= 0) return 0;
@@ -285,7 +288,10 @@ export function markStaleWorkersOffline(now = Date.now()) {
       changed++;
     }
   }
-  if (changed) saveStore();
+  if (changed) {
+    reassignShards();
+    saveStore();
+  }
   return changed;
 }
 

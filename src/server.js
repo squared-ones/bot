@@ -18,6 +18,8 @@ import {
   isApplicationOwner,
   grantTranslationRole,
   grantVoteRole,
+  getServerShardCount,
+  restartBotForShardChange,
 } from './bot.js';
 import {
   SESSION_TTL,
@@ -126,6 +128,7 @@ import {
   authenticateWorker,
   claimShard,
   heartbeat,
+  releaseWorker,
   markStaleWorkersOffline,
   getWorkerDataFiles,
   mergeWorkerData,
@@ -1061,6 +1064,14 @@ export function startServer(port = 3000) {
     next();
   };
 
+  // Reconnects the server's own bot when the dynamic shard count changes
+  // (a worker joined or left), since all shards must agree on the total.
+  function syncServerShard() {
+    if (getShardCount() !== getServerShardCount()) {
+      restartBotForShardChange();
+    }
+  }
+
   app.get('/api/workers', sessionGuard, (req, res) => {
     res.json({
       workers: listWorkers(billingIdOf(req)),
@@ -1089,6 +1100,7 @@ export function startServer(port = 3000) {
   app.post('/api/worker/claim', workerAuth, (req, res) => {
     const result = claimShard(req.worker);
     if (!result.ok) return res.status(409).json({ error: result.error });
+    syncServerShard();
     res.json(result);
   });
 
@@ -1096,7 +1108,15 @@ export function startServer(port = 3000) {
   app.post('/api/worker/heartbeat', workerAuth, (req, res) => {
     const { guilds, members, latency, version } = req.body ?? {};
     const result = heartbeat(req.worker, { guilds, members, latency, version });
+    syncServerShard();
     res.json(result);
+  });
+
+  // Worker is shutting down gracefully — free its shard immediately.
+  app.post('/api/worker/release', workerAuth, (req, res) => {
+    releaseWorker(req.worker);
+    syncServerShard();
+    res.json({ ok: true });
   });
 
   // Worker pulls the data snapshot it needs to run the full bot logic.
@@ -1991,10 +2011,11 @@ export function startServer(port = 3000) {
     res.status(404).sendFile(path.join(PUBLIC_DIR, '404.html'));
   });
 
-  // Periodically marks workers offline when they stop heartbeating.
+  // Periodically marks workers offline when they stop heartbeating and
+  // reconnects the server bot if the shard count changed as a result.
   const workerTicker = setInterval(() => {
     try {
-      markStaleWorkersOffline();
+      if (markStaleWorkersOffline() > 0) syncServerShard();
     } catch (error) {
       console.error('[web] worker status sweep failed:', error.message);
     }

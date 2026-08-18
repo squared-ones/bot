@@ -27,6 +27,11 @@ function resolveSafeDataDir(candidate) {
 }
 
 export function resolveDataDir() {
+  // When compiled into the standalone worker app, the source tree isn't
+  // available — keep runtime data next to the executable instead.
+  if (process.pkg) {
+    return path.join(path.dirname(process.execPath), 'data');
+  }
   const safeRoot = path.resolve(HERE, '..', 'data');
   const envDataDir = process.env.DATA_DIR;
   if (envDataDir) {

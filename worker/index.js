@@ -3,23 +3,41 @@
 // Runs one Discord shard of the Squared One bot from your own machine. While
 // the worker is online it earns the owner credits (SQ) based on uptime.
 //
-// Setup:
+// Setup (standalone app):
 //   1. Create a worker token in the dashboard (Settings -> Workers).
-//   2. Copy worker/.env.example to worker/.env and set WORKER_TOKEN (and
+//   2. Create a file named `.env` next to the app and set WORKER_TOKEN (and
 //      WORKER_URL if the server is not at the default address).
-//   3. Run:  node worker/index.js
+//   3. Run the app — the bundled app keeps its data in a `data/` folder next
+//      to the executable.
+//
+// Setup (from source):
+//   1. Copy worker/.env.example to worker/.env and set WORKER_TOKEN.
+//   2. Run:  node worker/index.js
 //
 // The worker pulls the current data snapshot (rules, configs, levels, …) from
 // the server on startup and periodically, and pushes its guild-scoped changes
 // back so data stays consistent across shards.
-import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { startBot } from '../src/bot.js';
 import { resolveDataDir } from '../src/github-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Standalone app: `.env` and `data/` live next to the executable. From
+// source: they live in the worker/ folder (and the repo data/ folder).
+const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+if (fs.existsSync(path.join(APP_DIR, '.env'))) {
+  dotenv.config({ path: path.join(APP_DIR, '.env') });
+} else if (process.pkg) {
+  console.warn('[worker] no .env found next to the app — creating a template. Add your WORKER_TOKEN and restart.');
+  fs.writeFileSync(
+    path.join(APP_DIR, '.env'),
+    '# Squared One worker\nWORKER_TOKEN=\nWORKER_URL=https://squared-one.onrender.com\n'
+  );
+}
 
 const WORKER_URL = (process.env.WORKER_URL || 'https://squared-one.onrender.com').replace(/\/+$/, '');
 const WORKER_TOKEN = process.env.WORKER_TOKEN || '';
@@ -39,6 +57,9 @@ const GUILD_SCOPED_FILES = [
 let client = null;
 let shardId = null;
 let shardCount = 1;
+let stopping = false;
+let heartbeatTimer = null;
+let syncTimer = null;
 
 async function api(pathname, method = 'GET', body) {
   const res = await fetch(`${WORKER_URL}${pathname}`, {
@@ -110,7 +131,9 @@ async function sendHeartbeat() {
     latency: client.ws.ping,
     version: '1.0.0',
   });
-  // If the server reassigned our shard (e.g. shard count changed), reconnect.
+  // If the server reassigned our shard (e.g. the shard count changed because
+  // another worker joined or left), destroy the client so the main loop
+  // re-claims a shard and reconnects with the new count.
   if (
     result.ok &&
     (result.shardId !== shardId || result.shardCount !== shardCount)
@@ -118,7 +141,9 @@ async function sendHeartbeat() {
     console.log(
       `[worker] shard reassigned to ${result.shardId}/${result.shardCount}, reconnecting…`
     );
-    process.exit(0);
+    await client.destroy().catch(() => {});
+    client = null;
+    return;
   }
   if (result.creditsEarned > 0) {
     console.log(
@@ -127,14 +152,16 @@ async function sendHeartbeat() {
   }
 }
 
-async function run() {
-  if (!WORKER_TOKEN) {
-    console.error(
-      '[worker] WORKER_TOKEN is not set. Create a worker token in the dashboard and add it to worker/.env'
-    );
-    process.exit(1);
-  }
+function stopTimers() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  if (syncTimer) clearInterval(syncTimer);
+  heartbeatTimer = null;
+  syncTimer = null;
+}
 
+// Runs one claim + connect cycle. Returns when the client disconnects (e.g.
+// a shard reassignment) or the process is asked to stop.
+async function runCycle() {
   console.log(`[worker] connecting to ${WORKER_URL}…`);
   const claim = await api('/api/worker/claim', 'POST');
   shardId = claim.shardId;
@@ -142,10 +169,9 @@ async function run() {
   console.log(`[worker] claimed shard ${shardId}/${shardCount}.`);
 
   if (!claim.botToken) {
-    console.error(
-      '[worker] the server did not provide a bot token — set DISCORD_TOKEN on the server.'
+    throw new Error(
+      'the server did not provide a bot token — set DISCORD_TOKEN on the server'
     );
-    process.exit(1);
   }
 
   try {
@@ -160,34 +186,76 @@ async function run() {
     registerCommands: false,
   });
 
-  const heartbeatTimer = setInterval(() => {
+  heartbeatTimer = setInterval(() => {
     sendHeartbeat().catch((error) =>
       console.error(`[worker] heartbeat failed: ${error.message}`)
     );
   }, HEARTBEAT_INTERVAL_MS);
   heartbeatTimer.unref?.();
 
-  const syncTimer = setInterval(() => {
+  syncTimer = setInterval(() => {
     pushData()
       .catch((error) => console.warn(`[worker] data push failed: ${error.message}`))
       .then(() => pullData().catch(() => {}));
   }, DATA_SYNC_INTERVAL_MS);
   syncTimer.unref?.();
 
+  // Wait until the client is gone (destroyed on reassignment or shutdown).
+  while (!stopping && client) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  stopTimers();
+  if (client) {
+    await client.destroy().catch(() => {});
+    client = null;
+  }
+}
+
+async function main() {
+  if (!WORKER_TOKEN) {
+    console.error(
+      `[worker] WORKER_TOKEN is not set. Create a worker token in the dashboard and add it to ${path.join(APP_DIR, '.env')}`
+    );
+    process.exit(1);
+  }
+
   const shutdown = async (signal) => {
+    if (stopping) return;
+    stopping = true;
     console.log(`[worker] ${signal} received, shutting down…`);
     try {
       await pushData();
     } catch {
       // Best-effort push on shutdown.
     }
+    try {
+      await api('/api/worker/release', 'POST');
+    } catch {
+      // The server will mark us offline via the timeout anyway.
+    }
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+  while (!stopping) {
+    try {
+      await runCycle();
+    } catch (error) {
+      console.error(`[worker] error: ${error.message}`);
+      stopTimers();
+      if (client) {
+        await client.destroy().catch(() => {});
+        client = null;
+      }
+      if (stopping) break;
+      console.log('[worker] retrying in 5s…');
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
 }
 
-run().catch((error) => {
-  console.error(`[worker] failed to start: ${error.message}`);
+main().catch((error) => {
+  console.error(`[worker] fatal: ${error.message}`);
   process.exit(1);
 });

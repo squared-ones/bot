@@ -1,0 +1,43 @@
+name: Release worker apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ldid (macOS ad-hoc signing)
+        # pkg embeds a Node runtime; macOS binaries built on Linux need an
+        # ad-hoc signature (ldid) or the kernel refuses to launch them.
+        run: sudo apt-get update && sudo apt-get install -y ldid
+
+      - name: Build worker executables
+        # pkg cross-compiles all platforms (Windows .exe, Linux/macOS binaries)
+        # from this single runner and wraps them in .zip / .tar.gz archives
+        # under dist/worker-release/.
+        run: npm run package:worker
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/worker-release/*.zip, dist/worker-release/*.tar.gz
+          generate_release_notes: true

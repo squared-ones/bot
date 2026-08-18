@@ -188,6 +188,30 @@ body::before {
 }
 
 /* ---------- Workers ---------- */
+.worker-downloads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.worker-downloads .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.worker-downloads .worker-arch {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  opacity: 0.75;
+}
+
 .worker-run-row {
   display: flex;
   align-items: center;

@@ -170,7 +170,10 @@ const SEED_CATALOG = {
   'web.dash.workers.reveal-note': 'Copy this token now — it will not be shown again.',
   'web.dash.workers.copy': 'Copy',
   'web.dash.workers.run-help':
-    'Download the worker app, add your token, and run it. See the worker README for full instructions.',
+    'Download the worker app for your platform, extract it, paste your token into the .env file, and run it. Every hour of uptime earns you credits.',
+  'web.dash.workers.windows': 'Windows',
+  'web.dash.workers.linux': 'Linux',
+  'web.dash.workers.macos': 'macOS',
 };
 
 let store = null;
