@@ -47,6 +47,8 @@ async function obfuscateFrontend(publicDir) {
 }
 
 async function main() {
+  const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+
   console.log('[build] cleaning dist/');
   await rm(dist, { recursive: true, force: true });
   await mkdir(dist, { recursive: true });
@@ -118,7 +120,6 @@ async function main() {
     );
   }
 
-  const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   const distPkg = {
     name: pkg.name,
     version: pkg.version,

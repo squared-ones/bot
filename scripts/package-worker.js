@@ -124,16 +124,17 @@ function parseArgs() {
 
 // Ad-hoc sign macOS binaries so the kernel accepts them. Only meaningful on
 // a macOS machine — `codesign` doesn't exist elsewhere, which is fine for
-// linux/windows-only builds.
+// linux/windows-only builds. `-f` is required: pkg already ad-hoc signs the
+// binary on macOS, and codesign refuses to re-sign without force.
 function codesignMacos(targets) {
   if (!targets.some((t) => t.os === 'macos')) return;
   try {
     for (const t of targets.filter((x) => x.os === 'macos')) {
-      execFileSync('codesign', ['--sign', '-', path.join(binDir, binaryName(t))], { stdio: 'ignore' });
+      execFileSync('codesign', ['-f', '--sign', '-', path.join(binDir, binaryName(t))], { stdio: 'ignore' });
       console.log(`[worker-pkg]   ad-hoc signed ${binaryName(t)}`);
     }
   } catch (error) {
-    console.warn('[worker-pkg] codesign unavailable — macOS binaries left unsigned:', error.message);
+    console.warn('[worker-pkg] codesign failed — macOS binaries left unsigned:', error.message);
   }
 }
 

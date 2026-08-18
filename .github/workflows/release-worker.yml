@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag for manual runs (e.g. v1.0.1)'
+        required: false
+        default: 'v1.0.0'
 
 permissions:
   contents: write
@@ -37,5 +42,8 @@ jobs:
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
+          # Tag pushes use the pushed tag; manual runs use the version input.
+          # If the tag doesn't exist yet, GitHub creates it at this commit.
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
           files: dist/worker-release/*.zip, dist/worker-release/*.tar.gz
           generate_release_notes: true
