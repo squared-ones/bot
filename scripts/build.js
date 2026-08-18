@@ -113,6 +113,18 @@ async function main() {
   await obfuscateFrontend(path.join(dist, 'public'));
   await mkdir(path.join(dist, 'data'), { recursive: true });
 
+  console.log('[build] copying DiscordBotClient web app…');
+  if (existsSync(path.join(root, 'build'))) {
+    await cp(path.join(root, 'build'), path.join(dist, 'build'), {
+      recursive: true,
+    });
+  }
+  if (existsSync(path.join(root, 'assets'))) {
+    await cp(path.join(root, 'assets'), path.join(dist, 'assets'), {
+      recursive: true,
+    });
+  }
+
   if (existsSync(path.join(root, '.env.example'))) {
     await cp(
       path.join(root, '.env.example'),

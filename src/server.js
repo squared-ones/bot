@@ -1,4 +1,5 @@
 import express from 'express';
+import { createRequire } from 'node:module';
 import crypto from 'node:crypto';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import path from 'node:path';
@@ -158,6 +159,19 @@ function resolvePublicDir() {
     return path.join(__dirname, 'public');
   }
   return path.join(__dirname, '..', 'public');
+}
+
+// Resolves the compiled DiscordBotClient app (build/AppCore/APIServer.js) in
+// both dev (src/) and built (dist/) layouts.
+function resolveBotClientApp() {
+  const candidates = [
+    path.join(__dirname, 'build', 'AppCore', 'APIServer.js'),
+    path.join(__dirname, '..', 'build', 'AppCore', 'APIServer.js'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
 }
 
 // Only allow same-origin relative redirects (prevents open redirects).
@@ -2002,6 +2016,24 @@ export function startServer(port = 3000) {
 
   // ---------- Static (public, but never auto-serve index.html) ----------
   app.use(express.static(PUBLIC_DIR, { index: false }));
+
+  // ---------- DiscordBotClient (web) ----------
+  // Mounted after Squared One's own routes and static files so it only
+  // handles Discord API/asset paths (/api/v9, /api/v10, /channels, /app,
+  // /login, /client). The compiled app lives in build/ (CommonJS).
+  try {
+    const nodeRequire = createRequire(import.meta.url);
+    const { default: botClientApp } = nodeRequire(resolveBotClientApp());
+    if (botClientApp) {
+      app.use(botClientApp);
+      console.log('[web] DiscordBotClient mounted — open /client (or /channels/@me).');
+    }
+  } catch (error) {
+    console.warn(
+      '[web] DiscordBotClient not built — run "npm run client:build:ts":',
+      error.message
+    );
+  }
 
   // 404 fallback — JSON for API routes, themed page for everything else.
   app.use((req, res) => {

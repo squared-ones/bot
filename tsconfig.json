@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "module": "commonjs",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "outDir": "build",
+    "moduleResolution": "node",
+    "resolveJsonModule": false,
+    "strict": true,
+    "alwaysStrict": true,
+    "isolatedModules": true,
+    "target": "es2024",
+    "baseUrl": ".",
+    // "verbatimModuleSyntax": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": false,
+    "paths": {
+      "src/*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules/**/*",
+    "VencordExtension/**/*",
+    "dist/**/*",
+    "scripts/**/*",
+    "Vencord"
+  ]
+}

@@ -340,7 +340,17 @@
     "web.dash.workers.create": "Create worker",
     "web.dash.workers.reveal-note": "Copy this token now — it will not be shown again.",
     "web.dash.workers.copy": "Copy",
-    "web.dash.workers.run-help": "Download the worker app, add your token, and run it. See the worker README for full instructions."
+    "web.dash.workers.run-help": "Download the worker app, add your token, and run it. See the worker README for full instructions.",
+    "web.dash.workers.windows": "Windows",
+    "web.dash.workers.linux": "Linux",
+    "web.dash.workers.macos": "macOS",
+    "web.dash.nav.discordbotclient": "DiscordBotClient",
+    "web.dash.group.client": "Client",
+    "web.dash.botclient.about": "DiscordBotClient signs into Discord with a bot token and uses it like a regular account — view and manage guilds and channels, read and send messages — right in your browser.",
+    "web.dash.botclient.open": "Open web client",
+    "web.dash.botclient.features": "Sharding · guild & channel management · messages (send, history, embeds, components, reactions, polls) · voice · nitro · direct messages.",
+    "web.dash.botclient.tos": "Heads up: third-party clients are discouraged and against the Discord Terms of Service. Use at your own risk.",
+    "web.dash.botclient.setup-help": "Open the web client and sign in with your bot token. Enable the MessageContent intent (other intents are optional) — enable all intents if you want the member list and statuses."
   },
   "translations": {},
   "pending": [],
