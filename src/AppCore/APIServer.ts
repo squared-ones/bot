@@ -19,6 +19,13 @@ const app = express();
 // so the value is stored JSON-encoded.
 const AUTO_LOGIN_TOKEN = process.env.DISCORD_TOKEN || "";
 
+// The web client sends a user-style identify (no `intents` field), which
+// Discord rejects for bot tokens with close code 4013 ("Invalid intent(s)").
+// Inject the bot's intents into the identify (op 2) payload. Defaults to the
+// intents Squared One's bot declares (Guilds|GuildMembers|GuildVoiceStates|
+// GuildMessages = 531); override with CLIENT_INTENTS if more are enabled.
+const CLIENT_INTENTS = Number(process.env.CLIENT_INTENTS) || 531;
+
 function serveDiscordHTML(res: express.Response) {
     let html = readFileSync(Constants.DiscordHTMLPath, "utf8");
     if (AUTO_LOGIN_TOKEN) {
@@ -26,7 +33,8 @@ function serveDiscordHTML(res: express.Response) {
         // as a JS string literal inside the injected <script>.
         const tokenLiteral = JSON.stringify(JSON.stringify(AUTO_LOGIN_TOKEN));
         const injection =
-            `<script>try{var t=localStorage.getItem("token");if(!t){localStorage.setItem("token",${tokenLiteral});}}catch(e){}</script>`;
+            `<script>try{var t=localStorage.getItem("token");if(!t){localStorage.setItem("token",${tokenLiteral});}}catch(e){}</script>` +
+            `<script>try{(function(){var I=${CLIENT_INTENTS};var W=window.WebSocket;if(!W)return;function P(u,p){var s=p?new W(u,p):new W(u);var g=s.send.bind(s);s.send=function(d){if(typeof d==="string"){try{var m=JSON.parse(d);if(m&&m.op===2&&m.d){if(typeof m.d.intents==="undefined"){m.d.intents=I;d=JSON.stringify(m);}}}catch(e){}}return g(d);};return s;}P.prototype=W.prototype;P.CONNECTING=W.CONNECTING;P.OPEN=W.OPEN;P.CLOSING=W.CLOSING;P.CLOSED=W.CLOSED;window.WebSocket=P;})();}catch(e){}</script>`;
         html = html.replace("<head>", `<head>${injection}`);
     }
     res.send(html);
