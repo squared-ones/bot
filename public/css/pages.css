@@ -2031,6 +2031,20 @@
         margin-bottom: 10px;
       }
 
+      .tr-pending-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid var(--green);
+        background: rgba(0, 255, 136, 0.06);
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
       .tr-pending-actions {
         display: flex;
         gap: 8px;

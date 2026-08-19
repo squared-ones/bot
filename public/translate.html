@@ -63,6 +63,11 @@
 
       <div class="tr-list" id="tr-list"></div>
 
+      <section class="tr-pending" id="tr-pending" hidden>
+        <h2 class="tr-h2">Pending review</h2>
+        <div id="tr-pending-list"></div>
+      </section>
+
     </main>
 
     <div id="site-footer"></div>
@@ -84,6 +89,8 @@
         const rewardEl = $('#tr-reward');
         const noticeEl = $('#tr-notice');
         const statusEl = $('#tr-status');
+        const pendingEl = $('#tr-pending');
+        const pendingListEl = $('#tr-pending-list');
 
         let state = {
           catalog: {},
@@ -91,6 +98,7 @@
           reward: 0,
           signedIn: false,
           locale: 'fr',
+          pending: [],
         };
 
         function showStatus(message) {
@@ -119,6 +127,15 @@
           return data;
         }
 
+        // The signed-in contributor's pending submission for a key/locale, if any.
+        function pendingFor(key, locale) {
+          return (
+            state.pending.find(
+              (entry) => entry.key === key && entry.locale === locale
+            ) || null
+          );
+        }
+
         function renderStrings() {
           const q = filterEl.value.trim().toLowerCase();
           const entries = Object.entries(state.catalog).filter(
@@ -129,23 +146,25 @@
             return;
           }
           listEl.innerHTML = entries
-            .map(
-              ([key, source]) => `
+            .map(([key, source]) => {
+              const pending = pendingFor(key, state.locale);
+              const action = state.signedIn
+                ? pending
+                  ? '<div class="tr-pending-note">⏳ Pending review</div>'
+                  : `<form class="tr-submit" data-key="${esc(key)}">
+                      <input type="text" maxlength="1000" placeholder="Your ${esc(state.locale)} translation…" required />
+                      <button type="submit" class="btn btn-primary btn-sm">Submit</button>
+                    </form>`
+                : '';
+              return `
                 <div class="tr-row">
                   <div class="tr-row-top">
                     <span class="tr-key">${esc(key)}</span>
                   </div>
                   <div class="tr-source">${esc(source)}</div>
-                  ${
-                    state.signedIn
-                      ? `<form class="tr-submit" data-key="${esc(key)}">
-                          <input type="text" maxlength="1000" placeholder="Your ${esc(state.locale)} translation…" required />
-                          <button type="submit" class="btn btn-primary btn-sm">Submit</button>
-                        </form>`
-                      : ''
-                  }
-                </div>`
-            )
+                  ${action}
+                </div>`;
+            })
             .join('');
 
           if (state.signedIn) {
@@ -176,12 +195,35 @@
           }
         }
 
+        // Lists the contributor's own submissions awaiting review. Entries
+        // disappear from here once they are approved (or rejected), which
+        // hides the pending translation on the site.
+        function renderPending() {
+          if (!state.signedIn || !state.pending.length) {
+            pendingEl.hidden = true;
+            return;
+          }
+          pendingEl.hidden = false;
+          pendingListEl.innerHTML = state.pending
+            .map(
+              (entry) => `
+                <div class="tr-pending-item">
+                  <div class="tr-pending-meta">${esc(entry.locale)} · ${esc(
+                entry.key
+              )}</div>
+                  <div class="tr-pending-value">${esc(entry.value)}</div>
+                </div>`
+            )
+            .join('');
+        }
+
         function render() {
           rewardEl.textContent = '+' + state.reward + ' SQ per approved string';
           noticeEl.innerHTML = state.signedIn
             ? 'No machine translation — every entry is reviewed by a human before it ships.'
             : 'Please <a href="/login" style="color:var(--red)">sign in</a> to contribute translations.';
           renderStrings();
+          renderPending();
         }
 
         async function loadCatalog() {
@@ -190,6 +232,7 @@
             if (!res.ok) throw new Error('unauthorized');
             const data = await res.json();
             state.catalog = data.catalog || {};
+            state.pending = data.pending || [];
             state.reward = Number(data.reward) || 0;
             state.signedIn = Boolean(data.signedIn);
             if (data.locale) state.locale = data.locale;
@@ -229,6 +272,10 @@
         filterEl.addEventListener('input', renderStrings);
 
         loadLocales().then(loadCatalog);
+
+        // Refresh so approved translations disappear from the pending list
+        // without a manual reload.
+        setInterval(loadCatalog, 30000);
       })();
     </script>
   </body>

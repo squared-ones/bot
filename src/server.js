@@ -684,14 +684,22 @@ export function startServer(port = 3000) {
   });
 
   // Full catalog for the translation contribution page (contributor-facing).
+  // `pending` is the signed-in contributor's own submissions so the page can
+  // show them as awaiting review, and hide them once approved.
   app.get('/api/i18n/catalog', guard, async (req, res) => {
     const userId = billingIdOf(req);
+    const pending = userId
+      ? listPendingTranslations().filter(
+          (entry) => entry.contributorId === userId
+        )
+      : [];
     res.json({
       catalog: getCatalog(),
       locales: listLocales(),
       reward: TRANSLATION_REWARD,
       locale: userId ? getUserLocale(userId) : null,
       signedIn: Boolean(req.user),
+      pending,
     });
   });
 
