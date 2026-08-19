@@ -1,5 +1,6 @@
 import { build } from 'esbuild';
 import JavaScriptObfuscator from 'javascript-obfuscator';
+import { execSync } from 'node:child_process';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -112,6 +113,9 @@ async function main() {
   });
   await obfuscateFrontend(path.join(dist, 'public'));
   await mkdir(path.join(dist, 'data'), { recursive: true });
+
+  console.log('[build] compiling DiscordBotClient web app (tsc + tsc-alias)…');
+  execSync('npm run client:build:ts', { cwd: root, stdio: 'inherit' });
 
   console.log('[build] copying DiscordBotClient web app…');
   if (existsSync(path.join(root, 'build'))) {

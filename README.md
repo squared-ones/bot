@@ -295,7 +295,8 @@ failure and falls back to the local data directory.
 ## Building
 
 `npm run build` bundles the server into `dist/index.js` without obfuscating it,
-then obfuscates the browser JavaScript and inline frontend scripts with
+then compiles the DiscordBotClient web app (`tsc` + `tsc-alias`) into
+`build/`, obfuscates the browser JavaScript and inline frontend scripts with
 [javascript-obfuscator](https://www.npmjs.com/package/javascript-obfuscator)
 and copies the web assets into `dist/`:
 
