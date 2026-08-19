@@ -238,7 +238,12 @@ export default class Util {
             },
             proxyRes => {
                 res.status(proxyRes.statusCode || 500);
-                const skipResHeaders = ["content-encoding", "content-length", "transfer-encoding"];
+                // Forward content-encoding: the browser asked for it via
+                // Accept-Encoding, so it can decompress; stripping the header
+                // while piping compressed bytes breaks every asset ("Invalid
+                // or unexpected token"). Only content-length/transfer-encoding
+                // must be skipped (Node re-frames the body).
+                const skipResHeaders = ["content-length", "transfer-encoding"];
                 Object.entries(proxyRes.headers).forEach(([key, value]) => {
                     if (value && !skipResHeaders.includes(key.toLowerCase())) {
                         try {
