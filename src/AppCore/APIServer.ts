@@ -88,12 +88,15 @@ function serveDiscordHTML(res: express.Response) {
         // The WebSocket wrapper has three jobs:
         //  1. Rewrite outgoing identify (op 2) payloads to carry the bot's
         //     intents — Discord rejects user-style identifies for bot tokens.
-        //  2. Drop the compress= gateway param — the web bundle is rewritten
-        //     to force the pass-through plaintext adapter, so gateway
-        //     messages arrive as plain JSON.
-        //  3. Patch incoming READY payloads with the user-only fields the web
+        //  2. Patch incoming READY payloads with the user-only fields the web
         //     client expects, so bot-token sessions don't crash its READY
         //     telemetry and loop socket resets.
+        //  3. Handle both gateway encodings: plain JSON (the rewritten bundle
+        //     forces the pass-through plaintext adapter) and zlib-stream
+        //     compressed binary (a browser still serving a cached older
+        //     unpatched bundle). Compressed messages are decompressed,
+        //     patched, and recompressed so the client's own decompressor
+        //     stays in sync.
         const injection =
             `<script>try{var t=localStorage.getItem("token");if(!t){localStorage.setItem("token",${tokenLiteral});}}catch(e){}</script>` +
             `<script>try{(function(){var I=${CLIENT_INTENTS};` +
@@ -104,14 +107,21 @@ function serveDiscordHTML(res: express.Response) {
             `var W=window.WebSocket;if(!W)return;` +
             `function patchReady(d){for(var k in D){if(d[k]===void 0){d[k]=D[k];}}return d;}` +
             `function patchMessage(ev){try{var data=ev&&ev.data;if(typeof data==="string"){var m=JSON.parse(data);if(m&&m.t==="READY"&&m.d&&typeof m.d==="object"){patchReady(m.d);return new MessageEvent("message",{data:JSON.stringify(m)});}}}catch(e){}return ev;}` +
-            `function plainUrl(u){try{var url=new URL(u);url.searchParams.delete("compress");return url.toString();}catch(e){return u;}}` +
-            `function P(u,p){var s=p?new W(plainUrl(u),p):new W(plainUrl(u));` +
+            // zlib-stream messages are one complete zlib stream terminated by
+            // 00 00 ff ff. Decompress, patch READY, recompress, re-append the
+            // terminator — delivered in arrival order via makeCompressor.
+            `function processCompressed(data){var bytes=new Uint8Array(data);var end=bytes.length;if(end>=4&&bytes[end-1]===255&&bytes[end-2]===255&&bytes[end-3]===0&&bytes[end-4]===0){end-=4;}var payload=bytes.slice(0,end);return new Response(new Blob([payload]).stream().pipeThrough(new DecompressionStream("deflate"))).text().then(function(text){var m=JSON.parse(text);if(m&&m.t==="READY"&&m.d&&typeof m.d==="object"){patchReady(m.d);}return new Response(new Blob([JSON.stringify(m)]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer();}).then(function(buf){var out=new Uint8Array(buf.byteLength+4);out.set(new Uint8Array(buf),0);out.set([0,0,255,255],buf.byteLength);return out.buffer;});}` +
+            `function makeCompressor(){var chain=Promise.resolve();return function(data,onDone,onFail){chain=chain.then(function(){return processCompressed(data);}).then(function(patched){try{onDone(patched);}catch(e){}},function(){try{onFail();}catch(e){}});};}` +
+            `function P(u,p){var s=p?new W(u,p):new W(u);` +
             `var g=s.send.bind(s);` +
             `s.send=function(d){if(typeof d==="string"){try{var m=JSON.parse(d);if(m&&m.op===2&&m.d){if(typeof m.d.intents==="undefined"){m.d.intents=I;d=JSON.stringify(m);}}}catch(e){}}return g(d);};` +
+            `if(/gateway(?:-[a-z0-9-]+)?\.discord\.gg/i.test(u)){var compressor=makeCompressor();` +
+            `var wrap=function(fn){return function(ev){var data=ev&&ev.data;if(typeof data==="string"){return fn.call(this,patchMessage(ev));}if(data instanceof ArrayBuffer||data instanceof Blob){var self=this,orig=ev;var toAB=function(d){return d instanceof Blob?d.arrayBuffer():Promise.resolve(d);};toAB(data).then(function(ab){compressor(ab,function(patched){fn.call(self,new MessageEvent("message",{data:patched}));},function(){fn.call(self,orig);});},function(){fn.call(self,orig);});return;}return fn.call(this,ev);};};` +
             `var add=s.addEventListener?s.addEventListener.bind(s):null;` +
-            `if(add){s.addEventListener=function(type,fn,opts){if(type==="message"){var h=fn;fn=function(ev){return h.call(this,patchMessage(ev));};}return add(type,fn,opts);};}` +
+            `if(add){s.addEventListener=function(type,fn,opts){if(type==="message"){fn=wrap(fn);}return add(type,fn,opts);};}` +
             `var om=null;` +
-            `try{Object.defineProperty(s,"onmessage",{get:function(){return om;},set:function(fn){om=fn?function(ev){return fn.call(this,patchMessage(ev));}:null;},configurable:true});}catch(e){}` +
+            `try{Object.defineProperty(s,"onmessage",{get:function(){return om;},set:function(fn){om=fn?wrap(fn):null;},configurable:true});}catch(e){}` +
+            `}` +
             `return s;}` +
             `P.prototype=W.prototype;P.CONNECTING=W.CONNECTING;P.OPEN=W.OPEN;P.CLOSING=W.CLOSING;P.CLOSED=W.CLOSED;` +
             `window.WebSocket=P;` +
