@@ -302,7 +302,8 @@
                         e = null != n("use_alt_gateway"),
                         i = window.GLOBAL_ENV.GATEWAY_ALT_ENDPOINT,
                         w = (e && null != i ? i : window.GLOBAL_ENV.GATEWAY_ENDPOINT) + "/?encoding=" + o + "&v=" + window.GLOBAL_ENV.API_VERSION;
-                    null != window.DiscordNative && void 0 !== window.Uint8Array && void 0 !== window.TextDecoder ? w += "&compress=zstd-stream" : void 0 !== window.Uint8Array && (w += "&compress=zlib-stream"), console.log("[FAST CONNECT] " + w + ", encoding: " + o + ", version: " + window.GLOBAL_ENV.API_VERSION);
+                    // Compression is disabled on purpose: the web bundle is rewritten to force Discord's plaintext gateway adapter, so the fast-connect socket must match (no compress= param) or it is rejected as a gateway URL mismatch.
+                    console.log("[FAST CONNECT] " + w + ", encoding: " + o + ", version: " + window.GLOBAL_ENV.API_VERSION);
                     var r = new WebSocket(w);
                     r.binaryType = "arraybuffer";
                     var t = Date.now(),

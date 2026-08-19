@@ -2,6 +2,7 @@
 
 import express from "express";
 import { readFileSync } from "fs";
+import { request as httpsRequest } from "https";
 import morgan from "morgan";
 import path from "path";
 import { registerRoutesSync } from "src/AppUtils/RegisterRoutes";
@@ -10,6 +11,58 @@ import Util from "src/AppUtils/Utils";
 import Constants from "./Constants";
 
 const logger = console;
+
+// Discord's web client is built for user accounts. When signed in with a bot
+// token, the gateway READY payload omits user-only fields, which crashes the
+// client's READY telemetry and loops socket resets. The injected WebSocket
+// wrapper (see serveDiscordHTML) patches READY to fill those fields in, but it
+// only works when the client uses the pass-through "plaintext" gateway
+// adapter — forced here by rewriting the pinned web bundle. If a future
+// Discord build moves the marker, the upstream file is served unchanged.
+const PLAINTEXT_FLAG_FROM = "isDiscordGatewayPlaintextSet(){return!1}";
+const PLAINTEXT_FLAG_TO = "isDiscordGatewayPlaintextSet(){return!0}";
+const patchedBundles = new Map<string, string>();
+
+function fetchPatchedWebBundle (assetPath: string): Promise<string> {
+    const cached = patchedBundles.get(assetPath);
+    if (cached) return Promise.resolve(cached);
+    return new Promise((resolve, reject) => {
+        const target = `https://canary.discord.com${assetPath}`;
+        const proxyReq = httpsRequest(
+            target,
+            {
+                method: "GET",
+                headers: {
+                    // Fetch uncompressed so the body can be rewritten in place.
+                    "Accept-Encoding": "identity",
+                    "User-Agent": Constants.UserAgentDiscordBot,
+                },
+            },
+            proxyRes => {
+                if (proxyRes.statusCode !== 200) {
+                    proxyRes.resume();
+                    return reject(new Error(`web bundle fetch failed: ${proxyRes.statusCode}`));
+                }
+                const chunks: Buffer[] = [];
+                proxyRes.on("data", chunk => chunks.push(chunk));
+                proxyRes.on("end", () => {
+                    let body = Buffer.concat(chunks).toString("utf8");
+                    if (body.includes(PLAINTEXT_FLAG_FROM)) {
+                        body = body.split(PLAINTEXT_FLAG_FROM).join(PLAINTEXT_FLAG_TO);
+                    } else {
+                        logger.warn(
+                            "[DiscordBotClient] web bundle patch marker not found — plaintext gateway not forced; bot-token READY may still crash.",
+                        );
+                    }
+                    patchedBundles.set(assetPath, body);
+                    resolve(body);
+                });
+            },
+        );
+        proxyReq.on("error", reject);
+        proxyReq.end();
+    });
+}
 
 const app = express();
 
@@ -32,9 +85,37 @@ function serveDiscordHTML(res: express.Response) {
         // JSON.stringify twice: once for the stored JSON value, once to embed it
         // as a JS string literal inside the injected <script>.
         const tokenLiteral = JSON.stringify(JSON.stringify(AUTO_LOGIN_TOKEN));
+        // The WebSocket wrapper has three jobs:
+        //  1. Rewrite outgoing identify (op 2) payloads to carry the bot's
+        //     intents — Discord rejects user-style identifies for bot tokens.
+        //  2. Drop the compress= gateway param — the web bundle is rewritten
+        //     to force the pass-through plaintext adapter, so gateway
+        //     messages arrive as plain JSON.
+        //  3. Patch incoming READY payloads with the user-only fields the web
+        //     client expects, so bot-token sessions don't crash its READY
+        //     telemetry and loop socket resets.
         const injection =
             `<script>try{var t=localStorage.getItem("token");if(!t){localStorage.setItem("token",${tokenLiteral});}}catch(e){}</script>` +
-            `<script>try{(function(){var I=${CLIENT_INTENTS};var W=window.WebSocket;if(!W)return;function P(u,p){var s=p?new W(u,p):new W(u);var g=s.send.bind(s);s.send=function(d){if(typeof d==="string"){try{var m=JSON.parse(d);if(m&&m.op===2&&m.d){if(typeof m.d.intents==="undefined"){m.d.intents=I;d=JSON.stringify(m);}}}catch(e){}}return g(d);};return s;}P.prototype=W.prototype;P.CONNECTING=W.CONNECTING;P.OPEN=W.OPEN;P.CLOSING=W.CLOSING;P.CLOSED=W.CLOSED;window.WebSocket=P;})();}catch(e){}</script>`;
+            `<script>try{(function(){var I=${CLIENT_INTENTS};` +
+            // User-only READY fields bot tokens never receive. Only filled in
+            // when missing, so bot fields (guilds, user, session_id, ...)
+            // are preserved.
+            `var D={users:[],sessions:[],guild_join_requests:[],relationships:[],connected_accounts:[],private_channels:[],merged_presences:{friends:[],guilds:[]},merged_members:[],presences:[],experiments:[],guild_experiments:[],read_state:{entries:[],version:0,partial:false},user_guild_settings:{partial:false,entries:[],version:0},notification_settings:{flags:0},consents:{},auth_session_id_hash:"",static_client_session_id:"",analytics_token:"",friend_suggestion_count:0,tutorial:null,geo_ordered_rtc_regions:[],counts:{},games:{},user_settings:{}};` +
+            `var W=window.WebSocket;if(!W)return;` +
+            `function patchReady(d){for(var k in D){if(d[k]===void 0){d[k]=D[k];}}return d;}` +
+            `function patchMessage(ev){try{var data=ev&&ev.data;if(typeof data==="string"){var m=JSON.parse(data);if(m&&m.t==="READY"&&m.d&&typeof m.d==="object"){patchReady(m.d);return new MessageEvent("message",{data:JSON.stringify(m)});}}}catch(e){}return ev;}` +
+            `function plainUrl(u){try{var url=new URL(u);url.searchParams.delete("compress");return url.toString();}catch(e){return u;}}` +
+            `function P(u,p){var s=p?new W(plainUrl(u),p):new W(plainUrl(u));` +
+            `var g=s.send.bind(s);` +
+            `s.send=function(d){if(typeof d==="string"){try{var m=JSON.parse(d);if(m&&m.op===2&&m.d){if(typeof m.d.intents==="undefined"){m.d.intents=I;d=JSON.stringify(m);}}}catch(e){}}return g(d);};` +
+            `var add=s.addEventListener?s.addEventListener.bind(s):null;` +
+            `if(add){s.addEventListener=function(type,fn,opts){if(type==="message"){var h=fn;fn=function(ev){return h.call(this,patchMessage(ev));};}return add(type,fn,opts);};}` +
+            `var om=null;` +
+            `try{Object.defineProperty(s,"onmessage",{get:function(){return om;},set:function(fn){om=fn?function(ev){return fn.call(this,patchMessage(ev));}:null;},configurable:true});}catch(e){}` +
+            `return s;}` +
+            `P.prototype=W.prototype;P.CONNECTING=W.CONNECTING;P.OPEN=W.OPEN;P.CLOSING=W.CLOSING;P.CLOSED=W.CLOSED;` +
+            `window.WebSocket=P;` +
+            `})();}catch(e){}</script>`;
         html = html.replace("<head>", `<head>${injection}`);
     }
     res.send(html);
@@ -77,6 +158,24 @@ registerRoutesSync(app, path.resolve(__dirname, "routes"), ["/api/v10", "/api/v9
 
 app.all("/developers/*splat", (req, res) => {
     return res.redirect("/app");
+});
+
+// Rewrites the pinned Discord web bundle to force the pass-through plaintext
+// gateway adapter (see PLAINTEXT_FLAG_* above), so the injected WebSocket
+// wrapper can patch bot-token READY payloads.
+app.get(/^\/assets\/web\..+\.js$/, async (req, res, next) => {
+    try {
+        const body = await fetchPatchedWebBundle(req.path);
+        res.set("Content-Type", "application/javascript; charset=utf-8");
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        res.send(body);
+    } catch (error) {
+        logger.warn(
+            "[DiscordBotClient] failed to fetch/rewrite web bundle, serving upstream:",
+            (error as Error).message,
+        );
+        next();
+    }
 });
 
 // Other
