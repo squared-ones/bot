@@ -40,7 +40,7 @@ jobs:
         run: npm run package:worker -- --codesign
 
       - name: Attach to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # Tag pushes use the pushed tag; manual runs use the version input.
           # If the tag doesn't exist yet, GitHub creates it at this commit.
