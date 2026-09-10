@@ -28,7 +28,7 @@
     "discord-api-types": "^0.38.50",
     "ini": "^6.0.0",
     "morgan": "^1.11.0",
-    "multer": "^2.2.0",
+    "multer": "^2.3.0",
     "murmurhash": "^2.0.1",
     "probe-image-size": "^7.3.0",
     "undici": "^7.24.3"
