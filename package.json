@@ -22,16 +22,16 @@
   },
   "dependencies": {
     "discord.js": "^14.16.3",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.0",
     "express": "^5.2.1",
     "@sapphire/snowflake": "^3.5.5",
-    "discord-api-types": "^0.38.50",
-    "ini": "^6.0.0",
-    "morgan": "^1.11.0",
-    "multer": "^2.2.0",
+    "discord-api-types": "^0.38.55",
+    "ini": "^7.0.0",
+    "morgan": "^1.12.1",
+    "multer": "^2.4.0",
     "murmurhash": "^2.0.1",
     "probe-image-size": "^7.3.0",
-    "undici": "^7.24.3"
+    "undici": "^8.10.2"
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.22.0",
