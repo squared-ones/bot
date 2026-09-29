@@ -27,7 +27,7 @@
     "@sapphire/snowflake": "^3.5.5",
     "discord-api-types": "^0.38.50",
     "ini": "^6.0.0",
-    "morgan": "^1.11.0",
+    "morgan": "^1.12.1",
     "multer": "^2.2.0",
     "murmurhash": "^2.0.1",
     "probe-image-size": "^7.3.0",
